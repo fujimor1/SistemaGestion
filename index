@@ -3,1324 +3,975 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sistema Termales — Prototipo</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<title>Baños Termales de Collpa — Sistema</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <style>
-  :root {
-    --primary: #3A6B4E;
-    --primary-light: #EAF3DE;
-    --primary-mid: #639922;
-    --accent: #C4793A;
-    --accent-light: #FAEEDA;
-    --bg: #F7F4EE;
-    --surface: #FFFFFF;
-    --surface2: #F0ECE4;
-    --text: #2A2218;
-    --text2: #6B6356;
-    --text3: #A89E92;
-    --border: rgba(42,34,24,0.12);
-    --border2: rgba(42,34,24,0.2);
-    --danger: #E24B4A;
-    --danger-light: #FCEBEB;
-    --success: #3A6B4E;
-    --success-light: #EAF3DE;
-    --warning: #BA7517;
-    --warning-light: #FAEEDA;
-    --info: #185FA5;
-    --info-light: #E6F1FB;
-    --sidebar-w: 220px;
-    --radius: 8px;
-    --radius-lg: 12px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; min-height: 100vh; }
-  
-  /* LAYOUT */
-  .app { display: flex; min-height: 100vh; }
-  .sidebar { width: var(--sidebar-w); background: var(--text); flex-shrink: 0; display: flex; flex-direction: column; min-height: 100vh; }
-  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-  
-  /* SIDEBAR */
-  .sidebar-brand { padding: 20px 16px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-  .sidebar-brand h1 { font-family: 'Playfair Display', serif; font-size: 17px; color: #fff; font-weight: 500; line-height: 1.3; }
-  .sidebar-brand span { font-size: 11px; color: rgba(255,255,255,0.45); font-weight: 300; letter-spacing: 0.5px; }
-  .sidebar-section { padding: 12px 0 4px; }
-  .sidebar-label { font-size: 10px; letter-spacing: 1px; color: rgba(255,255,255,0.3); padding: 0 16px 6px; text-transform: uppercase; font-weight: 500; }
-  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 16px; cursor: pointer; color: rgba(255,255,255,0.6); font-size: 13px; font-weight: 400; transition: all 0.15s; border-left: 2px solid transparent; }
-  .nav-item:hover { color: #fff; background: rgba(255,255,255,0.07); }
-  .nav-item.active { color: #fff; background: rgba(255,255,255,0.1); border-left-color: #8FBF72; }
-  .nav-item i { font-size: 16px; flex-shrink: 0; }
-  .sidebar-user { margin-top: auto; padding: 14px 16px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; }
-  .user-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #fff; flex-shrink: 0; }
-  .user-info { min-width: 0; }
-  .user-info p { font-size: 12px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .user-info span { font-size: 11px; color: rgba(255,255,255,0.4); }
-  
-  /* TOPBAR */
-  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; height: 54px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-  .topbar-title { font-size: 16px; font-weight: 500; color: var(--text); }
-  .topbar-actions { display: flex; align-items: center; gap: 10px; }
-  .topbar-date { font-size: 12px; color: var(--text2); }
-  
-  /* CONTENT */
-  .content { padding: 24px; flex: 1; }
-  .screen { display: none; }
-  .screen.active { display: block; }
-  
-  /* CARDS */
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 20px; }
-  .card-title { font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-  
-  /* GRID */
-  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
-  
-  /* METRIC CARD */
-  .metric { background: var(--surface2); border-radius: var(--radius); padding: 14px 16px; }
-  .metric-label { font-size: 11px; color: var(--text3); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .metric-value { font-size: 24px; font-weight: 600; color: var(--text); line-height: 1.1; }
-  .metric-sub { font-size: 11px; color: var(--text2); margin-top: 4px; }
-  .metric.green .metric-value { color: var(--primary); }
-  .metric.amber .metric-value { color: var(--accent); }
-  .metric.info .metric-value { color: var(--info); }
-  
-  /* BADGES */
-  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 4px; }
-  .badge-green { background: var(--success-light); color: var(--success); }
-  .badge-amber { background: var(--warning-light); color: var(--warning); }
-  .badge-red { background: var(--danger-light); color: var(--danger); }
-  .badge-info { background: var(--info-light); color: var(--info); }
-  .badge-gray { background: var(--surface2); color: var(--text2); }
-  
-  /* BUTTONS */
-  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--surface); color: var(--text); font-size: 13px; font-family: inherit; cursor: pointer; font-weight: 400; transition: all 0.12s; }
-  .btn:hover { background: var(--surface2); }
-  .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
-  .btn-primary:hover { background: #2d5540; border-color: #2d5540; }
-  .btn-accent { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .btn-accent:hover { background: #a86330; }
-  .btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
-  .btn-sm { padding: 5px 10px; font-size: 12px; }
-  .btn-xs { padding: 3px 8px; font-size: 11px; }
-  
-  /* TABLES */
-  table { width: 100%; border-collapse: collapse; }
-  th { text-align: left; font-size: 11px; font-weight: 500; color: var(--text3); padding: 8px 12px; border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.5px; }
-  td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text); }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: var(--surface2); }
-  
-  /* FORMS */
-  .form-group { margin-bottom: 14px; }
-  .form-label { font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 5px; display: block; }
-  .form-control { width: 100%; padding: 8px 11px; border: 1px solid var(--border2); border-radius: var(--radius); font-family: inherit; font-size: 13px; color: var(--text); background: var(--surface); outline: none; }
-  .form-control:focus { border-color: var(--primary); }
-  select.form-control { cursor: pointer; }
-  
-  /* TABS */
-  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
-  .tab { padding: 8px 16px; font-size: 13px; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.12s; font-weight: 400; }
-  .tab:hover { color: var(--text); }
-  .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 500; }
-  
-  /* SECTION HEADER */
-  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-  .section-title { font-size: 15px; font-weight: 500; color: var(--text); }
-  .section-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
-  
-  /* STATUS DOT */
-  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-  .dot-green { background: var(--primary); }
-  .dot-amber { background: var(--warning); }
-  .dot-red { background: var(--danger); }
-  .dot-gray { background: var(--text3); }
-  .dot-blue { background: var(--info); }
-  
-  /* ROOM GRID */
-  .room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
-  .room-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; cursor: pointer; transition: all 0.12s; text-align: center; }
-  .room-card:hover { border-color: var(--primary); }
-  .room-card.libre { background: var(--success-light); border-color: rgba(58,107,78,0.3); }
-  .room-card.ocupada { background: var(--danger-light); border-color: rgba(226,75,74,0.3); }
-  .room-card.limpieza { background: var(--warning-light); border-color: rgba(186,117,23,0.3); }
-  .room-card.mantenimiento { background: var(--surface2); border-color: var(--border2); }
-  .room-num { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
-  .room-type { font-size: 11px; color: var(--text2); }
-  .room-status { font-size: 11px; font-weight: 500; margin-top: 6px; }
-  .libre .room-status { color: var(--success); }
-  .ocupada .room-status { color: var(--danger); }
-  .limpieza .room-status { color: var(--warning); }
-  
-  /* TABLE GRID (comedor) */
-  .table-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
-  .mesa-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 10px; cursor: pointer; transition: all 0.12s; text-align: center; }
-  .mesa-card:hover { transform: translateY(-1px); }
-  .mesa-card.libre { background: var(--success-light); border-color: rgba(58,107,78,0.3); }
-  .mesa-card.ocupada { background: var(--danger-light); border-color: rgba(226,75,74,0.3); }
-  .mesa-card.por-pagar { background: var(--warning-light); border-color: rgba(186,117,23,0.3); }
-  .mesa-num { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
-  .mesa-info { font-size: 11px; color: var(--text2); }
-  .mesa-status { font-size: 11px; font-weight: 500; margin-top: 6px; }
-  .libre .mesa-status { color: var(--success); }
-  .ocupada .mesa-status { color: var(--danger); }
-  .por-pagar .mesa-status { color: var(--warning); }
+:root{--pr:#3A6B4E;--prl:#EAF3DE;--ac:#C4793A;--acl:#FAEEDA;--bg:#F7F4EE;--sf:#fff;--sf2:#F0ECE4;--tx:#2A2218;--tx2:#6B6356;--tx3:#A89E92;--bd:rgba(42,34,24,.12);--bd2:rgba(42,34,24,.2);--dg:#E24B4A;--dgl:#FCEBEB;--wn:#BA7517;--wnl:#FAEEDA;--in:#185FA5;--inl:#E6F1FB;--sw:230px;--r:8px;--rl:12px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);font-size:14px}
 
-  /* COCINA */
-  .pedido-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 12px; }
-  .pedido-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
-  .pedido-mesa { font-size: 15px; font-weight: 600; }
-  .pedido-time { font-size: 11px; color: var(--text2); }
-  .pedido-item { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); }
-  .pedido-item:last-child { border-bottom: none; }
-  .item-name { font-size: 13px; }
-  .item-qty { font-size: 13px; font-weight: 600; color: var(--accent); }
+/* ── ROOT LAYOUT ── */
+.root{display:flex;height:100vh;overflow:hidden}
 
-  /* LOGIN */
-  .login-wrap { min-height: 100vh; background: var(--text); display: flex; align-items: center; justify-content: center; }
-  .login-box { background: var(--surface); border-radius: var(--radius-lg); padding: 36px 32px; width: 340px; }
-  .login-logo { text-align: center; margin-bottom: 28px; }
-  .login-logo h1 { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--text); }
-  .login-logo p { font-size: 12px; color: var(--text2); margin-top: 4px; }
+/* ── LOGIN ── */
+.login-wrap{position:fixed;inset:0;background:#1E2B22;display:flex;align-items:center;justify-content:center;z-index:100}
+.login-box{background:#fff;border-radius:var(--rl);padding:36px 32px;width:340px}
+.login-logo{text-align:center;margin-bottom:24px}
+.login-logo h1{font-family:'Playfair Display',serif;font-size:20px;color:var(--tx);line-height:1.35}
+.login-logo p{font-size:12px;color:var(--tx2);margin-top:4px}
+.login-icon{width:44px;height:44px;border-radius:50%;background:var(--pr);display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
 
-  /* POS */
-  .pos-layout { display: grid; grid-template-columns: 1fr 320px; gap: 16px; }
-  .pos-products { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .pos-product { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; cursor: pointer; transition: all 0.12s; text-align: center; }
-  .pos-product:hover { border-color: var(--primary); background: var(--primary-light); }
-  .pos-product .p-name { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
-  .pos-product .p-price { font-size: 16px; font-weight: 600; color: var(--primary); }
-  .pos-product .p-stock { font-size: 11px; color: var(--text3); margin-top: 3px; }
-  
-  /* CAJA */
-  .caja-layout { display: grid; grid-template-columns: 1fr 340px; gap: 16px; }
-  
-  /* CHART BAR SIMPLE */
-  .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 100px; }
-  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-  .bar { width: 100%; background: var(--primary); border-radius: 3px 3px 0 0; opacity: 0.8; }
-  .bar.accent { background: var(--accent); }
-  .bar-label { font-size: 10px; color: var(--text3); }
-  .bar-val { font-size: 10px; color: var(--text2); font-weight: 500; }
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sw);background:#1E2B22;flex-shrink:0;display:flex;flex-direction:column;height:100vh;overflow-y:auto;overflow-x:hidden}
+.sb-brand{padding:16px 16px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sb-brand-row{display:flex;align-items:center;gap:9px;margin-bottom:4px}
+.sb-icon{width:28px;height:28px;border-radius:50%;background:var(--pr);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sb-brand h1{font-family:'Playfair Display',serif;font-size:14px;color:#fff;font-weight:500;line-height:1.3}
+.sb-brand span{font-size:10px;color:rgba(255,255,255,.3);letter-spacing:.7px;text-transform:uppercase}
+.sb-sec{padding:12px 0 4px}
+.sb-lbl{font-size:10px;letter-spacing:.9px;color:rgba(255,255,255,.28);padding:0 16px 5px;text-transform:uppercase;font-weight:500}
+.ni{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;color:rgba(255,255,255,.52);font-size:13px;transition:all .13s;border-left:2px solid transparent;user-select:none}
+.ni:hover{color:#fff;background:rgba(255,255,255,.06)}
+.ni.on{color:#fff;background:rgba(255,255,255,.09);border-left-color:#7FBF6A}
+.ni i{font-size:16px;flex-shrink:0}
+.ns{display:flex;align-items:center;gap:8px;padding:7px 16px 7px 40px;font-size:12px;color:rgba(255,255,255,.38);cursor:pointer;transition:all .13s;border-left:2px solid transparent}
+.ns:hover{color:rgba(255,255,255,.7)}
+.ns.on{color:#7FBF6A;border-left-color:#7FBF6A}
+.sb-div{height:1px;background:rgba(255,255,255,.07);margin:4px 0}
+.sb-user{margin-top:auto;padding:12px 16px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;flex-shrink:0}
+.av{width:30px;height:30px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0}
 
-  /* INVENTORY SECTION TABS */
-  .inv-tab { padding: 8px 14px; font-size: 12px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; background: var(--surface); color: var(--text2); font-family: inherit; }
-  .inv-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+/* ── MAIN ── */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.topbar{background:#fff;border-bottom:1px solid var(--bd);padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar-title{font-size:15px;font-weight:500}
+.content{padding:22px 24px;flex:1;overflow-y:auto}
 
-  /* REPORT DONUT placeholder */
-  .donut { width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(var(--primary) 0% 45%, var(--accent) 45% 70%, var(--info) 70% 88%, var(--text3) 88% 100%); position: relative; flex-shrink: 0; }
-  .donut::after { content: ''; position: absolute; top: 20px; left: 20px; right: 20px; bottom: 20px; background: var(--surface); border-radius: 50%; }
+/* ── PANELS ── */
+.panel{display:none}.panel.on{display:block}
 
-  /* NAV SUB */
-  .nav-sub { padding: 5px 16px 5px 40px; font-size: 12px; color: rgba(255,255,255,0.45); cursor: pointer; display: flex; align-items: center; gap: 6px; }
-  .nav-sub:hover { color: rgba(255,255,255,0.75); }
-  .nav-sub.active { color: #8FBF72; }
+/* ── CARDS ── */
+.card{background:#fff;border:1px solid var(--bd);border-radius:var(--rl);padding:16px 20px}
+.card-title{font-size:11px;font-weight:500;color:var(--tx2);margin-bottom:12px;display:flex;align-items:center;gap:7px;text-transform:uppercase;letter-spacing:.4px}
 
-  .gap-2 { gap: 8px; }
-  .gap-3 { gap: 12px; }
-  .flex { display: flex; }
-  .flex-col { flex-direction: column; }
-  .items-center { align-items: center; }
-  .justify-between { justify-content: space-between; }
-  .mb-2 { margin-bottom: 8px; }
-  .mb-3 { margin-bottom: 12px; }
-  .mb-4 { margin-bottom: 16px; }
-  .mb-5 { margin-bottom: 20px; }
-  .mt-2 { margin-top: 8px; }
-  .mt-3 { margin-top: 12px; }
-  .w-full { width: 100%; }
-  .text-sm { font-size: 12px; }
-  .text-xs { font-size: 11px; }
-  .text-muted { color: var(--text2); }
-  .fw-500 { font-weight: 500; }
-  
-  /* SCREEN SWITCHER */
-  .screen-nav { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 24px; background: var(--surface); border-bottom: 1px solid var(--border); }
-  .snav-btn { padding: 5px 12px; font-size: 12px; border: 1px solid var(--border2); border-radius: 6px; cursor: pointer; background: transparent; font-family: inherit; color: var(--text2); transition: all 0.12s; }
-  .snav-btn:hover { background: var(--surface2); color: var(--text); }
-  .snav-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+/* ── GRID ── */
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+
+/* ── METRIC ── */
+.met{background:var(--sf2);border-radius:var(--r);padding:14px 16px}
+.met-lbl{font-size:11px;color:var(--tx3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+.met-val{font-size:24px;font-weight:600;color:var(--tx);line-height:1.1}
+.met-sub{font-size:11px;color:var(--tx2);margin-top:4px}
+.met.gr .met-val{color:var(--pr)}.met.am .met-val{color:var(--ac)}.met.inf .met-val{color:var(--in)}.met.dg .met-val{color:var(--dg)}
+
+/* ── BADGES ── */
+.b{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:3px 8px;border-radius:4px}
+.bg{background:var(--prl);color:#27500A}.ba{background:var(--wnl);color:#633806}.br{background:var(--dgl);color:#791F1F}.bi{background:var(--inl);color:#0C447C}.bx{background:var(--sf2);color:var(--tx2)}.bp{background:#EDE9FE;color:#5B21B6}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--r);border:1px solid var(--bd2);background:#fff;color:var(--tx);font-size:13px;font-family:inherit;cursor:pointer;font-weight:400;transition:all .12s}
+.btn:hover{background:var(--sf2)}
+.btn-p{background:var(--pr);color:#fff;border-color:var(--pr)}.btn-p:hover{background:#2d5540}
+.btn-a{background:var(--ac);color:#fff;border-color:var(--ac)}.btn-a:hover{background:#a86330}
+.btn-d{background:var(--dg);color:#fff;border-color:var(--dg)}
+.btn-sm{padding:5px 10px;font-size:12px}.btn-xs{padding:3px 8px;font-size:11px}
+.btn-full{width:100%;justify-content:center}
+
+/* ── TABLES ── */
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11px;font-weight:500;color:var(--tx3);padding:8px 12px;border-bottom:1px solid var(--bd);text-transform:uppercase;letter-spacing:.4px}
+td{padding:10px 12px;border-bottom:1px solid var(--bd);font-size:13px}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--sf2)}
+
+/* ── FORMS ── */
+.fg{margin-bottom:13px}
+.fl{font-size:12px;font-weight:500;color:var(--tx2);margin-bottom:4px;display:block}
+.fc{width:100%;padding:8px 11px;border:1px solid var(--bd2);border-radius:var(--r);font-family:inherit;font-size:13px;color:var(--tx);background:#fff;outline:none}
+.fc:focus{border-color:var(--pr)}
+select.fc{cursor:pointer}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--bd);margin-bottom:16px}
+.tab{padding:8px 16px;font-size:13px;color:var(--tx2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .12s}
+.tab:hover{color:var(--tx)}.tab.on{color:var(--pr);border-bottom-color:var(--pr);font-weight:500}
+
+/* ── SECTION ── */
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.st{font-size:14px;font-weight:500;color:var(--tx)}
+
+/* ── DOT ── */
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.dg2{background:var(--pr)}.da{background:var(--wn)}.dr{background:var(--dg)}.dgr{background:var(--tx3)}.db{background:var(--in)}
+
+/* ── ROOM / TABLE ── */
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:9px}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:9px}
+.rc,.mc{border:1px solid var(--bd);border-radius:var(--r);padding:12px 8px;cursor:pointer;transition:all .12s;text-align:center}
+.rc:hover,.mc:hover{transform:translateY(-1px)}
+.rc.li,.mc.li{background:var(--prl);border-color:rgba(58,107,78,.28)}
+.rc.oc,.mc.oc{background:var(--dgl);border-color:rgba(226,75,74,.28)}
+.rc.lm{background:var(--wnl);border-color:rgba(186,117,23,.28)}
+.mc.pp{background:var(--wnl);border-color:rgba(186,117,23,.28)}
+.rn{font-size:17px;font-weight:600;margin-bottom:3px}
+.rt,.mi{font-size:11px;color:var(--tx2)}
+.rs,.ms{font-size:11px;font-weight:500;margin-top:5px}
+.li .rs,.li .ms{color:var(--pr)}.oc .rs,.oc .ms{color:var(--dg)}.lm .rs{color:var(--wn)}.pp .ms{color:var(--wn)}
+
+/* ── COCINA ── */
+.pk{background:#fff;border:1px solid var(--bd);border-radius:var(--rl);padding:13px;margin-bottom:10px}
+.pk-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--bd)}
+.pk-it{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bd)}
+.pk-it:last-child{border-bottom:none}
+
+/* ── POS ── */
+.pos-wrap{display:grid;grid-template-columns:1fr 300px;gap:16px}
+.pos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.pos-p{background:#fff;border:1px solid var(--bd);border-radius:var(--r);padding:11px;cursor:pointer;transition:all .12s;text-align:center}
+.pos-p:hover{border-color:var(--pr);background:var(--prl)}
+
+/* ── CAJA TABS ── */
+.ctab-wrap{display:grid;grid-template-columns:1fr 320px;gap:16px}
+.caja-tab-content{display:none}.caja-tab-content.on{display:block}
+
+/* ── INV TABS ── */
+.it{padding:7px 13px;font-size:12px;border:1px solid var(--bd);border-radius:6px;cursor:pointer;background:#fff;color:var(--tx2);font-family:inherit;transition:all .12s}
+.it:hover{background:var(--sf2)}.it.on{background:var(--pr);color:#fff;border-color:var(--pr)}
+
+/* ── CHART ── */
+.bars{display:flex;align-items:flex-end;gap:8px;height:100px}
+.bc{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.bar{width:100%;background:var(--pr);border-radius:3px 3px 0 0}
+.bar.ac{background:var(--ac)}
+
+/* ── DONUT ── */
+.donut{width:80px;height:80px;border-radius:50%;background:conic-gradient(var(--pr) 0% 45%,var(--ac) 45% 70%,var(--in) 70% 88%,var(--tx3) 88% 100%);position:relative;flex-shrink:0}
+.donut::after{content:'';position:absolute;top:20px;left:20px;right:20px;bottom:20px;background:#fff;border-radius:50%}
+
+/* ── UTIL ── */
+.mb2{margin-bottom:8px}.mb3{margin-bottom:12px}.mb4{margin-bottom:16px}.mb5{margin-bottom:20px}
+.mt3{margin-top:12px}.mt4{margin-top:16px}
+.tm{color:var(--tx2)}.txs{font-size:11px}.txm{font-size:12px}.fw5{font-weight:500}
+.flex{display:flex}.ac2{align-items:center}.jb{justify-content:space-between}
+.alert{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;border-left:3px solid}
+.alert-w{background:var(--wnl);border-color:var(--wn)}.alert-i{background:var(--inl);border-color:var(--in)}.alert-d{background:var(--dgl);border-color:var(--dg)}
 </style>
 </head>
 <body>
 
-<!-- NAVEGACIÓN RÁPIDA DE PANTALLAS -->
-<div style="background:#1a1a1a; padding:10px 20px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-  <span style="font-size:11px; color:rgba(255,255,255,0.4); margin-right:4px; font-family:'DM Sans',sans-serif;">PANTALLAS:</span>
-  <button class="snav-btn active" onclick="showScreen('login')" id="snav-login">🔐 Login</button>
-  <button class="snav-btn" onclick="showScreen('dashboard')" id="snav-dashboard">📊 Dashboard</button>
-  <button class="snav-btn" onclick="showScreen('usuarios')" id="snav-usuarios">👥 Usuarios</button>
-  <button class="snav-btn" onclick="showScreen('inventario')" id="snav-inventario">📦 Inventario</button>
-  <button class="snav-btn" onclick="showScreen('termales')" id="snav-termales">🏊 Baños Termales</button>
-  <button class="snav-btn" onclick="showScreen('hospedaje')" id="snav-hospedaje">🏠 Hospedaje</button>
-  <button class="snav-btn" onclick="showScreen('mesero')" id="snav-mesero">🍽️ Comedor - Mesero</button>
-  <button class="snav-btn" onclick="showScreen('cocina')" id="snav-cocina">👨‍🍳 Comedor - Cocina</button>
-  <button class="snav-btn" onclick="showScreen('tienda')" id="snav-tienda">🛍️ Tienda POS</button>
-  <button class="snav-btn" onclick="showScreen('caja')" id="snav-caja">🖨️ Caja</button>
-  <button class="snav-btn" onclick="showScreen('reportes')" id="snav-reportes">📈 Reportes</button>
-</div>
-
-<!-- ═══════════════ PANTALLA: LOGIN ═══════════════ -->
-<div class="screen active" id="screen-login">
-  <div class="login-wrap">
-    <div class="login-box">
-      <div class="login-logo">
-        <h1>Aguas Termales</h1>
-        <p>Sistema de Gestión Integral</p>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Usuario</label>
-        <input type="text" class="form-control" placeholder="ej. admin@termales.pe" value="admin@termales.pe">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Contraseña</label>
-        <input type="password" class="form-control" placeholder="••••••••" value="password">
-      </div>
-      <button class="btn btn-primary w-full" style="justify-content:center; margin-top:6px;" onclick="showScreen('dashboard')">
-        <i class="ti ti-login"></i> Ingresar al sistema
-      </button>
-      <p style="text-align:center; font-size:11px; color:var(--text3); margin-top:16px;">Sistema interno — acceso restringido</p>
+<!-- ═══════ LOGIN OVERLAY ═══════ -->
+<div id="login-overlay" class="login-wrap">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-icon"><i class="ti ti-droplet" style="font-size:22px;color:#fff"></i></div>
+      <h1>Baños Termales<br>de Collpa</h1>
+      <p>Sistema de Gestión Integral</p>
     </div>
+    <div class="fg"><label class="fl">Usuario</label><input type="text" class="fc" value="admin@collpa.pe"></div>
+    <div class="fg"><label class="fl">Contraseña</label><input type="password" class="fc" value="password"></div>
+    <button class="btn btn-p btn-full" style="margin-top:4px" onclick="doLogin()"><i class="ti ti-login"></i> Ingresar</button>
+    <p style="text-align:center;font-size:11px;color:var(--tx3);margin-top:14px">Acceso restringido al personal autorizado</p>
   </div>
 </div>
 
-<!-- ═══════════════ PANTALLA: DASHBOARD ═══════════════ -->
-<div class="screen" id="screen-dashboard">
-  <div class="app">
-    <div class="sidebar">
-      <div class="sidebar-brand">
-        <h1>Aguas Termales</h1>
-        <span>SISTEMA DE GESTIÓN</span>
+<!-- ═══════ APP SHELL (sidebar + main, always visible behind login) ═══════ -->
+<div class="root">
+
+  <!-- SIDEBAR ÚNICO PERSISTENTE -->
+  <nav class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-brand-row">
+        <div class="sb-icon"><i class="ti ti-droplet" style="font-size:14px;color:#fff"></i></div>
+        <h1>Baños Termales<br>de Collpa</h1>
       </div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Principal</div>
-        <div class="nav-item active"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
-        <div class="nav-item" onclick="showScreen('usuarios')"><i class="ti ti-users"></i> Usuarios y Roles</div>
+      <span>Sistema de Gestión</span>
+    </div>
+
+    <div class="sb-sec">
+      <div class="sb-lbl">Principal</div>
+      <div class="ni" id="ni-dashboard"  onclick="go('dashboard')"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
+      <div class="ni" id="ni-usuarios"   onclick="go('usuarios')"><i class="ti ti-users"></i> Usuarios y Roles</div>
+    </div>
+
+    <div class="sb-div"></div>
+    <div class="sb-sec">
+      <div class="sb-lbl">Módulos</div>
+      <div class="ni" id="ni-termales"   onclick="go('termales')"><i class="ti ti-waves"></i> Baños Termales</div>
+      <div class="ni" id="ni-hospedaje"  onclick="go('hospedaje')"><i class="ti ti-bed"></i> Hospedaje</div>
+      <div class="ni" id="ni-comedor"    onclick="go('mesero')"><i class="ti ti-tools-kitchen-2"></i> Comedor</div>
+      <div class="ns" id="ni-mesero"     onclick="go('mesero')"><i class="ti ti-armchair"></i> Vista Mesero</div>
+      <div class="ns" id="ni-cocina"     onclick="go('cocina')"><i class="ti ti-chef-hat"></i> Vista Cocina</div>
+      <div class="ni" id="ni-tienda"     onclick="go('tienda')"><i class="ti ti-shopping-bag"></i> Tienda</div>
+    </div>
+
+    <div class="sb-div"></div>
+    <div class="sb-sec">
+      <div class="sb-lbl">Gestión</div>
+      <div class="ni" id="ni-inventario" onclick="go('inventario')"><i class="ti ti-box"></i> Inventario</div>
+      <div class="ni" id="ni-caja"       onclick="go('caja')"><i class="ti ti-printer"></i> Caja y Facturación</div>
+      <div class="ni" id="ni-reportes"   onclick="go('reportes')"><i class="ti ti-chart-bar"></i> Reportes</div>
+    </div>
+
+    <div class="sb-user">
+      <div class="av" id="sb-av">JR</div>
+      <div><p id="sb-name" style="font-size:12px;color:#fff">Juan Ríos</p><span id="sb-role" style="font-size:11px;color:rgba(255,255,255,.38)">Administrador</span></div>
+      <i class="ti ti-logout" style="margin-left:auto;font-size:15px;color:rgba(255,255,255,.3);cursor:pointer" onclick="doLogout()"></i>
+    </div>
+  </nav>
+
+  <!-- MAIN AREA -->
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title" id="topbar-title">Dashboard General</span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:12px;color:var(--tx2)"><i class="ti ti-calendar" style="vertical-align:-2px"></i> Domingo, 25 de mayo 2025</span>
+        <button class="btn btn-sm"><i class="ti ti-bell"></i></button>
       </div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Módulos</div>
-        <div class="nav-item" onclick="showScreen('termales')"><i class="ti ti-waves"></i> Baños Termales</div>
-        <div class="nav-item" onclick="showScreen('hospedaje')"><i class="ti ti-bed"></i> Hospedaje</div>
-        <div class="nav-item" onclick="showScreen('mesero')"><i class="ti ti-tools-kitchen-2"></i> Comedor</div>
-        <div class="nav-item" onclick="showScreen('tienda')"><i class="ti ti-shopping-bag"></i> Tienda</div>
+    </div>
+
+    <div class="content">
+
+<!-- ░░░░░░░░░░ DASHBOARD ░░░░░░░░░░ -->
+<div class="panel on" id="panel-dashboard">
+  <p class="txs tm mb3" style="text-transform:uppercase;letter-spacing:.5px;font-weight:500">Resumen del día</p>
+  <div class="g4 mb4">
+    <div class="met gr"><div class="met-lbl">Ingresos totales</div><div class="met-val">S/ 3,840</div><div class="met-sub">↑ 12% vs ayer</div></div>
+    <div class="met"><div class="met-lbl">Clientes baños</div><div class="met-val">64</div><div class="met-sub">Aforo: 68%</div></div>
+    <div class="met am"><div class="met-lbl">Hab. ocupadas</div><div class="met-val">7 / 12</div><div class="met-sub">58% de ocupación</div></div>
+    <div class="met inf"><div class="met-lbl">Pedidos comedor</div><div class="met-val">38</div><div class="met-sub">4 mesas activas</div></div>
+  </div>
+  <div class="g2 mb4">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-chart-bar" style="font-size:13px"></i> Ingresos por ambiente</div>
+      <div class="bars">
+        <div class="bc"><span style="font-size:10px;color:var(--tx2)">S/1,240</span><div class="bar" style="height:80px"></div><span style="font-size:10px;color:var(--tx3)">Baños</span></div>
+        <div class="bc"><span style="font-size:10px;color:var(--tx2)">S/1,680</span><div class="bar" style="height:100px"></div><span style="font-size:10px;color:var(--tx3)">Hospedaje</span></div>
+        <div class="bc"><span style="font-size:10px;color:var(--tx2)">S/620</span><div class="bar ac" style="height:45px"></div><span style="font-size:10px;color:var(--tx3)">Comedor</span></div>
+        <div class="bc"><span style="font-size:10px;color:var(--tx2)">S/300</span><div class="bar ac" style="height:22px;opacity:.7"></div><span style="font-size:10px;color:var(--tx3)">Tienda</span></div>
       </div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Gestión</div>
-        <div class="nav-item" onclick="showScreen('inventario')"><i class="ti ti-box"></i> Inventario</div>
-        <div class="nav-item" onclick="showScreen('caja')"><i class="ti ti-printer"></i> Caja y Facturación</div>
-        <div class="nav-item" onclick="showScreen('reportes')"><i class="ti ti-chart-bar"></i> Reportes</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+        <span class="b bg"><span class="dot dg2"></span> Baños</span>
+        <span class="b bi"><span class="dot db"></span> Hospedaje</span>
+        <span class="b ba"><span class="dot da"></span> Comedor</span>
+        <span class="b bx"><span class="dot dgr"></span> Tienda</span>
       </div>
-      <div class="sidebar-user">
-        <div class="user-avatar">JR</div>
-        <div class="user-info">
-          <p>Juan Ríos</p>
-          <span>Administrador</span>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-credit-card" style="font-size:13px"></i> Medios de pago</div>
+      <div style="display:flex;gap:18px;align-items:center">
+        <div class="donut"></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:9px">
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span style="display:flex;align-items:center;gap:6px"><span class="dot dg2"></span> Efectivo</span><span class="fw5">S/1,920 <span class="tm txs">(50%)</span></span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span style="display:flex;align-items:center;gap:6px"><span class="dot da"></span> Yape/Plin</span><span class="fw5">S/1,152 <span class="tm txs">(30%)</span></span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span style="display:flex;align-items:center;gap:6px"><span class="dot db"></span> Tarjeta</span><span class="fw5">S/768 <span class="tm txs">(20%)</span></span></div>
+          <div style="border-top:1px solid var(--bd);padding-top:9px;display:flex;justify-content:space-between;font-size:14px;font-weight:600"><span>Total</span><span>S/ 3,840</span></div>
         </div>
       </div>
     </div>
-    <div class="main">
-      <div class="topbar">
-        <span class="topbar-title">Dashboard General</span>
-        <div class="topbar-actions">
-          <span class="topbar-date"><i class="ti ti-calendar" style="vertical-align:-2px;"></i> Domingo, 25 de mayo 2025</span>
-          <button class="btn btn-sm"><i class="ti ti-bell"></i></button>
-        </div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-alert-triangle" style="font-size:13px;color:var(--wn)"></i> Alertas del sistema</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="alert alert-w"><i class="ti ti-box" style="color:var(--wn)"></i><div><p style="font-size:13px;font-weight:500">Stock bajo: Toallas grandes</p><p class="txs tm">8 unidades (mín. 20)</p></div></div>
+        <div class="alert alert-w"><i class="ti ti-box" style="color:var(--wn)"></i><div><p style="font-size:13px;font-weight:500">Stock bajo: Shampú individual</p><p class="txs tm">12 unidades (mín. 30)</p></div></div>
+        <div class="alert alert-i"><i class="ti ti-bed" style="color:var(--in)"></i><div><p style="font-size:13px;font-weight:500">Check-out pendiente: Hab. 04</p><p class="txs tm">Salida programada 12:00 pm</p></div></div>
       </div>
-      <div class="content">
-        <!-- Métricas del día -->
-        <div class="mb-4">
-          <p class="text-xs text-muted mb-2" style="text-transform:uppercase; letter-spacing:0.5px; font-weight:500;">Resumen del día de hoy</p>
-          <div class="grid-4">
-            <div class="metric green">
-              <div class="metric-label">Ingresos totales</div>
-              <div class="metric-value">S/ 3,840</div>
-              <div class="metric-sub">↑ 12% vs ayer</div>
-            </div>
-            <div class="metric">
-              <div class="metric-label">Clientes baños</div>
-              <div class="metric-value">64</div>
-              <div class="metric-sub">Aforo: 68% ocupado</div>
-            </div>
-            <div class="metric amber">
-              <div class="metric-label">Habitaciones ocupadas</div>
-              <div class="metric-value">7 / 12</div>
-              <div class="metric-sub">58% de ocupación</div>
-            </div>
-            <div class="metric info">
-              <div class="metric-label">Pedidos comedor</div>
-              <div class="metric-value">38</div>
-              <div class="metric-sub">4 mesas activas ahora</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="grid-2 mb-4">
-          <!-- Ingresos por ambiente -->
-          <div class="card">
-            <div class="card-title"><i class="ti ti-chart-bar" style="font-size:14px;"></i> Ingresos por ambiente — hoy</div>
-            <div style="display:flex; gap:16px; align-items:flex-end; margin-bottom:12px;">
-              <div class="bar-chart" style="flex:1;">
-                <div class="bar-col"><div class="bar-val">S/1,240</div><div class="bar" style="height:85px;"></div><div class="bar-label">Baños</div></div>
-                <div class="bar-col"><div class="bar-val">S/1,680</div><div class="bar" style="height:100px;"></div><div class="bar-label">Hospedaje</div></div>
-                <div class="bar-col"><div class="bar-val">S/620</div><div class="bar accent" style="height:45px;"></div><div class="bar-label">Comedor</div></div>
-                <div class="bar-col"><div class="bar-val">S/300</div><div class="bar accent" style="height:22px;"></div><div class="bar-label">Tienda</div></div>
-              </div>
-            </div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-              <span class="badge badge-green"><span class="dot dot-green"></span> Baños S/1,240</span>
-              <span class="badge badge-info"><span class="dot dot-blue"></span> Hospedaje S/1,680</span>
-              <span class="badge badge-amber"><span class="dot dot-amber"></span> Comedor S/620</span>
-              <span class="badge badge-gray"><span class="dot dot-gray"></span> Tienda S/300</span>
-            </div>
-          </div>
-
-          <!-- Medios de pago -->
-          <div class="card">
-            <div class="card-title"><i class="ti ti-credit-card" style="font-size:14px;"></i> Por medio de pago</div>
-            <div style="display:flex; gap:20px; align-items:center;">
-              <div class="donut"></div>
-              <div style="flex:1;">
-                <div style="display:flex; flex-direction:column; gap:8px;">
-                  <div style="display:flex; justify-content:space-between; font-size:13px;">
-                    <span style="display:flex; align-items:center; gap:6px;"><span class="dot" style="background:var(--primary);"></span> Efectivo</span>
-                    <span class="fw-500">S/ 1,920 <span class="text-muted text-xs">(50%)</span></span>
-                  </div>
-                  <div style="display:flex; justify-content:space-between; font-size:13px;">
-                    <span style="display:flex; align-items:center; gap:6px;"><span class="dot" style="background:var(--accent);"></span> Yape / Plin</span>
-                    <span class="fw-500">S/ 1,152 <span class="text-muted text-xs">(30%)</span></span>
-                  </div>
-                  <div style="display:flex; justify-content:space-between; font-size:13px;">
-                    <span style="display:flex; align-items:center; gap:6px;"><span class="dot" style="background:var(--info);"></span> Tarjeta</span>
-                    <span class="fw-500">S/ 768 <span class="text-muted text-xs">(20%)</span></span>
-                  </div>
-                </div>
-                <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
-                  <div style="display:flex; justify-content:space-between; font-size:14px; font-weight:600;">
-                    <span>Total</span><span>S/ 3,840</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="grid-2">
-          <!-- Alertas -->
-          <div class="card">
-            <div class="card-title"><i class="ti ti-alert-triangle" style="font-size:14px; color:var(--warning);"></i> Alertas del sistema</div>
-            <div style="display:flex; flex-direction:column; gap:8px;">
-              <div style="display:flex; align-items:center; gap:10px; padding:8px 10px; background:var(--warning-light); border-radius:6px; border-left:3px solid var(--warning);">
-                <i class="ti ti-box" style="color:var(--warning);"></i>
-                <div><p style="font-size:13px; font-weight:500;">Stock bajo: Toallas grandes</p><p class="text-xs text-muted">Solo quedan 8 unidades (mínimo: 20)</p></div>
-              </div>
-              <div style="display:flex; align-items:center; gap:10px; padding:8px 10px; background:var(--warning-light); border-radius:6px; border-left:3px solid var(--warning);">
-                <i class="ti ti-box" style="color:var(--warning);"></i>
-                <div><p style="font-size:13px; font-weight:500;">Stock bajo: Shampú individual</p><p class="text-xs text-muted">Solo quedan 12 unidades (mínimo: 30)</p></div>
-              </div>
-              <div style="display:flex; align-items:center; gap:10px; padding:8px 10px; background:var(--info-light); border-radius:6px; border-left:3px solid var(--info);">
-                <i class="ti ti-bed" style="color:var(--info);"></i>
-                <div><p style="font-size:13px; font-weight:500;">Check-out pendiente: Hab. 04</p><p class="text-xs text-muted">Salida programada a las 12:00 pm</p></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Actividad reciente -->
-          <div class="card">
-            <div class="card-title"><i class="ti ti-clock" style="font-size:14px;"></i> Actividad reciente</div>
-            <div style="display:flex; flex-direction:column; gap:0;">
-              <div style="display:flex; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); align-items:center;">
-                <span class="badge badge-green">Caja</span>
-                <span style="font-size:13px; flex:1;">Boleta B001-0142 emitida — S/ 35.00</span>
-                <span class="text-xs text-muted">10:48</span>
-              </div>
-              <div style="display:flex; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); align-items:center;">
-                <span class="badge badge-info">Hospedaje</span>
-                <span style="font-size:13px; flex:1;">Check-in Hab. 08 — Familia Gutiérrez</span>
-                <span class="text-xs text-muted">10:32</span>
-              </div>
-              <div style="display:flex; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); align-items:center;">
-                <span class="badge badge-amber">Comedor</span>
-                <span style="font-size:13px; flex:1;">Pedido Mesa 3 — 4 platos enviados a cocina</span>
-                <span class="text-xs text-muted">10:15</span>
-              </div>
-              <div style="display:flex; gap:10px; padding:8px 0; align-items:center;">
-                <span class="badge badge-green">Baños</span>
-                <span style="font-size:13px; flex:1;">Ingreso grupo de 6 personas — Familiar</span>
-                <span class="text-xs text-muted">10:05</span>
-              </div>
-            </div>
-          </div>
-        </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-clock" style="font-size:13px"></i> Actividad reciente</div>
+      <div style="display:flex;flex-direction:column">
+        <div style="display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--bd);align-items:center"><span class="b bg">Caja</span><span style="font-size:13px;flex:1">Boleta B001-0142 — S/ 40.00</span><span class="txs tm">10:48</span></div>
+        <div style="display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--bd);align-items:center"><span class="b bi">Hospedaje</span><span style="font-size:13px;flex:1">Check-in Hab. 08 — Familia Gutiérrez</span><span class="txs tm">10:32</span></div>
+        <div style="display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--bd);align-items:center"><span class="b ba">Comedor</span><span style="font-size:13px;flex:1">Pedido Mesa 3 — 4 platos a cocina</span><span class="txs tm">10:15</span></div>
+        <div style="display:flex;gap:9px;padding:8px 0;align-items:center"><span class="b bg">Baños</span><span style="font-size:13px;flex:1">Ingreso grupo 6 personas</span><span class="txs tm">10:05</span></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════ PANTALLA: USUARIOS ═══════════════ -->
-<div class="screen" id="screen-usuarios">
-  <div class="app">
-    <div class="sidebar">
-      <div class="sidebar-brand"><h1>Aguas Termales</h1><span>SISTEMA DE GESTIÓN</span></div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Principal</div>
-        <div class="nav-item" onclick="showScreen('dashboard')"><i class="ti ti-layout-dashboard"></i> Dashboard</div>
-        <div class="nav-item active"><i class="ti ti-users"></i> Usuarios y Roles</div>
-      </div>
-      <div class="sidebar-user"><div class="user-avatar">JR</div><div class="user-info"><p>Juan Ríos</p><span>Administrador</span></div></div>
+<!-- ░░░░░░░░░░ USUARIOS ░░░░░░░░░░ -->
+<div class="panel" id="panel-usuarios">
+  <div class="g3 mb4">
+    <div class="met"><div class="met-lbl">Total usuarios</div><div class="met-val">11</div></div>
+    <div class="met gr"><div class="met-lbl">Activos</div><div class="met-val">10</div></div>
+    <div class="met"><div class="met-lbl">Roles</div><div class="met-val">6</div></div>
+  </div>
+  <div class="card mb4">
+    <div class="sh mb3"><div class="st">Lista de usuarios</div><div style="display:flex;gap:8px"><input type="text" class="fc" placeholder="Buscar..." style="width:190px"><select class="fc" style="width:140px"><option>Todos los roles</option><option>Administrador</option><option>Cajero</option><option>Mesero</option></select></div></div>
+    <table>
+      <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Módulos</th><th>Último acceso</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><span class="fw5">Juan Ríos</span></td><td class="tm">jrios@collpa.pe</td><td><span class="b bg">Administrador</span></td><td><span class="txs tm">Todos</span></td><td class="tm">Hoy, 10:00</td><td><span class="b bg">Activo</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
+        <tr><td><span class="fw5">María Condori</span></td><td class="tm">mcondori@collpa.pe</td><td><span class="b bi">Cajero</span></td><td><span class="txs tm">Caja, Reportes</span></td><td class="tm">Hoy, 09:45</td><td><span class="b bg">Activo</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
+        <tr><td><span class="fw5">Carlos Mamani</span></td><td class="tm">cmamani@collpa.pe</td><td><span class="b ba">Mesero</span></td><td><span class="txs tm">Comedor</span></td><td class="tm">Hoy, 09:30</td><td><span class="b bg">Activo</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
+        <tr><td><span class="fw5">Rosa Quispe</span></td><td class="tm">rquispe@collpa.pe</td><td><span class="b bp">Cocinero</span></td><td><span class="txs tm">Cocina</span></td><td class="tm">Hoy, 08:00</td><td><span class="b bg">Activo</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
+        <tr><td><span class="fw5">Luis Apaza</span></td><td class="tm">lapaza@collpa.pe</td><td><span class="b bx">Recepcionista</span></td><td><span class="txs tm">Baños, Hospedaje</span></td><td class="tm">Ayer</td><td><span class="b bg">Activo</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
+        <tr><td><span class="fw5">Ana Torres</span></td><td class="tm">atorres@collpa.pe</td><td><span class="b bx">Enc. Tienda</span></td><td><span class="txs tm">Tienda, Inventario</span></td><td class="tm">Hace 2 días</td><td><span class="b br">Inactivo</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="st mb3">Roles y permisos</div>
+    <div class="g3">
+      <div style="border:1px solid var(--bd);border-radius:var(--r);padding:13px"><div class="fw5 mb2" style="font-size:13px">Administrador</div><div style="display:flex;flex-wrap:wrap;gap:4px"><span class="b bg">Dashboard</span><span class="b bg">Usuarios</span><span class="b bg">Inventario</span><span class="b bg">Caja</span><span class="b bg">Reportes</span><span class="b bg">Todos los módulos</span></div></div>
+      <div style="border:1px solid var(--bd);border-radius:var(--r);padding:13px"><div class="fw5 mb2" style="font-size:13px">Cajero</div><div style="display:flex;flex-wrap:wrap;gap:4px"><span class="b bi">Caja</span><span class="b bi">Facturación</span><span class="b bi">Reportes básicos</span></div></div>
+      <div style="border:1px solid var(--bd);border-radius:var(--r);padding:13px"><div class="fw5 mb2" style="font-size:13px">Mesero</div><div style="display:flex;flex-wrap:wrap;gap:4px"><span class="b ba">Mapa mesas</span><span class="b ba">Tomar pedido</span><span class="b ba">Ver carta</span></div></div>
+      <div style="border:1px solid var(--bd);border-radius:var(--r);padding:13px"><div class="fw5 mb2" style="font-size:13px">Cocinero</div><div style="display:flex;flex-wrap:wrap;gap:4px"><span class="b bp">Pantalla cocina</span><span class="b bp">Ver pedidos</span></div></div>
+      <div style="border:1px solid var(--bd);border-radius:var(--r);padding:13px"><div class="fw5 mb2" style="font-size:13px">Recepcionista</div><div style="display:flex;flex-wrap:wrap;gap:4px"><span class="b bx">Baños</span><span class="b bx">Hospedaje</span></div></div>
+      <div style="border:1px solid var(--bd);border-radius:var(--r);padding:13px"><div class="fw5 mb2" style="font-size:13px">Enc. Tienda</div><div style="display:flex;flex-wrap:wrap;gap:4px"><span class="b bx">POS Tienda</span><span class="b bx">Inventario Tienda</span></div></div>
     </div>
-    <div class="main">
-      <div class="topbar">
-        <span class="topbar-title">Usuarios y Roles</span>
-        <button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Nuevo usuario</button>
+  </div>
+</div>
+
+<!-- ░░░░░░░░░░ INVENTARIO ░░░░░░░░░░ -->
+<div class="panel" id="panel-inventario">
+  <div class="g4 mb4">
+    <div class="met"><div class="met-lbl">Total ítems</div><div class="met-val">248</div></div>
+    <div class="met am"><div class="met-lbl">Stock bajo</div><div class="met-val">12</div></div>
+    <div class="met dg"><div class="met-lbl">Agotados</div><div class="met-val">3</div></div>
+    <div class="met gr"><div class="met-lbl">Compras mes</div><div class="met-val">S/ 4,820</div></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+      <button class="it on" onclick="invTab(this,'tienda')">🛍️ Tienda</button>
+      <button class="it" onclick="invTab(this,'cocina')">🍽️ Cocina</button>
+      <button class="it" onclick="invTab(this,'banios')">🏊 Baños Termales</button>
+      <button class="it" onclick="invTab(this,'hosped')">🏠 Hospedaje</button>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <input type="text" class="fc" placeholder="Buscar..." style="width:165px">
+        <button class="btn btn-sm btn-p"><i class="ti ti-plus"></i> Nuevo ítem</button>
+        <button class="btn btn-sm"><i class="ti ti-truck-delivery"></i> Registrar compra</button>
       </div>
-      <div class="content">
-        <div class="grid-3 mb-4">
-          <div class="metric"><div class="metric-label">Total usuarios</div><div class="metric-value">11</div></div>
-          <div class="metric green"><div class="metric-label">Activos</div><div class="metric-value">10</div></div>
-          <div class="metric"><div class="metric-label">Roles configurados</div><div class="metric-value">6</div></div>
-        </div>
+    </div>
+    <table><thead><tr><th>Código</th><th>Producto</th><th>Categoría</th><th>Stock actual</th><th>Mínimo</th><th>Unidad</th><th>Último ingreso</th><th>Estado</th><th></th></tr></thead>
+    <tbody id="inv-tbody">
+      <tr><td class="tm">T-001</td><td class="fw5">Agua mineral 600ml</td><td><span class="b bx">Bebidas</span></td><td>145</td><td>50</td><td>Unid.</td><td>20/05/2025</td><td><span class="b bg">OK</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
+      <tr><td class="tm">T-002</td><td class="fw5">Snack mix andino</td><td><span class="b bx">Alimentos</span></td><td>38</td><td>40</td><td>Unid.</td><td>18/05/2025</td><td><span class="b ba">Stock bajo</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
+      <tr><td class="tm">T-003</td><td class="fw5">Recuerdo artesanal</td><td><span class="b bx">Artesanía</span></td><td>22</td><td>10</td><td>Unid.</td><td>15/05/2025</td><td><span class="b bg">OK</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
+      <tr><td class="tm">T-004</td><td class="fw5">Crema termal 50ml</td><td><span class="b bx">Cosmético</span></td><td>0</td><td>15</td><td>Unid.</td><td>10/05/2025</td><td><span class="b br">Agotado</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
+      <tr><td class="tm">T-005</td><td class="fw5">Gorra termal logo</td><td><span class="b bx">Ropa</span></td><td>18</td><td>10</td><td>Unid.</td><td>12/05/2025</td><td><span class="b bg">OK</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
+      <tr><td class="tm">T-006</td><td class="fw5">Poncho de baño</td><td><span class="b bx">Ropa</span></td><td>7</td><td>20</td><td>Unid.</td><td>08/05/2025</td><td><span class="b ba">Stock bajo</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
+    </tbody></table>
+  </div>
+</div>
 
-        <div class="card mb-4">
-          <div class="section-header mb-3">
-            <div class="section-title">Lista de usuarios</div>
-            <div style="display:flex; gap:8px;">
-              <input type="text" class="form-control" placeholder="Buscar usuario..." style="width:220px;">
-              <select class="form-control" style="width:140px;"><option>Todos los roles</option><option>Administrador</option><option>Cajero</option><option>Mesero</option><option>Cocinero</option></select>
-            </div>
-          </div>
-          <table>
-            <thead><tr><th>Nombre</th><th>Usuario / Email</th><th>Rol</th><th>Módulos</th><th>Último acceso</th><th>Estado</th><th></th></tr></thead>
-            <tbody>
-              <tr><td><div style="font-weight:500;">Juan Ríos</div></td><td style="color:var(--text2);">jrios@termales.pe</td><td><span class="badge badge-green">Administrador</span></td><td><span class="text-xs text-muted">Todos</span></td><td class="text-muted">Hoy, 10:00</td><td><span class="badge badge-green">Activo</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
-              <tr><td><div style="font-weight:500;">María Condori</div></td><td style="color:var(--text2);">mcondori@termales.pe</td><td><span class="badge badge-info">Cajero</span></td><td><span class="text-xs text-muted">Caja, Reportes</span></td><td class="text-muted">Hoy, 09:45</td><td><span class="badge badge-green">Activo</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
-              <tr><td><div style="font-weight:500;">Carlos Mamani</div></td><td style="color:var(--text2);">cmamani@termales.pe</td><td><span class="badge badge-amber">Mesero</span></td><td><span class="text-xs text-muted">Comedor</span></td><td class="text-muted">Hoy, 09:30</td><td><span class="badge badge-green">Activo</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
-              <tr><td><div style="font-weight:500;">Rosa Quispe</div></td><td style="color:var(--text2);">rquispe@termales.pe</td><td><span class="badge" style="background:#EDE9FE;color:#5B21B6;">Cocinero</span></td><td><span class="text-xs text-muted">Cocina</span></td><td class="text-muted">Hoy, 08:00</td><td><span class="badge badge-green">Activo</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
-              <tr><td><div style="font-weight:500;">Luis Apaza</div></td><td style="color:var(--text2);">lapaza@termales.pe</td><td><span class="badge badge-gray">Recepcionista</span></td><td><span class="text-xs text-muted">Baños, Hospedaje</span></td><td class="text-muted">Ayer</td><td><span class="badge badge-green">Activo</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
-              <tr><td><div style="font-weight:500;">Ana Torres</div></td><td style="color:var(--text2);">atorres@termales.pe</td><td><span class="badge badge-gray">Enc. Tienda</span></td><td><span class="text-xs text-muted">Tienda, Inventario</span></td><td class="text-muted">Hace 2 días</td><td><span class="badge badge-red">Inactivo</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
-            </tbody>
-          </table>
-        </div>
+<!-- ░░░░░░░░░░ BAÑOS TERMALES ░░░░░░░░░░ -->
+<div class="panel" id="panel-termales">
+  <div class="g4 mb4">
+    <div class="met gr"><div class="met-lbl">Aforo actual</div><div class="met-val">43/80</div><div class="met-sub">54% ocupado</div></div>
+    <div class="met"><div class="met-lbl">Ingresos hoy</div><div class="met-val">64</div></div>
+    <div class="met am"><div class="met-lbl">Recaudado</div><div class="met-val">S/ 1,240</div></div>
+    <div class="met"><div class="met-lbl">Hora pico</div><div class="met-val">10–12am</div></div>
+  </div>
+  <div class="g2 mb4">
+    <div class="card">
+      <div class="st mb3">Registrar nuevo ingreso</div>
+      <div class="fg"><label class="fl">Tipo de ingreso</label><select class="fc"><option>Individual (1 persona)</option><option>Pareja (2 personas)</option><option>Familia (3–5 personas)</option><option>Grupo (6+ personas)</option></select></div>
+      <div class="fg"><label class="fl">Cantidad de personas</label><input type="number" class="fc" value="2" min="1"></div>
+      <div class="fg"><label class="fl">Tipo de servicio</label><select class="fc"><option>Piscina general — S/ 20.00 / pers.</option><option>Poza privada — S/ 45.00 / pers.</option><option>Paquete relajación — S/ 65.00 / pers.</option></select></div>
+      <div class="fg"><label class="fl">Observaciones</label><input type="text" class="fc" placeholder="Opcional..."></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid var(--bd)">
+        <div><p class="txs tm">Total estimado</p><p style="font-size:20px;font-weight:600;color:var(--pr)">S/ 40.00</p></div>
+        <button class="btn btn-p"><i class="ti ti-login"></i> Registrar y cobrar</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="st mb3">Tarifas vigentes</div>
+      <table><thead><tr><th>Servicio</th><th>Tarifa</th><th>Descripción</th></tr></thead>
+      <tbody>
+        <tr><td class="fw5">Piscina general</td><td class="fw5" style="color:var(--pr)">S/ 20.00</td><td class="tm">Por persona, tiempo libre</td></tr>
+        <tr><td class="fw5">Poza privada</td><td class="fw5" style="color:var(--pr)">S/ 45.00</td><td class="tm">Por persona, 1.5 hrs</td></tr>
+        <tr><td class="fw5">Paq. relajación</td><td class="fw5" style="color:var(--pr)">S/ 65.00</td><td class="tm">Poza + masaje 30min</td></tr>
+        <tr><td class="fw5">Niño (3–10 años)</td><td class="fw5" style="color:var(--ac)">S/ 10.00</td><td class="tm">Precio especial</td></tr>
+        <tr><td class="fw5">Adulto mayor</td><td class="fw5" style="color:var(--ac)">S/ 15.00</td><td class="tm">Precio especial</td></tr>
+      </tbody></table>
+      <div style="margin-top:10px;text-align:right"><button class="btn btn-sm"><i class="ti ti-edit"></i> Editar tarifas</button></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="sh"><div class="st">Registro de ingresos — hoy</div><input type="text" class="fc" placeholder="Buscar..." style="width:190px"></div>
+    <table><thead><tr><th>#</th><th>Hora</th><th>Tipo</th><th>Servicio</th><th>Personas</th><th>Total</th><th>Pago</th><th>Atendido por</th><th></th></tr></thead>
+    <tbody>
+      <tr><td class="tm">064</td><td>10:48</td><td>Pareja</td><td>Piscina general</td><td>2</td><td class="fw5">S/ 40.00</td><td><span class="b bg">Efectivo</span></td><td class="tm">L. Apaza</td><td><button class="btn btn-xs"><i class="ti ti-printer"></i></button></td></tr>
+      <tr><td class="tm">063</td><td>10:35</td><td>Familia</td><td>Piscina general</td><td>4</td><td class="fw5">S/ 80.00</td><td><span class="b bi">Yape</span></td><td class="tm">L. Apaza</td><td><button class="btn btn-xs"><i class="ti ti-printer"></i></button></td></tr>
+      <tr><td class="tm">062</td><td>10:20</td><td>Individual</td><td>Paq. relajación</td><td>1</td><td class="fw5">S/ 65.00</td><td><span class="b bg">Efectivo</span></td><td class="tm">L. Apaza</td><td><button class="btn btn-xs"><i class="ti ti-printer"></i></button></td></tr>
+      <tr><td class="tm">061</td><td>10:05</td><td>Grupo</td><td>Piscina general</td><td>6</td><td class="fw5">S/ 120.00</td><td><span class="b ba">Tarjeta</span></td><td class="tm">L. Apaza</td><td><button class="btn btn-xs"><i class="ti ti-printer"></i></button></td></tr>
+    </tbody></table>
+  </div>
+</div>
 
+<!-- ░░░░░░░░░░ HOSPEDAJE ░░░░░░░░░░ -->
+<div class="panel" id="panel-hospedaje">
+  <div class="g4 mb4">
+    <div class="met am"><div class="met-lbl">Ocupadas</div><div class="met-val">7/12</div><div class="met-sub">58% ocupación</div></div>
+    <div class="met gr"><div class="met-lbl">Disponibles</div><div class="met-val">3</div></div>
+    <div class="met"><div class="met-lbl">En limpieza</div><div class="met-val">1</div></div>
+    <div class="met"><div class="met-lbl">Check-outs hoy</div><div class="met-val">2</div></div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="st mb3">Mapa de habitaciones</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        <span style="display:flex;align-items:center;gap:5px;font-size:12px"><span style="width:10px;height:10px;background:var(--prl);border:1px solid rgba(58,107,78,.3);border-radius:2px;display:inline-block"></span> Libre</span>
+        <span style="display:flex;align-items:center;gap:5px;font-size:12px"><span style="width:10px;height:10px;background:var(--dgl);border:1px solid rgba(226,75,74,.3);border-radius:2px;display:inline-block"></span> Ocupada</span>
+        <span style="display:flex;align-items:center;gap:5px;font-size:12px"><span style="width:10px;height:10px;background:var(--wnl);border:1px solid rgba(186,117,23,.3);border-radius:2px;display:inline-block"></span> Limpieza</span>
+      </div>
+      <div class="rgrid">
+        <div class="rc oc"><div class="rn" style="color:var(--dg)">01</div><div class="rt">Matrimonial</div><div class="rs">Ocupada</div></div>
+        <div class="rc oc"><div class="rn" style="color:var(--dg)">02</div><div class="rt">Simple</div><div class="rs">Ocupada</div></div>
+        <div class="rc li"><div class="rn" style="color:var(--pr)">03</div><div class="rt">Familiar</div><div class="rs">Libre</div></div>
+        <div class="rc oc"><div class="rn" style="color:var(--dg)">04</div><div class="rt">Matrimonial</div><div class="rs">Salida hoy</div></div>
+        <div class="rc li"><div class="rn" style="color:var(--pr)">05</div><div class="rt">Simple</div><div class="rs">Libre</div></div>
+        <div class="rc oc"><div class="rn" style="color:var(--dg)">06</div><div class="rt">Simple</div><div class="rs">Ocupada</div></div>
+        <div class="rc oc"><div class="rn" style="color:var(--dg)">07</div><div class="rt">Familiar</div><div class="rs">Ocupada</div></div>
+        <div class="rc oc"><div class="rn" style="color:var(--dg)">08</div><div class="rt">Matrimonial</div><div class="rs">Ocupada</div></div>
+        <div class="rc lm"><div class="rn" style="color:var(--wn)">09</div><div class="rt">Simple</div><div class="rs">Limpieza</div></div>
+        <div class="rc li"><div class="rn" style="color:var(--pr)">10</div><div class="rt">Simple</div><div class="rs">Libre</div></div>
+        <div class="rc oc"><div class="rn" style="color:var(--dg)">11</div><div class="rt">Familiar</div><div class="rs">Ocupada</div></div>
+        <div class="rc oc"><div class="rn" style="color:var(--dg)">12</div><div class="rt">Suite</div><div class="rs">Ocupada</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="st mb3">Huéspedes activos</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="border:1px solid var(--bd);border-radius:var(--r);padding:12px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span class="fw5" style="font-size:13px">Hab. 08 — Matrimonial</span><span class="b bg">Activo</span></div>
+          <p style="font-size:13px">Familia Gutiérrez <span class="tm">(2 adultos, 1 niño)</span></p>
+          <div style="display:flex;gap:12px;margin-top:6px;font-size:12px;color:var(--tx2)"><span><i class="ti ti-login" style="vertical-align:-2px"></i> 25/05</span><span><i class="ti ti-logout" style="vertical-align:-2px"></i> 27/05</span></div>
+          <div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-xs"><i class="ti ti-eye"></i> Ver</button><button class="btn btn-xs btn-a"><i class="ti ti-logout"></i> Check-out</button></div>
+        </div>
+        <div style="border:1px solid var(--bd);border-radius:var(--r);padding:12px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span class="fw5" style="font-size:13px">Hab. 04 — Matrimonial</span><span class="b ba">Salida hoy</span></div>
+          <p style="font-size:13px">Sr. Ramírez <span class="tm">(2 adultos)</span></p>
+          <div style="display:flex;gap:12px;margin-top:6px;font-size:12px;color:var(--tx2)"><span><i class="ti ti-login" style="vertical-align:-2px"></i> 23/05</span><span><i class="ti ti-logout" style="vertical-align:-2px"></i> 25/05</span></div>
+          <div style="margin-top:8px;display:flex;gap:6px"><button class="btn btn-xs"><i class="ti ti-eye"></i> Ver</button><button class="btn btn-xs btn-p"><i class="ti ti-logout"></i> Check-out</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ░░░░░░░░░░ MESERO ░░░░░░░░░░ -->
+<div class="panel" id="panel-mesero">
+  <div class="g2">
+    <div class="card">
+      <div class="st mb3">Mapa de mesas</div>
+      <div class="tgrid">
+        <div class="mc li"><div style="font-size:16px">🍽️</div><div class="fw5">M1</div><div class="mi">4 pers.</div><div class="ms">Libre</div></div>
+        <div class="mc oc"><div style="font-size:16px">🍽️</div><div class="fw5">M2</div><div class="mi">2 pers.</div><div class="ms">Ocupada</div></div>
+        <div class="mc oc"><div style="font-size:16px">🍽️</div><div class="fw5">M3</div><div class="mi">4 pers.</div><div class="ms">Ocupada</div></div>
+        <div class="mc li"><div style="font-size:16px">🍽️</div><div class="fw5">M4</div><div class="mi">6 pers.</div><div class="ms">Libre</div></div>
+        <div class="mc pp"><div style="font-size:16px">🍽️</div><div class="fw5">M5</div><div class="mi">4 pers.</div><div class="ms">Por pagar</div></div>
+        <div class="mc li"><div style="font-size:16px">🍽️</div><div class="fw5">M6</div><div class="mi">2 pers.</div><div class="ms">Libre</div></div>
+        <div class="mc oc"><div style="font-size:16px">🍽️</div><div class="fw5">M7</div><div class="mi">4 pers.</div><div class="ms">Ocupada</div></div>
+        <div class="mc pp"><div style="font-size:16px">🍽️</div><div class="fw5">M8</div><div class="mi">4 pers.</div><div class="ms">Por pagar</div></div>
+        <div class="mc li"><div style="font-size:16px">🍽️</div><div class="fw5">M9</div><div class="mi">6 pers.</div><div class="ms">Libre</div></div>
+        <div class="mc oc"><div style="font-size:16px">🍽️</div><div class="fw5">M10</div><div class="mi">2 pers.</div><div class="ms">Ocupada</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="st mb3">Tomar pedido — Mesa 3</div>
+      <div class="tabs"><div class="tab on">Entradas</div><div class="tab">Fondos</div><div class="tab">Bebidas</div><div class="tab">Postres</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <div style="border:1px solid var(--bd);border-radius:var(--r);padding:10px;cursor:pointer" onmouseover="this.style.borderColor='var(--pr)'" onmouseout="this.style.borderColor='var(--bd)'"><div style="font-size:12px;font-weight:500">Trucha frita</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px"><span style="font-size:14px;font-weight:600;color:var(--pr)">S/ 28</span><button class="btn btn-xs btn-p"><i class="ti ti-plus"></i></button></div></div>
+        <div style="border:1px solid var(--bd);border-radius:var(--r);padding:10px;cursor:pointer" onmouseover="this.style.borderColor='var(--pr)'" onmouseout="this.style.borderColor='var(--bd)'"><div style="font-size:12px;font-weight:500">Caldo de gallina</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px"><span style="font-size:14px;font-weight:600;color:var(--pr)">S/ 18</span><button class="btn btn-xs btn-p"><i class="ti ti-plus"></i></button></div></div>
+        <div style="border:1px solid var(--bd);border-radius:var(--r);padding:10px;cursor:pointer" onmouseover="this.style.borderColor='var(--pr)'" onmouseout="this.style.borderColor='var(--bd)'"><div style="font-size:12px;font-weight:500">Lomo saltado</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px"><span style="font-size:14px;font-weight:600;color:var(--pr)">S/ 32</span><button class="btn btn-xs btn-p"><i class="ti ti-plus"></i></button></div></div>
+        <div style="border:1px solid var(--bd);border-radius:var(--r);padding:10px;cursor:pointer" onmouseover="this.style.borderColor='var(--pr)'" onmouseout="this.style.borderColor='var(--bd)'"><div style="font-size:12px;font-weight:500">Ají de gallina</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px"><span style="font-size:14px;font-weight:600;color:var(--pr)">S/ 25</span><button class="btn btn-xs btn-p"><i class="ti ti-plus"></i></button></div></div>
+      </div>
+      <div style="border:1px solid var(--bd);border-radius:var(--r);padding:12px">
+        <p style="font-size:13px;font-weight:500;margin-bottom:8px">Pedido actual — Mesa 3</p>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd);font-size:13px"><span>2x Trucha frita</span><span class="fw5">S/ 56.00</span></div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd);font-size:13px"><span>1x Caldo de gallina</span><span class="fw5">S/ 18.00</span></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px;font-weight:600"><span>Total</span><span style="color:var(--pr)">S/ 74.00</span></div>
+        <div style="display:flex;gap:8px;margin-top:4px"><button class="btn btn-sm" style="flex:1;justify-content:center"><i class="ti ti-note"></i> Nota</button><button class="btn btn-p btn-sm" style="flex:1;justify-content:center"><i class="ti ti-send"></i> Enviar a cocina</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ░░░░░░░░░░ COCINA ░░░░░░░░░░ -->
+<div class="panel" id="panel-cocina">
+  <div class="g3">
+    <div>
+      <div style="font-size:11px;font-weight:500;color:var(--dg);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px"><span class="dot dr"></span> Pendientes (2)</div>
+      <div class="pk" style="border-left:3px solid var(--dg)"><div class="pk-hdr"><div><div style="font-size:14px;font-weight:600">Mesa 3</div><div style="font-size:11px;color:var(--tx2)">Hace 8 min</div></div><span class="b br">Urgente</span></div><div class="pk-it"><span style="font-size:13px;font-weight:600;color:var(--ac)">2x</span><span style="font-size:13px">Trucha frita</span></div><div class="pk-it"><span style="font-size:13px;font-weight:600;color:var(--ac)">1x</span><span style="font-size:13px">Caldo de gallina</span></div><div class="pk-it"><span style="font-size:13px;font-weight:600;color:var(--ac)">1x</span><span style="font-size:13px">Limonada</span></div><button class="btn btn-a btn-sm btn-full" style="margin-top:10px"><i class="ti ti-player-play"></i> Iniciar preparación</button></div>
+      <div class="pk" style="border-left:3px solid var(--dg)"><div class="pk-hdr"><div><div style="font-size:14px;font-weight:600">Mesa 7</div><div style="font-size:11px;color:var(--tx2)">Hace 3 min</div></div><span class="b br">Nuevo</span></div><div class="pk-it"><span style="font-size:13px;font-weight:600;color:var(--ac)">3x</span><span style="font-size:13px">Lomo saltado</span></div><div class="pk-it"><span style="font-size:13px;font-weight:600;color:var(--ac)">1x</span><span style="font-size:13px">Ají de gallina</span></div><button class="btn btn-a btn-sm btn-full" style="margin-top:10px"><i class="ti ti-player-play"></i> Iniciar preparación</button></div>
+    </div>
+    <div>
+      <div style="font-size:11px;font-weight:500;color:var(--wn);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px"><span class="dot da"></span> En preparación (2)</div>
+      <div class="pk" style="border-left:3px solid var(--wn)"><div class="pk-hdr"><div><div style="font-size:14px;font-weight:600">Mesa 2</div><div style="font-size:11px;color:var(--tx2)">Hace 15 min</div></div><span class="b ba">Preparando</span></div><div class="pk-it"><span style="font-size:13px;font-weight:600;color:var(--ac)">2x</span><span style="font-size:13px">Caldo de gallina</span></div><div class="pk-it" style="opacity:.45;text-decoration:line-through"><span style="font-size:13px;font-weight:600">1x</span><span style="font-size:13px">Chicha morada ✓</span></div><button class="btn btn-p btn-sm btn-full" style="margin-top:10px"><i class="ti ti-check"></i> Marcar como listo</button></div>
+      <div class="pk" style="border-left:3px solid var(--wn)"><div class="pk-hdr"><div><div style="font-size:14px;font-weight:600">Mesa 10</div><div style="font-size:11px;color:var(--tx2)">Hace 10 min</div></div><span class="b ba">Preparando</span></div><div class="pk-it"><span style="font-size:13px;font-weight:600;color:var(--ac)">1x</span><span style="font-size:13px">Trucha frita</span></div><div class="pk-it"><span style="font-size:13px;font-weight:600;color:var(--ac)">2x</span><span style="font-size:13px">Papas fritas</span></div><button class="btn btn-p btn-sm btn-full" style="margin-top:10px"><i class="ti ti-check"></i> Marcar como listo</button></div>
+    </div>
+    <div>
+      <div style="font-size:11px;font-weight:500;color:var(--pr);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px"><span class="dot dg2"></span> Listos para servir (1)</div>
+      <div class="pk" style="border-left:3px solid var(--pr);opacity:.85"><div class="pk-hdr"><div><div style="font-size:14px;font-weight:600">Mesa 5</div><div style="font-size:11px;color:var(--tx2)">Hace 2 min</div></div><span class="b bg">Listo</span></div><div class="pk-it"><span style="font-size:13px;font-weight:600;color:var(--ac)">4x</span><span style="font-size:13px">Menú del día</span></div><div class="pk-it"><span style="font-size:13px;font-weight:600;color:var(--ac)">4x</span><span style="font-size:13px">Chicha morada</span></div><button class="btn btn-sm btn-full" style="margin-top:10px;background:var(--prl);color:var(--pr);border-color:transparent"><i class="ti ti-check"></i> Servido — cerrar</button></div>
+      <div style="margin-top:16px;padding:13px;background:var(--sf2);border-radius:var(--r)">
+        <p class="txs tm fw5 mb2" style="text-transform:uppercase;letter-spacing:.4px">Resumen del turno</p>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span class="tm">Completados</span><span class="fw5">24</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span class="tm">Tiempo prom.</span><span class="fw5">14 min</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span class="tm">Más pedido</span><span class="fw5">Trucha frita</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ░░░░░░░░░░ TIENDA ░░░░░░░░░░ -->
+<div class="panel" id="panel-tienda">
+  <div class="pos-wrap">
+    <div>
+      <div style="display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+        <button class="it on">Todos</button><button class="it">Bebidas</button><button class="it">Alimentos</button><button class="it">Artesanía</button><button class="it">Cosmético</button><button class="it">Ropa</button>
+        <input type="text" class="fc" placeholder="Buscar..." style="width:145px;margin-left:auto">
+      </div>
+      <div class="pos-grid">
+        <div class="pos-p"><div style="font-size:12px;font-weight:500">Agua mineral 600ml</div><div style="font-size:15px;font-weight:600;color:var(--pr)">S/ 3.00</div><div style="font-size:11px;color:var(--tx3)">Stock: 145</div></div>
+        <div class="pos-p"><div style="font-size:12px;font-weight:500">Snack mix andino</div><div style="font-size:15px;font-weight:600;color:var(--pr)">S/ 8.00</div><div style="font-size:11px;color:var(--tx3)">Stock: 38</div></div>
+        <div class="pos-p"><div style="font-size:12px;font-weight:500">Recuerdo artesanal</div><div style="font-size:15px;font-weight:600;color:var(--pr)">S/ 25.00</div><div style="font-size:11px;color:var(--tx3)">Stock: 22</div></div>
+        <div class="pos-p" style="opacity:.5;cursor:not-allowed"><div style="font-size:12px;font-weight:500">Crema termal 50ml</div><div style="font-size:15px;font-weight:600;color:var(--pr)">S/ 35.00</div><div style="font-size:11px;color:var(--dg)">Sin stock</div></div>
+        <div class="pos-p"><div style="font-size:12px;font-weight:500">Gorra termal logo</div><div style="font-size:15px;font-weight:600;color:var(--pr)">S/ 20.00</div><div style="font-size:11px;color:var(--tx3)">Stock: 18</div></div>
+        <div class="pos-p"><div style="font-size:12px;font-weight:500">Poncho de baño</div><div style="font-size:15px;font-weight:600;color:var(--pr)">S/ 45.00</div><div style="font-size:11px;color:var(--wn)">Stock: 7</div></div>
+        <div class="pos-p"><div style="font-size:12px;font-weight:500">Chicha morada 500ml</div><div style="font-size:15px;font-weight:600;color:var(--pr)">S/ 5.00</div><div style="font-size:11px;color:var(--tx3)">Stock: 60</div></div>
+        <div class="pos-p"><div style="font-size:12px;font-weight:500">Herboristería termal</div><div style="font-size:15px;font-weight:600;color:var(--pr)">S/ 18.00</div><div style="font-size:11px;color:var(--tx3)">Stock: 14</div></div>
+        <div class="pos-p"><div style="font-size:12px;font-weight:500">Foto recuerdo impresa</div><div style="font-size:15px;font-weight:600;color:var(--pr)">S/ 12.00</div><div style="font-size:11px;color:var(--tx3)">Stock: 200</div></div>
+      </div>
+    </div>
+    <div class="card" style="height:fit-content">
+      <div class="st mb3">Venta actual</div>
+      <div style="min-height:110px;border:1px dashed var(--bd);border-radius:var(--r);padding:11px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--bd);font-size:13px"><span>2x Agua mineral</span><div style="display:flex;align-items:center;gap:6px"><span class="fw5">S/ 6.00</span><button class="btn btn-xs"><i class="ti ti-trash" style="font-size:11px"></i></button></div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--bd);font-size:13px"><span>1x Recuerdo artesanal</span><div style="display:flex;align-items:center;gap:6px"><span class="fw5">S/ 25.00</span><button class="btn btn-xs"><i class="ti ti-trash" style="font-size:11px"></i></button></div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px"><span>1x Snack mix andino</span><div style="display:flex;align-items:center;gap:6px"><span class="fw5">S/ 8.00</span><button class="btn btn-xs"><i class="ti ti-trash" style="font-size:11px"></i></button></div></div>
+      </div>
+      <div style="border-top:1px solid var(--bd);padding-top:11px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span class="tm">Subtotal</span><span>S/ 39.00</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:600"><span>Total</span><span style="color:var(--pr)">S/ 39.00</span></div>
+      </div>
+      <div class="fg"><label class="fl">Medio de pago</label><select class="fc"><option>Efectivo</option><option>Yape / Plin</option><option>Tarjeta</option><option>Mixto</option></select></div>
+      <div class="fg"><label class="fl">Comprobante</label><select class="fc"><option>Boleta</option><option>Factura</option><option>Nota de venta</option><option>Sin comprobante</option></select></div>
+      <div style="display:flex;flex-direction:column;gap:7px;margin-top:4px">
+        <button class="btn btn-p btn-full"><i class="ti ti-check"></i> Cobrar S/ 39.00</button>
+        <button class="btn btn-full" style="color:var(--dg)"><i class="ti ti-x"></i> Cancelar venta</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ░░░░░░░░░░ CAJA Y FACTURACIÓN ░░░░░░░░░░ -->
+<div class="panel" id="panel-caja">
+  <!-- TABS CAJA -->
+  <div class="tabs" id="caja-tabs">
+    <div class="tab on" onclick="cajaTab(this,'comprobantes')">Comprobantes</div>
+    <div class="tab" onclick="cajaTab(this,'cajachica')">Caja Chica</div>
+    <div class="tab" onclick="cajaTab(this,'cierre')">Cierre de caja</div>
+    <div class="tab" onclick="cajaTab(this,'anulaciones')">Anulaciones</div>
+    <div class="tab" onclick="cajaTab(this,'notas')">Notas de venta</div>
+  </div>
+
+  <!-- TAB: COMPROBANTES -->
+  <div class="caja-tab-content on" id="ctab-comprobantes">
+    <div class="ctab-wrap">
+      <div class="card">
+        <div style="display:flex;gap:8px;margin-bottom:13px;flex-wrap:wrap;align-items:center">
+          <input type="text" class="fc" placeholder="Buscar N° comprobante..." style="width:200px">
+          <select class="fc" style="width:115px"><option>Todos</option><option>Boleta</option><option>Factura</option></select>
+          <select class="fc" style="width:115px"><option>Hoy</option><option>Esta semana</option><option>Este mes</option></select>
+          <button class="btn btn-p btn-sm" style="margin-left:auto"><i class="ti ti-printer"></i> Nuevo comprobante</button>
+        </div>
+        <table><thead><tr><th>N°</th><th>Tipo</th><th>Fecha</th><th>Origen</th><th>Cliente</th><th>Total</th><th>Pago</th><th>Estado</th><th></th></tr></thead>
+        <tbody>
+          <tr><td class="fw5" style="color:var(--in)">B001-0142</td><td><span class="b bi">Boleta</span></td><td>25/05 10:48</td><td class="tm">Baños</td><td class="tm">S/N</td><td class="fw5">S/ 40.00</td><td><span class="b bg">Efectivo</span></td><td><span class="b bg">Emitida</span></td><td><button class="btn btn-xs"><i class="ti ti-printer"></i></button></td></tr>
+          <tr><td class="fw5" style="color:var(--in)">B001-0141</td><td><span class="b bi">Boleta</span></td><td>25/05 10:35</td><td class="tm">Hospedaje</td><td class="tm">S/N</td><td class="fw5">S/ 280.00</td><td><span class="b ba">Yape</span></td><td><span class="b bg">Emitida</span></td><td><button class="btn btn-xs"><i class="ti ti-printer"></i></button></td></tr>
+          <tr><td class="fw5" style="color:var(--in)">F001-0038</td><td><span class="b ba">Factura</span></td><td>25/05 10:20</td><td class="tm">Comedor</td><td>Empresa SAC</td><td class="fw5">S/ 186.00</td><td><span class="b bx">Tarjeta</span></td><td><span class="b bg">Emitida</span></td><td><button class="btn btn-xs"><i class="ti ti-printer"></i></button></td></tr>
+          <tr><td class="fw5" style="color:var(--dg);text-decoration:line-through">B001-0139</td><td><span class="b bi">Boleta</span></td><td>25/05 09:45</td><td class="tm">Tienda</td><td class="tm">S/N</td><td class="fw5 tm">S/ 35.00</td><td><span class="b bg">Efectivo</span></td><td><span class="b br">Anulada</span></td><td><button class="btn btn-xs"><i class="ti ti-eye"></i></button></td></tr>
+          <tr><td class="fw5" style="color:var(--in)">B001-0138</td><td><span class="b bi">Boleta</span></td><td>25/05 09:30</td><td class="tm">Baños</td><td class="tm">S/N</td><td class="fw5">S/ 120.00</td><td><span class="b bx">Tarjeta</span></td><td><span class="b bg">Emitida</span></td><td><button class="btn btn-xs"><i class="ti ti-printer"></i></button></td></tr>
+        </tbody></table>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
         <div class="card">
-          <div class="section-title mb-3">Roles y permisos</div>
-          <div class="grid-3">
-            <div style="border:1px solid var(--border); border-radius:var(--radius); padding:14px;">
-              <div style="font-weight:500; margin-bottom:8px; font-size:13px;">Administrador</div>
-              <div style="display:flex; flex-wrap:wrap; gap:4px;">
-                <span class="badge badge-green">Dashboard</span><span class="badge badge-green">Usuarios</span><span class="badge badge-green">Inventario</span><span class="badge badge-green">Caja</span><span class="badge badge-green">Reportes</span><span class="badge badge-green">Todos los módulos</span>
-              </div>
-            </div>
-            <div style="border:1px solid var(--border); border-radius:var(--radius); padding:14px;">
-              <div style="font-weight:500; margin-bottom:8px; font-size:13px;">Cajero</div>
-              <div style="display:flex; flex-wrap:wrap; gap:4px;">
-                <span class="badge badge-info">Caja</span><span class="badge badge-info">Facturación</span><span class="badge badge-info">Reportes básicos</span>
-              </div>
-            </div>
-            <div style="border:1px solid var(--border); border-radius:var(--radius); padding:14px;">
-              <div style="font-weight:500; margin-bottom:8px; font-size:13px;">Mesero</div>
-              <div style="display:flex; flex-wrap:wrap; gap:4px;">
-                <span class="badge badge-amber">Mapa mesas</span><span class="badge badge-amber">Tomar pedido</span><span class="badge badge-amber">Ver carta</span>
-              </div>
-            </div>
-            <div style="border:1px solid var(--border); border-radius:var(--radius); padding:14px;">
-              <div style="font-weight:500; margin-bottom:8px; font-size:13px;">Cocinero</div>
-              <div style="display:flex; flex-wrap:wrap; gap:4px;">
-                <span class="badge" style="background:#EDE9FE;color:#5B21B6;">Pantalla cocina</span><span class="badge" style="background:#EDE9FE;color:#5B21B6;">Ver pedidos</span>
-              </div>
-            </div>
-            <div style="border:1px solid var(--border); border-radius:var(--radius); padding:14px;">
-              <div style="font-weight:500; margin-bottom:8px; font-size:13px;">Recepcionista</div>
-              <div style="display:flex; flex-wrap:wrap; gap:4px;">
-                <span class="badge badge-gray">Baños Termales</span><span class="badge badge-gray">Hospedaje</span>
-              </div>
-            </div>
-            <div style="border:1px solid var(--border); border-radius:var(--radius); padding:14px;">
-              <div style="font-weight:500; margin-bottom:8px; font-size:13px;">Enc. Tienda</div>
-              <div style="display:flex; flex-wrap:wrap; gap:4px;">
-                <span class="badge badge-gray">POS Tienda</span><span class="badge badge-gray">Inventario Tienda</span>
-              </div>
-            </div>
+          <div class="st mb3">Resumen del día</div>
+          <div style="display:flex;flex-direction:column;gap:0">
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--bd)"><span class="tm">Boletas emitidas</span><span class="fw5">38</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--bd)"><span class="tm">Facturas emitidas</span><span class="fw5">4</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--bd)"><span class="tm">Anulaciones</span><span class="fw5" style="color:var(--dg)">2</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600;padding:8px 0"><span>Total facturado</span><span style="color:var(--pr)">S/ 3,840</span></div>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════ PANTALLA: INVENTARIO ═══════════════ -->
-<div class="screen" id="screen-inventario">
-  <div class="app">
-    <div class="sidebar">
-      <div class="sidebar-brand"><h1>Aguas Termales</h1><span>SISTEMA DE GESTIÓN</span></div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Gestión</div>
-        <div class="nav-item active"><i class="ti ti-box"></i> Inventario</div>
-        <div class="nav-item" onclick="showScreen('caja')"><i class="ti ti-printer"></i> Caja y Facturación</div>
-        <div class="nav-item" onclick="showScreen('reportes')"><i class="ti ti-chart-bar"></i> Reportes</div>
-      </div>
-      <div class="sidebar-user"><div class="user-avatar">JR</div><div class="user-info"><p>Juan Ríos</p><span>Administrador</span></div></div>
-    </div>
-    <div class="main">
-      <div class="topbar">
-        <span class="topbar-title">Inventario Central</span>
-        <div style="display:flex; gap:8px;">
-          <button class="btn btn-sm"><i class="ti ti-truck-delivery"></i> Registrar compra</button>
-          <button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Nuevo ítem</button>
-        </div>
-      </div>
-      <div class="content">
-        <div class="grid-4 mb-4">
-          <div class="metric"><div class="metric-label">Total ítems</div><div class="metric-value">248</div></div>
-          <div class="metric"><div class="metric-label">Con stock bajo</div><div class="metric-value" style="color:var(--warning);">12</div></div>
-          <div class="metric"><div class="metric-label">Agotados</div><div class="metric-value" style="color:var(--danger);">3</div></div>
-          <div class="metric green"><div class="metric-label">Compras este mes</div><div class="metric-value">S/ 4,820</div></div>
-        </div>
-
         <div class="card">
-          <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:center;">
-            <button class="inv-tab active" onclick="setInvTab(this,'tienda')">🛍️ Tienda</button>
-            <button class="inv-tab" onclick="setInvTab(this,'cocina')">🍽️ Cocina / Comedor</button>
-            <button class="inv-tab" onclick="setInvTab(this,'banios')">🏊 Baños Termales</button>
-            <button class="inv-tab" onclick="setInvTab(this,'hosped')">🏠 Hospedaje</button>
-            <div style="margin-left:auto; display:flex; gap:8px;">
-              <input type="text" class="form-control" placeholder="Buscar..." style="width:180px;">
-              <select class="form-control" style="width:130px;"><option>Todas las categ.</option></select>
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr><th>Código</th><th>Producto / Ítem</th><th>Categoría</th><th>Stock actual</th><th>Stock mínimo</th><th>Unidad</th><th>Último ingreso</th><th>Estado</th><th></th></tr>
-            </thead>
-            <tbody id="inv-tbody">
-              <tr><td class="text-muted">T-001</td><td style="font-weight:500;">Agua mineral 600ml</td><td><span class="badge badge-gray">Bebidas</span></td><td>145</td><td>50</td><td>Unid.</td><td>20/05/2025</td><td><span class="badge badge-green">OK</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
-              <tr><td class="text-muted">T-002</td><td style="font-weight:500;">Snack mix andino</td><td><span class="badge badge-gray">Alimentos</span></td><td>38</td><td>40</td><td>Unid.</td><td>18/05/2025</td><td><span class="badge badge-amber">Stock bajo</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
-              <tr><td class="text-muted">T-003</td><td style="font-weight:500;">Recuerdo artesanal</td><td><span class="badge badge-gray">Artesanía</span></td><td>22</td><td>10</td><td>Unid.</td><td>15/05/2025</td><td><span class="badge badge-green">OK</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
-              <tr><td class="text-muted">T-004</td><td style="font-weight:500;">Crema termal 50ml</td><td><span class="badge badge-gray">Cosmético</span></td><td>0</td><td>15</td><td>Unid.</td><td>10/05/2025</td><td><span class="badge badge-red">Agotado</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
-              <tr><td class="text-muted">T-005</td><td style="font-weight:500;">Gorra termal logo</td><td><span class="badge badge-gray">Ropa</span></td><td>18</td><td>10</td><td>Unid.</td><td>12/05/2025</td><td><span class="badge badge-green">OK</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
-              <tr><td class="text-muted">T-006</td><td style="font-weight:500;">Poncho de baño</td><td><span class="badge badge-gray">Ropa</span></td><td>7</td><td>20</td><td>Unid.</td><td>08/05/2025</td><td><span class="badge badge-amber">Stock bajo</span></td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>
-            </tbody>
-          </table>
+          <div class="st mb3">Wallets digitales</div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--bd)"><span class="tm">Yape</span><span class="fw5">S/ 820.00</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0"><span class="tm">Plin</span><span class="fw5">S/ 332.00</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600;padding:8px 0;margin-top:4px;border-top:1px solid var(--bd)"><span>Subtotal wallets</span><span style="color:var(--in)">S/ 1,152.00</span></div>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<!-- ═══════════════ PANTALLA: BAÑOS TERMALES ═══════════════ -->
-<div class="screen" id="screen-termales">
-  <div class="app">
-    <div class="sidebar">
-      <div class="sidebar-brand"><h1>Aguas Termales</h1><span>SISTEMA DE GESTIÓN</span></div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Módulos</div>
-        <div class="nav-item active"><i class="ti ti-waves"></i> Baños Termales</div>
-        <div class="nav-item" onclick="showScreen('hospedaje')"><i class="ti ti-bed"></i> Hospedaje</div>
-        <div class="nav-item" onclick="showScreen('mesero')"><i class="ti ti-tools-kitchen-2"></i> Comedor</div>
-        <div class="nav-item" onclick="showScreen('tienda')"><i class="ti ti-shopping-bag"></i> Tienda</div>
-      </div>
-      <div class="sidebar-user"><div class="user-avatar">LA</div><div class="user-info"><p>Luis Apaza</p><span>Recepcionista</span></div></div>
-    </div>
-    <div class="main">
-      <div class="topbar">
-        <span class="topbar-title">Baños Termales — Recepción</span>
-        <div style="display:flex; gap:8px;">
-          <button class="btn btn-primary btn-sm"><i class="ti ti-user-plus"></i> Nuevo ingreso</button>
+  <!-- TAB: CAJA CHICA -->
+  <div class="caja-tab-content" id="ctab-cajachica">
+    <div class="ctab-wrap">
+      <div>
+        <div class="g3 mb4">
+          <div class="met gr"><div class="met-lbl">Apertura de caja</div><div class="met-val">S/ 500.00</div><div class="met-sub">Apertura: 08:00 am</div></div>
+          <div class="met am"><div class="met-lbl">Total egresos</div><div class="met-val">S/ 180.00</div><div class="met-sub">6 movimientos</div></div>
+          <div class="met"><div class="met-lbl">Saldo actual</div><div class="met-val">S/ 320.00</div><div class="met-sub">Disponible en caja</div></div>
         </div>
-      </div>
-      <div class="content">
-        <div class="grid-4 mb-4">
-          <div class="metric green"><div class="metric-label">Aforo actual</div><div class="metric-value">43 / 80</div><div class="metric-sub">54% ocupado</div></div>
-          <div class="metric"><div class="metric-label">Ingresos hoy</div><div class="metric-value">64</div></div>
-          <div class="metric amber"><div class="metric-label">Ingresos hoy</div><div class="metric-value">S/ 1,240</div></div>
-          <div class="metric"><div class="metric-label">Hora pico</div><div class="metric-value">10–12am</div></div>
-        </div>
-
-        <div class="grid-2 mb-4">
-          <!-- Nuevo ingreso -->
-          <div class="card">
-            <div class="section-title mb-3">Registrar nuevo ingreso</div>
-            <div class="form-group">
-              <label class="form-label">Tipo de ingreso</label>
-              <select class="form-control">
-                <option>Individual (1 persona)</option>
-                <option>Pareja (2 personas)</option>
-                <option>Familia (3–5 personas)</option>
-                <option>Grupo (6+ personas)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Cantidad de personas</label>
-              <input type="number" class="form-control" value="2" min="1">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Tipo de servicio</label>
-              <select class="form-control">
-                <option>Piscina general — S/ 20.00 / pers.</option>
-                <option>Poza privada — S/ 45.00 / pers.</option>
-                <option>Paquete relajación — S/ 65.00 / pers.</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Observaciones</label>
-              <input type="text" class="form-control" placeholder="Opcional...">
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; padding-top:12px; border-top:1px solid var(--border);">
-              <div><p class="text-xs text-muted">Total estimado</p><p style="font-size:20px; font-weight:600; color:var(--primary);">S/ 40.00</p></div>
-              <button class="btn btn-primary"><i class="ti ti-login"></i> Registrar y cobrar</button>
-            </div>
+        <div class="card mb4">
+          <div class="sh mb3">
+            <div class="st">Registrar egreso</div>
           </div>
-
-          <!-- Tarifas -->
-          <div class="card">
-            <div class="section-title mb-3">Tarifas vigentes</div>
-            <table>
-              <thead><tr><th>Servicio</th><th>Tarifa</th><th>Descripción</th></tr></thead>
-              <tbody>
-                <tr><td style="font-weight:500;">Piscina general</td><td style="font-weight:600; color:var(--primary);">S/ 20.00</td><td class="text-muted">Por persona, tiempo ilimitado</td></tr>
-                <tr><td style="font-weight:500;">Poza privada</td><td style="font-weight:600; color:var(--primary);">S/ 45.00</td><td class="text-muted">Por persona, 1.5 hrs</td></tr>
-                <tr><td style="font-weight:500;">Paquete relajación</td><td style="font-weight:600; color:var(--primary);">S/ 65.00</td><td class="text-muted">Poza + masaje 30min</td></tr>
-                <tr><td style="font-weight:500;">Niño (3–10 años)</td><td style="font-weight:600; color:var(--accent);">S/ 10.00</td><td class="text-muted">Mitad de precio</td></tr>
-                <tr><td style="font-weight:500;">Adulto mayor</td><td style="font-weight:600; color:var(--accent);">S/ 15.00</td><td class="text-muted">Precio especial</td></tr>
-              </tbody>
-            </table>
-            <div style="margin-top:12px; text-align:right;">
-              <button class="btn btn-sm"><i class="ti ti-edit"></i> Editar tarifas</button>
-            </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end">
+            <div><label class="fl">Concepto</label><input type="text" class="fc" placeholder="Ej: Compra de gas"></div>
+            <div><label class="fl">Categoría</label><select class="fc"><option>Insumos</option><option>Servicios</option><option>Limpieza</option><option>Mantenimiento</option><option>Otros</option></select></div>
+            <div><label class="fl">Monto (S/)</label><input type="number" class="fc" placeholder="0.00"></div>
+            <button class="btn btn-a"><i class="ti ti-plus"></i> Registrar</button>
           </div>
         </div>
-
-        <!-- Registro de hoy -->
         <div class="card">
-          <div class="section-header">
-            <div class="section-title">Registro de ingresos — hoy</div>
-            <input type="text" class="form-control" placeholder="Buscar..." style="width:200px;">
+          <div class="sh mb3"><div class="st">Movimientos de caja chica — hoy</div><select class="fc" style="width:130px"><option>Todos</option><option>Egresos</option><option>Ingresos</option></select></div>
+          <table><thead><tr><th>Hora</th><th>Concepto</th><th>Categoría</th><th>Tipo</th><th>Monto</th><th>Registrado por</th><th>Comprobante</th></tr></thead>
+          <tbody>
+            <tr><td>08:00</td><td>Apertura de caja</td><td><span class="b bx">Apertura</span></td><td><span class="b bg">Ingreso</span></td><td class="fw5" style="color:var(--pr)">+ S/ 500.00</td><td class="tm">M. Condori</td><td class="tm">—</td></tr>
+            <tr><td>08:30</td><td>Compra de pan y desayuno personal</td><td><span class="b bx">Alimentación</span></td><td><span class="b br">Egreso</span></td><td class="fw5" style="color:var(--dg)">- S/ 45.00</td><td class="tm">M. Condori</td><td class="tm">Ticket 001</td></tr>
+            <tr><td>09:15</td><td>Compra de gas cocina</td><td><span class="b bx">Insumos</span></td><td><span class="b br">Egreso</span></td><td class="fw5" style="color:var(--dg)">- S/ 60.00</td><td class="tm">M. Condori</td><td class="tm">Boleta 0089</td></tr>
+            <tr><td>10:00</td><td>Limpiador de pisos (urgente)</td><td><span class="b bx">Limpieza</span></td><td><span class="b br">Egreso</span></td><td class="fw5" style="color:var(--dg)">- S/ 35.00</td><td class="tm">L. Apaza</td><td class="tm">Ticket 002</td></tr>
+            <tr><td>10:40</td><td>Cinta adhesiva y materiales</td><td><span class="b bx">Mantenimiento</span></td><td><span class="b br">Egreso</span></td><td class="fw5" style="color:var(--dg)">- S/ 20.00</td><td class="tm">M. Condori</td><td class="tm">—</td></tr>
+            <tr><td>11:10</td><td>Pasajes proveedor</td><td><span class="b bx">Otros</span></td><td><span class="b br">Egreso</span></td><td class="fw5" style="color:var(--dg)">- S/ 20.00</td><td class="tm">J. Ríos</td><td class="tm">—</td></tr>
+          </tbody></table>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card">
+          <div class="st mb3">Estado de caja chica</div>
+          <div style="display:flex;flex-direction:column;gap:0">
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--bd)"><span class="tm">Apertura</span><span class="fw5">S/ 500.00</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--bd)"><span class="tm">Egresos del día</span><span class="fw5" style="color:var(--dg)">- S/ 180.00</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:600;padding:8px 0"><span>Saldo disponible</span><span style="color:var(--pr)">S/ 320.00</span></div>
           </div>
-          <table>
-            <thead><tr><th>#</th><th>Hora</th><th>Tipo</th><th>Servicio</th><th>Personas</th><th>Total</th><th>Pago</th><th>Atendido por</th><th>Comprobante</th></tr></thead>
-            <tbody>
-              <tr><td class="text-muted">064</td><td>10:48</td><td>Pareja</td><td>Piscina general</td><td>2</td><td style="font-weight:500;">S/ 40.00</td><td><span class="badge badge-green">Efectivo</span></td><td class="text-muted">L. Apaza</td><td><button class="btn btn-xs"><i class="ti ti-printer"></i></button></td></tr>
-              <tr><td class="text-muted">063</td><td>10:35</td><td>Familia</td><td>Piscina general</td><td>4</td><td style="font-weight:500;">S/ 80.00</td><td><span class="badge badge-info">Yape</span></td><td class="text-muted">L. Apaza</td><td><button class="btn btn-xs"><i class="ti ti-printer"></i></button></td></tr>
-              <tr><td class="text-muted">062</td><td>10:20</td><td>Individual</td><td>Paquete relajación</td><td>1</td><td style="font-weight:500;">S/ 65.00</td><td><span class="badge badge-green">Efectivo</span></td><td class="text-muted">L. Apaza</td><td><button class="btn btn-xs"><i class="ti ti-printer"></i></button></td></tr>
-              <tr><td class="text-muted">061</td><td>10:05</td><td>Grupo</td><td>Piscina general</td><td>6</td><td style="font-weight:500;">S/ 120.00</td><td><span class="badge badge-amber">Tarjeta</span></td><td class="text-muted">L. Apaza</td><td><button class="btn btn-xs"><i class="ti ti-printer"></i></button></td></tr>
-            </tbody>
-          </table>
+          <div style="margin-top:12px;padding:10px;background:var(--wnl);border-radius:var(--r);border-left:3px solid var(--wn)">
+            <p style="font-size:12px;font-weight:500;color:var(--wn)"><i class="ti ti-alert-triangle" style="vertical-align:-2px"></i> Saldo bajo</p>
+            <p class="txs tm" style="margin-top:2px">Se recomienda recargar caja chica pronto</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="st mb2">Egresos por categoría</div>
+          <div style="display:flex;flex-direction:column;gap:7px;margin-top:8px">
+            <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span class="tm">Alimentación</span><span class="fw5">S/ 45</span></div><div style="height:5px;background:var(--sf2);border-radius:3px"><div style="height:5px;background:var(--ac);border-radius:3px;width:65%"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span class="tm">Insumos</span><span class="fw5">S/ 60</span></div><div style="height:5px;background:var(--sf2);border-radius:3px"><div style="height:5px;background:var(--pr);border-radius:3px;width:85%"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span class="tm">Limpieza</span><span class="fw5">S/ 35</span></div><div style="height:5px;background:var(--sf2);border-radius:3px"><div style="height:5px;background:var(--pr);border-radius:3px;width:50%;opacity:.7"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span class="tm">Mantenimiento</span><span class="fw5">S/ 20</span></div><div style="height:5px;background:var(--sf2);border-radius:3px"><div style="height:5px;background:var(--in);border-radius:3px;width:29%"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span class="tm">Otros</span><span class="fw5">S/ 20</span></div><div style="height:5px;background:var(--sf2);border-radius:3px"><div style="height:5px;background:var(--tx3);border-radius:3px;width:29%"></div></div></div>
+          </div>
+        </div>
+        <button class="btn btn-p btn-full"><i class="ti ti-plus"></i> Recargar caja chica</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: CIERRE DE CAJA -->
+  <div class="caja-tab-content" id="ctab-cierre">
+    <div class="ctab-wrap">
+      <div>
+        <div class="card mb4">
+          <div class="sh mb3">
+            <div class="st">Cuadre del día — 25/05/2025</div>
+            <span class="b ba">Caja abierta</span>
+          </div>
+          <div class="g3 mb4">
+            <div class="met gr"><div class="met-lbl">Sistema registra</div><div class="met-val">S/ 3,840</div><div class="met-sub">Total ventas del día</div></div>
+            <div class="met am"><div class="met-lbl">Contado físico</div><div class="met-val">S/ 1,920</div><div class="met-sub">Solo efectivo</div></div>
+            <div class="met"><div class="met-lbl">Diferencia</div><div class="met-val" style="color:var(--pr)">S/ 0.00</div><div class="met-sub">Sin descuadre</div></div>
+          </div>
+          <table><thead><tr><th>Concepto</th><th>Según sistema</th><th>Contado/Verificado</th><th>Diferencia</th><th>Estado</th></tr></thead>
+          <tbody>
+            <tr><td class="fw5">Efectivo en caja</td><td>S/ 1,920.00</td><td><input type="number" class="fc" value="1920" style="width:120px"></td><td style="color:var(--pr)" class="fw5">S/ 0.00</td><td><span class="b bg">✓ Cuadrado</span></td></tr>
+            <tr><td class="fw5">Yape recibido</td><td>S/ 820.00</td><td><input type="number" class="fc" value="820" style="width:120px"></td><td style="color:var(--pr)" class="fw5">S/ 0.00</td><td><span class="b bg">✓ Cuadrado</span></td></tr>
+            <tr><td class="fw5">Plin recibido</td><td>S/ 332.00</td><td><input type="number" class="fc" value="332" style="width:120px"></td><td style="color:var(--pr)" class="fw5">S/ 0.00</td><td><span class="b bg">✓ Cuadrado</span></td></tr>
+            <tr><td class="fw5">Tarjeta</td><td>S/ 768.00</td><td><input type="number" class="fc" value="768" style="width:120px"></td><td style="color:var(--pr)" class="fw5">S/ 0.00</td><td><span class="b bg">✓ Cuadrado</span></td></tr>
+            <tr><td class="fw5">Egresos caja chica</td><td>S/ 180.00</td><td><input type="number" class="fc" value="180" style="width:120px"></td><td style="color:var(--pr)" class="fw5">S/ 0.00</td><td><span class="b bg">✓ Cuadrado</span></td></tr>
+          </tbody></table>
+        </div>
+        <div class="card">
+          <div class="st mb3">Resumen por ambiente</div>
+          <table><thead><tr><th>Ambiente</th><th>N° transacciones</th><th>Efectivo</th><th>Wallets</th><th>Tarjeta</th><th>Total</th></tr></thead>
+          <tbody>
+            <tr><td class="fw5">Baños Termales</td><td>64</td><td>S/ 540</td><td>S/ 480</td><td>S/ 220</td><td class="fw5" style="color:var(--pr)">S/ 1,240</td></tr>
+            <tr><td class="fw5">Hospedaje</td><td>7</td><td>S/ 840</td><td>S/ 420</td><td>S/ 420</td><td class="fw5" style="color:var(--pr)">S/ 1,680</td></tr>
+            <tr><td class="fw5">Comedor</td><td>38</td><td>S/ 360</td><td>S/ 180</td><td>S/ 80</td><td class="fw5" style="color:var(--pr)">S/ 620</td></tr>
+            <tr><td class="fw5">Tienda</td><td>33</td><td>S/ 180</td><td>S/ 72</td><td>S/ 48</td><td class="fw5" style="color:var(--pr)">S/ 300</td></tr>
+            <tr style="background:var(--sf2)"><td class="fw5">TOTAL</td><td class="fw5">142</td><td class="fw5">S/ 1,920</td><td class="fw5">S/ 1,152</td><td class="fw5">S/ 768</td><td class="fw5" style="color:var(--pr);font-size:14px">S/ 3,840</td></tr>
+          </tbody></table>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card">
+          <div class="st mb3">Total general del día</div>
+          <div style="font-size:32px;font-weight:600;color:var(--pr);margin-bottom:4px">S/ 3,840.00</div>
+          <div class="txs tm mb4">Efectivo + Wallets + Tarjeta</div>
+          <div style="display:flex;flex-direction:column;gap:0">
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--bd)"><span class="tm">Apertura caja</span><span class="fw5">S/ 500.00</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--bd)"><span class="tm">Ingresos efectivo</span><span class="fw5" style="color:var(--pr)">+ S/ 1,920.00</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--bd)"><span class="tm">Egresos caja chica</span><span class="fw5" style="color:var(--dg)">- S/ 180.00</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600;padding:8px 0"><span>Efectivo a entregar</span><span style="color:var(--pr)">S/ 2,240.00</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="fg"><label class="fl">Observaciones del cierre</label><textarea class="fc" rows="3" placeholder="Novedades, incidencias del día..."></textarea></div>
+          <div class="fg"><label class="fl">Responsable del cierre</label><input type="text" class="fc" value="María Condori" readonly></div>
+          <button class="btn btn-a btn-full mb2"><i class="ti ti-lock"></i> Cerrar caja del día</button>
+          <button class="btn btn-full"><i class="ti ti-download"></i> Descargar reporte PDF</button>
+        </div>
+        <div class="card">
+          <div class="st mb2">Historial de cierres</div>
+          <div style="display:flex;flex-direction:column;gap:0">
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid var(--bd)"><span class="tm">24/05/2025</span><span class="fw5">S/ 3,420 <span class="b bg" style="margin-left:4px">OK</span></span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid var(--bd)"><span class="tm">23/05/2025</span><span class="fw5">S/ 4,180 <span class="b bg" style="margin-left:4px">OK</span></span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:7px 0"><span class="tm">22/05/2025</span><span class="fw5">S/ 2,960 <span class="b ba" style="margin-left:4px">+S/20 dif.</span></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: ANULACIONES -->
+  <div class="caja-tab-content" id="ctab-anulaciones">
+    <div class="ctab-wrap">
+      <div>
+        <div class="card mb4">
+          <div class="sh mb3">
+            <div class="st">Solicitar anulación</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div><label class="fl">N° de comprobante a anular</label><input type="text" class="fc" placeholder="Ej: B001-0142"></div>
+            <div><label class="fl">Motivo de anulación</label><select class="fc"><option>Error en el monto</option><option>Producto devuelto</option><option>Servicio no prestado</option><option>Error en datos del cliente</option><option>Duplicado</option><option>Otro</option></select></div>
+            <div style="grid-column:1/-1"><label class="fl">Descripción detallada</label><textarea class="fc" rows="2" placeholder="Detalle el motivo de la anulación..."></textarea></div>
+            <div><label class="fl">Clave de autorización (supervisor)</label><input type="password" class="fc" placeholder="••••••"></div>
+            <div style="display:flex;align-items:flex-end"><button class="btn btn-d" style="width:100%;justify-content:center"><i class="ti ti-ban"></i> Solicitar anulación</button></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="sh mb3">
+            <div class="st">Historial de anulaciones</div>
+            <div style="display:flex;gap:8px">
+              <select class="fc" style="width:120px"><option>Hoy</option><option>Esta semana</option><option>Este mes</option></select>
+              <input type="text" class="fc" placeholder="Buscar..." style="width:170px">
+            </div>
+          </div>
+          <table><thead><tr><th>N° Original</th><th>Tipo</th><th>Fecha anulación</th><th>Monto</th><th>Motivo</th><th>Anulado por</th><th>Autorizado por</th><th></th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="fw5" style="color:var(--dg);text-decoration:line-through">B001-0139</td>
+              <td><span class="b bi">Boleta</span></td>
+              <td>25/05 09:45</td>
+              <td class="tm fw5">S/ 35.00</td>
+              <td><span class="b bx">Error en el monto</span></td>
+              <td class="tm">M. Condori</td>
+              <td class="tm">J. Ríos</td>
+              <td><button class="btn btn-xs"><i class="ti ti-eye"></i></button></td>
+            </tr>
+            <tr>
+              <td class="fw5" style="color:var(--dg);text-decoration:line-through">B001-0122</td>
+              <td><span class="b bi">Boleta</span></td>
+              <td>24/05 14:20</td>
+              <td class="tm fw5">S/ 80.00</td>
+              <td><span class="b bx">Producto devuelto</span></td>
+              <td class="tm">M. Condori</td>
+              <td class="tm">J. Ríos</td>
+              <td><button class="btn btn-xs"><i class="ti ti-eye"></i></button></td>
+            </tr>
+            <tr>
+              <td class="fw5" style="color:var(--dg);text-decoration:line-through">F001-0031</td>
+              <td><span class="b ba">Factura</span></td>
+              <td>23/05 11:05</td>
+              <td class="tm fw5">S/ 186.00</td>
+              <td><span class="b bx">Error datos cliente</span></td>
+              <td class="tm">M. Condori</td>
+              <td class="tm">J. Ríos</td>
+              <td><button class="btn btn-xs"><i class="ti ti-eye"></i></button></td>
+            </tr>
+          </tbody></table>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card">
+          <div class="st mb3">Estadísticas anulaciones</div>
+          <div style="display:flex;flex-direction:column;gap:0">
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--bd)"><span class="tm">Hoy</span><span class="fw5" style="color:var(--dg)">2 anulaciones</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--bd)"><span class="tm">Esta semana</span><span class="fw5">7 anulaciones</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--bd)"><span class="tm">Este mes</span><span class="fw5">18 anulaciones</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0"><span class="tm">Monto anulado mes</span><span class="fw5" style="color:var(--dg)">S/ 1,240</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="st mb3">Motivos frecuentes</div>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span class="tm">Error en el monto</span><span class="fw5">38%</span></div><div style="height:5px;background:var(--sf2);border-radius:3px"><div style="height:5px;background:var(--dg);border-radius:3px;width:38%"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span class="tm">Producto devuelto</span><span class="fw5">28%</span></div><div style="height:5px;background:var(--sf2);border-radius:3px"><div style="height:5px;background:var(--dg);border-radius:3px;width:28%;opacity:.8"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span class="tm">Servicio no prestado</span><span class="fw5">20%</span></div><div style="height:5px;background:var(--sf2);border-radius:3px"><div style="height:5px;background:var(--dg);border-radius:3px;width:20%;opacity:.6"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span class="tm">Otros</span><span class="fw5">14%</span></div><div style="height:5px;background:var(--sf2);border-radius:3px"><div style="height:5px;background:var(--tx3);border-radius:3px;width:14%"></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: NOTAS DE VENTA -->
+  <div class="caja-tab-content" id="ctab-notas">
+    <div class="ctab-wrap">
+      <div>
+        <div class="card mb4">
+          <div class="sh mb3">
+            <div>
+              <div class="st">¿Qué es una nota de venta?</div>
+              <p class="txs tm mt3">Documento interno para ventas donde el cliente no requiere boleta ni factura. No tiene validez tributaria pero sí es un registro interno de la operación.</p>
+            </div>
+            <button class="btn btn-p btn-sm"><i class="ti ti-plus"></i> Nueva nota de venta</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:13px;flex-wrap:wrap;align-items:center">
+            <input type="text" class="fc" placeholder="Buscar N° nota..." style="width:190px">
+            <select class="fc" style="width:120px"><option>Todos los orígenes</option><option>Baños</option><option>Comedor</option><option>Tienda</option></select>
+            <select class="fc" style="width:115px"><option>Hoy</option><option>Esta semana</option><option>Este mes</option></select>
+          </div>
+          <table><thead><tr><th>N° Nota</th><th>Fecha / Hora</th><th>Origen</th><th>Descripción</th><th>Pago</th><th>Total</th><th>Emitido por</th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="fw5" style="color:var(--tx2)">NV-0028</td><td>25/05 10:50</td><td class="tm">Tienda</td><td>Venta artículos varios</td><td><span class="b bg">Efectivo</span></td><td class="fw5">S/ 23.00</td><td class="tm">A. Torres</td><td><div style="display:flex;gap:4px"><button class="btn btn-xs"><i class="ti ti-printer"></i></button><button class="btn btn-xs"><i class="ti ti-eye"></i></button></div></td></tr>
+            <tr><td class="fw5" style="color:var(--tx2)">NV-0027</td><td>25/05 09:55</td><td class="tm">Baños</td><td>Ingreso sin comprobante — grupo</td><td><span class="b ba">Yape</span></td><td class="fw5">S/ 60.00</td><td class="tm">L. Apaza</td><td><div style="display:flex;gap:4px"><button class="btn btn-xs"><i class="ti ti-printer"></i></button><button class="btn btn-xs"><i class="ti ti-eye"></i></button></div></td></tr>
+            <tr><td class="fw5" style="color:var(--tx2)">NV-0026</td><td>25/05 09:30</td><td class="tm">Comedor</td><td>Consumo mesa 6 — sin comprobante</td><td><span class="b bg">Efectivo</span></td><td class="fw5">S/ 74.00</td><td class="tm">C. Mamani</td><td><div style="display:flex;gap:4px"><button class="btn btn-xs"><i class="ti ti-printer"></i></button><button class="btn btn-xs"><i class="ti ti-eye"></i></button></div></td></tr>
+            <tr><td class="fw5" style="color:var(--tx2)">NV-0025</td><td>24/05 16:40</td><td class="tm">Tienda</td><td>Venta menor — recuerdo</td><td><span class="b bg">Efectivo</span></td><td class="fw5">S/ 25.00</td><td class="tm">A. Torres</td><td><div style="display:flex;gap:4px"><button class="btn btn-xs"><i class="ti ti-printer"></i></button><button class="btn btn-xs"><i class="ti ti-eye"></i></button></div></td></tr>
+          </tbody></table>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card">
+          <div class="st mb3">Resumen notas de venta</div>
+          <div style="display:flex;flex-direction:column;gap:0">
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--bd)"><span class="tm">Emitidas hoy</span><span class="fw5">3</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--bd)"><span class="tm">Total hoy</span><span class="fw5" style="color:var(--pr)">S/ 157.00</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid var(--bd)"><span class="tm">Esta semana</span><span class="fw5">18</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0"><span class="tm">Total semana</span><span class="fw5" style="color:var(--pr)">S/ 924.00</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="st mb3">Por origen — hoy</div>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--prl);border-radius:6px"><span style="font-size:13px">Baños Termales</span><span class="fw5" style="color:var(--pr)">S/ 60</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--wnl);border-radius:6px"><span style="font-size:13px">Comedor</span><span class="fw5" style="color:var(--wn)">S/ 74</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--sf2);border-radius:6px"><span style="font-size:13px">Tienda</span><span class="fw5" style="color:var(--tx2)">S/ 23</span></div>
+          </div>
+        </div>
+        <div class="card" style="border-left:3px solid var(--wn)">
+          <p class="fw5" style="font-size:12px;color:var(--wn);margin-bottom:6px"><i class="ti ti-alert-triangle" style="vertical-align:-2px"></i> Aviso importante</p>
+          <p class="txs tm">Las notas de venta no tienen validez tributaria ante SUNAT. Use boletas o facturas para sustentar operaciones que el cliente necesite declarar.</p>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════ PANTALLA: HOSPEDAJE ═══════════════ -->
-<div class="screen" id="screen-hospedaje">
-  <div class="app">
-    <div class="sidebar">
-      <div class="sidebar-brand"><h1>Aguas Termales</h1><span>SISTEMA DE GESTIÓN</span></div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Módulos</div>
-        <div class="nav-item" onclick="showScreen('termales')"><i class="ti ti-waves"></i> Baños Termales</div>
-        <div class="nav-item active"><i class="ti ti-bed"></i> Hospedaje</div>
-        <div class="nav-item" onclick="showScreen('mesero')"><i class="ti ti-tools-kitchen-2"></i> Comedor</div>
+<!-- ░░░░░░░░░░ REPORTES ░░░░░░░░░░ -->
+<div class="panel" id="panel-reportes">
+  <div class="tabs"><div class="tab on">General</div><div class="tab">Baños Termales</div><div class="tab">Hospedaje</div><div class="tab">Comedor</div><div class="tab">Tienda</div><div class="tab">Inventario</div><div class="tab">Caja</div></div>
+  <div class="g4 mb4">
+    <div class="met gr"><div class="met-lbl">Ingresos del día</div><div class="met-val">S/ 3,840</div><div class="met-sub">↑ 12% vs ayer</div></div>
+    <div class="met"><div class="met-lbl">Transacciones</div><div class="met-val">142</div></div>
+    <div class="met am"><div class="met-lbl">Ticket promedio</div><div class="met-val">S/ 27.04</div></div>
+    <div class="met"><div class="met-lbl">Clientes atendidos</div><div class="met-val">138</div></div>
+  </div>
+  <div class="g2 mb4">
+    <div class="card">
+      <div class="card-title">Ingresos por día — semana</div>
+      <div style="display:flex;align-items:flex-end;gap:6px;height:110px;padding-top:10px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1"><div style="width:100%;background:var(--pr);border-radius:3px 3px 0 0;height:65px;opacity:.85"></div><span style="font-size:10px;color:var(--tx3)">Lun</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1"><div style="width:100%;background:var(--pr);border-radius:3px 3px 0 0;height:50px;opacity:.7"></div><span style="font-size:10px;color:var(--tx3)">Mar</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1"><div style="width:100%;background:var(--pr);border-radius:3px 3px 0 0;height:75px;opacity:.8"></div><span style="font-size:10px;color:var(--tx3)">Mié</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1"><div style="width:100%;background:var(--pr);border-radius:3px 3px 0 0;height:55px;opacity:.65"></div><span style="font-size:10px;color:var(--tx3)">Jue</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1"><div style="width:100%;background:var(--ac);border-radius:3px 3px 0 0;height:90px"></div><span style="font-size:10px;color:var(--tx3)">Vie</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1"><div style="width:100%;background:var(--ac);border-radius:3px 3px 0 0;height:105px"></div><span style="font-size:10px;color:var(--tx3)">Sáb</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1"><div style="width:100%;background:var(--ac);border-radius:3px 3px 0 0;height:88px"></div><span style="font-size:10px;color:var(--tx3);font-weight:600">Dom</span></div>
       </div>
-      <div class="sidebar-user"><div class="user-avatar">LA</div><div class="user-info"><p>Luis Apaza</p><span>Recepcionista</span></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--tx3)"><span>Total semana:</span><span class="fw5" style="color:var(--tx)">S/ 24,180.00</span></div>
     </div>
-    <div class="main">
-      <div class="topbar">
-        <span class="topbar-title">Hospedaje — Recepción</span>
-        <div style="display:flex; gap:8px;">
-          <button class="btn btn-sm"><i class="ti ti-logout"></i> Check-out</button>
-          <button class="btn btn-primary btn-sm"><i class="ti ti-login"></i> Check-in</button>
-        </div>
-      </div>
-      <div class="content">
-        <div class="grid-4 mb-4">
-          <div class="metric amber"><div class="metric-label">Ocupadas</div><div class="metric-value">7 / 12</div><div class="metric-sub">58% ocupación</div></div>
-          <div class="metric green"><div class="metric-label">Disponibles</div><div class="metric-value">3</div></div>
-          <div class="metric"><div class="metric-label">En limpieza</div><div class="metric-value">1</div></div>
-          <div class="metric"><div class="metric-label">Check-outs hoy</div><div class="metric-value">2</div></div>
-        </div>
-
-        <div class="grid-2 mb-4">
-          <div class="card">
-            <div class="section-title mb-3">Mapa de habitaciones</div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
-              <span style="display:flex; align-items:center; gap:5px; font-size:12px;"><span style="width:12px;height:12px;background:var(--success-light);border-radius:2px;display:inline-block;"></span> Libre</span>
-              <span style="display:flex; align-items:center; gap:5px; font-size:12px;"><span style="width:12px;height:12px;background:var(--danger-light);border-radius:2px;display:inline-block;"></span> Ocupada</span>
-              <span style="display:flex; align-items:center; gap:5px; font-size:12px;"><span style="width:12px;height:12px;background:var(--warning-light);border-radius:2px;display:inline-block;"></span> Limpieza</span>
-              <span style="display:flex; align-items:center; gap:5px; font-size:12px;"><span style="width:12px;height:12px;background:var(--surface2);border-radius:2px;display:inline-block;"></span> Mantenimiento</span>
-            </div>
-            <div class="room-grid">
-              <div class="room-card ocupada"><div class="room-num" style="color:var(--danger);">01</div><div class="room-type">Matrimonial</div><div class="room-status">Ocupada</div></div>
-              <div class="room-card ocupada"><div class="room-num" style="color:var(--danger);">02</div><div class="room-type">Simple</div><div class="room-status">Ocupada</div></div>
-              <div class="room-card libre"><div class="room-num" style="color:var(--success);">03</div><div class="room-type">Familiar</div><div class="room-status">Libre</div></div>
-              <div class="room-card ocupada"><div class="room-num" style="color:var(--danger);">04</div><div class="room-type">Matrimonial</div><div class="room-status">Salida hoy</div></div>
-              <div class="room-card libre"><div class="room-num" style="color:var(--success);">05</div><div class="room-type">Simple</div><div class="room-status">Libre</div></div>
-              <div class="room-card ocupada"><div class="room-num" style="color:var(--danger);">06</div><div class="room-type">Simple</div><div class="room-status">Ocupada</div></div>
-              <div class="room-card ocupada"><div class="room-num" style="color:var(--danger);">07</div><div class="room-type">Familiar</div><div class="room-status">Ocupada</div></div>
-              <div class="room-card ocupada"><div class="room-num" style="color:var(--danger);">08</div><div class="room-type">Matrimonial</div><div class="room-status">Ocupada</div></div>
-              <div class="room-card limpieza"><div class="room-num" style="color:var(--warning);">09</div><div class="room-type">Simple</div><div class="room-status">Limpieza</div></div>
-              <div class="room-card libre"><div class="room-num" style="color:var(--success);">10</div><div class="room-type">Simple</div><div class="room-status">Libre</div></div>
-              <div class="room-card ocupada"><div class="room-num" style="color:var(--danger);">11</div><div class="room-type">Familiar</div><div class="room-status">Ocupada</div></div>
-              <div class="room-card ocupada"><div class="room-num" style="color:var(--danger);">12</div><div class="room-type">Suite</div><div class="room-status">Ocupada</div></div>
-            </div>
-          </div>
-
-          <!-- Checkins activos -->
-          <div class="card">
-            <div class="section-title mb-3">Huéspedes activos</div>
-            <div style="display:flex; flex-direction:column; gap:8px;">
-              <div style="border:1px solid var(--border); border-radius:var(--radius); padding:12px;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-                  <span style="font-weight:500; font-size:13px;">Hab. 08 — Matrimonial</span>
-                  <span class="badge badge-green">Activo</span>
-                </div>
-                <p style="font-size:13px;">Familia Gutiérrez <span class="text-muted">(2 adultos, 1 niño)</span></p>
-                <div style="display:flex; gap:12px; margin-top:6px; font-size:12px; color:var(--text2);">
-                  <span><i class="ti ti-login" style="vertical-align:-2px;"></i> Check-in: 25/05</span>
-                  <span><i class="ti ti-logout" style="vertical-align:-2px;"></i> Check-out: 27/05</span>
-                </div>
-                <div style="margin-top:8px; display:flex; gap:6px;">
-                  <button class="btn btn-xs"><i class="ti ti-eye"></i> Ver detalle</button>
-                  <button class="btn btn-xs btn-accent"><i class="ti ti-logout"></i> Check-out</button>
-                </div>
-              </div>
-              <div style="border:1px solid var(--border); border-radius:var(--radius); padding:12px;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-                  <span style="font-weight:500; font-size:13px;">Hab. 04 — Matrimonial</span>
-                  <span class="badge badge-amber">Salida hoy</span>
-                </div>
-                <p style="font-size:13px;">Sr. Ramírez <span class="text-muted">(2 adultos)</span></p>
-                <div style="display:flex; gap:12px; margin-top:6px; font-size:12px; color:var(--text2);">
-                  <span><i class="ti ti-login" style="vertical-align:-2px;"></i> Check-in: 23/05</span>
-                  <span><i class="ti ti-logout" style="vertical-align:-2px;"></i> Check-out: 25/05</span>
-                </div>
-                <div style="margin-top:8px; display:flex; gap:6px;">
-                  <button class="btn btn-xs"><i class="ti ti-eye"></i> Ver detalle</button>
-                  <button class="btn btn-xs btn-primary"><i class="ti ti-logout"></i> Hacer check-out</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div class="card">
+      <div class="card-title">Platillos más vendidos — Comedor</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Trucha frita</span><span class="fw5">68</span></div><div style="height:5px;background:var(--sf2);border-radius:3px"><div style="height:5px;background:var(--pr);border-radius:3px;width:85%"></div></div></div>
+        <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Caldo de gallina</span><span class="fw5">54</span></div><div style="height:5px;background:var(--sf2);border-radius:3px"><div style="height:5px;background:var(--pr);border-radius:3px;width:68%;opacity:.85"></div></div></div>
+        <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Lomo saltado</span><span class="fw5">42</span></div><div style="height:5px;background:var(--sf2);border-radius:3px"><div style="height:5px;background:var(--ac);border-radius:3px;width:53%"></div></div></div>
+        <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Menú del día</span><span class="fw5">38</span></div><div style="height:5px;background:var(--sf2);border-radius:3px"><div style="height:5px;background:var(--ac);border-radius:3px;width:47%;opacity:.8"></div></div></div>
+        <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Ají de gallina</span><span class="fw5">29</span></div><div style="height:5px;background:var(--sf2);border-radius:3px"><div style="height:5px;background:var(--tx3);border-radius:3px;width:36%"></div></div></div>
       </div>
     </div>
   </div>
-</div>
-
-<!-- ═══════════════ PANTALLA: COMEDOR MESERO ═══════════════ -->
-<div class="screen" id="screen-mesero">
-  <div class="app">
-    <div class="sidebar">
-      <div class="sidebar-brand"><h1>Aguas Termales</h1><span>SISTEMA DE GESTIÓN</span></div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Comedor</div>
-        <div class="nav-item active"><i class="ti ti-tools-kitchen-2"></i> Vista Mesero</div>
-        <div class="nav-item" onclick="showScreen('cocina')"><i class="ti ti-chef-hat"></i> Vista Cocina</div>
-      </div>
-      <div class="sidebar-user"><div class="user-avatar">CM</div><div class="user-info"><p>Carlos Mamani</p><span>Mesero</span></div></div>
-    </div>
-    <div class="main">
-      <div class="topbar">
-        <span class="topbar-title">Comedor — Vista Mesero</span>
-        <div style="display:flex; gap:8px;">
-          <span class="badge badge-green"><span class="dot dot-green"></span> 4 mesas ocupadas</span>
-          <span class="badge badge-amber"><span class="dot dot-amber"></span> 2 por pagar</span>
-        </div>
-      </div>
-      <div class="content">
-        <div class="grid-2">
-          <div class="card">
-            <div class="section-title mb-3">Mapa de mesas</div>
-            <div class="table-grid">
-              <div class="mesa-card libre"><div class="mesa-num" style="font-size:24px;">🍽️</div><div style="font-weight:600; font-size:16px;">M1</div><div class="mesa-info">4 personas</div><div class="mesa-status" style="color:var(--success);">Libre</div></div>
-              <div class="mesa-card ocupada"><div class="mesa-num" style="font-size:24px;">🍽️</div><div style="font-weight:600; font-size:16px;">M2</div><div class="mesa-info">2 personas</div><div class="mesa-status" style="color:var(--danger);">Ocupada</div></div>
-              <div class="mesa-card ocupada"><div class="mesa-num" style="font-size:24px;">🍽️</div><div style="font-weight:600; font-size:16px;">M3</div><div class="mesa-info">4 personas</div><div class="mesa-status" style="color:var(--danger);">Ocupada</div></div>
-              <div class="mesa-card libre"><div class="mesa-num" style="font-size:24px;">🍽️</div><div style="font-weight:600; font-size:16px;">M4</div><div class="mesa-info">6 personas</div><div class="mesa-status" style="color:var(--success);">Libre</div></div>
-              <div class="mesa-card por-pagar"><div class="mesa-num" style="font-size:24px;">🍽️</div><div style="font-weight:600; font-size:16px;">M5</div><div class="mesa-info">4 personas</div><div class="mesa-status" style="color:var(--warning);">Por pagar</div></div>
-              <div class="mesa-card libre"><div class="mesa-num" style="font-size:24px;">🍽️</div><div style="font-weight:600; font-size:16px;">M6</div><div class="mesa-info">2 personas</div><div class="mesa-status" style="color:var(--success);">Libre</div></div>
-              <div class="mesa-card ocupada"><div class="mesa-num" style="font-size:24px;">🍽️</div><div style="font-weight:600; font-size:16px;">M7</div><div class="mesa-info">4 personas</div><div class="mesa-status" style="color:var(--danger);">Ocupada</div></div>
-              <div class="mesa-card por-pagar"><div class="mesa-num" style="font-size:24px;">🍽️</div><div style="font-weight:600; font-size:16px;">M8</div><div class="mesa-info">4 personas</div><div class="mesa-status" style="color:var(--warning);">Por pagar</div></div>
-              <div class="mesa-card libre"><div class="mesa-num" style="font-size:24px;">🍽️</div><div style="font-weight:600; font-size:16px;">M9</div><div class="mesa-info">6 personas</div><div class="mesa-status" style="color:var(--success);">Libre</div></div>
-              <div class="mesa-card ocupada"><div class="mesa-num" style="font-size:24px;">🍽️</div><div style="font-weight:600; font-size:16px;">M10</div><div class="mesa-info">2 personas</div><div class="mesa-status" style="color:var(--danger);">Ocupada</div></div>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="section-title mb-3">Tomar pedido — Mesa 3</div>
-            <div class="tabs" style="margin-bottom:12px;">
-              <div class="tab active">Entradas</div>
-              <div class="tab">Fondos</div>
-              <div class="tab">Bebidas</div>
-              <div class="tab">Postres</div>
-            </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
-              <div style="border:1px solid var(--border); border-radius:var(--radius); padding:10px; cursor:pointer; transition:all 0.12s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
-                <div style="font-size:13px; font-weight:500;">Trucha frita</div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;"><span style="font-size:14px; font-weight:600; color:var(--primary);">S/ 28</span><button class="btn btn-xs btn-primary"><i class="ti ti-plus"></i></button></div>
-              </div>
-              <div style="border:1px solid var(--border); border-radius:var(--radius); padding:10px; cursor:pointer;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
-                <div style="font-size:13px; font-weight:500;">Caldo de gallina</div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;"><span style="font-size:14px; font-weight:600; color:var(--primary);">S/ 18</span><button class="btn btn-xs btn-primary"><i class="ti ti-plus"></i></button></div>
-              </div>
-              <div style="border:1px solid var(--border); border-radius:var(--radius); padding:10px; cursor:pointer;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
-                <div style="font-size:13px; font-weight:500;">Lomo saltado</div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;"><span style="font-size:14px; font-weight:600; color:var(--primary);">S/ 32</span><button class="btn btn-xs btn-primary"><i class="ti ti-plus"></i></button></div>
-              </div>
-              <div style="border:1px solid var(--border); border-radius:var(--radius); padding:10px; cursor:pointer;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border)'">
-                <div style="font-size:13px; font-weight:500;">Ají de gallina</div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;"><span style="font-size:14px; font-weight:600; color:var(--primary);">S/ 25</span><button class="btn btn-xs btn-primary"><i class="ti ti-plus"></i></button></div>
-              </div>
-            </div>
-            <div style="border:1px solid var(--border); border-radius:var(--radius); padding:12px;">
-              <div class="section-title mb-2" style="font-size:13px;">Pedido actual — Mesa 3</div>
-              <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border); font-size:13px;"><span>2x Trucha frita</span><span style="font-weight:500;">S/ 56.00</span></div>
-              <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--border); font-size:13px;"><span>1x Caldo de gallina</span><span style="font-weight:500;">S/ 18.00</span></div>
-              <div style="display:flex; justify-content:space-between; padding:8px 0; font-size:15px; font-weight:600;"><span>Total</span><span style="color:var(--primary);">S/ 74.00</span></div>
-              <div style="display:flex; gap:8px; margin-top:6px;">
-                <button class="btn btn-sm" style="flex:1; justify-content:center;"><i class="ti ti-note"></i> Agregar nota</button>
-                <button class="btn btn-primary btn-sm" style="flex:1; justify-content:center;"><i class="ti ti-send"></i> Enviar a cocina</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+  <div class="g3">
+    <div class="card"><div class="card-title">Servicios más usados — Baños</div><div style="display:flex;flex-direction:column;gap:7px"><div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--prl);border-radius:6px"><span style="font-size:13px">Piscina general</span><span class="fw5" style="color:var(--pr)">78%</span></div><div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--wnl);border-radius:6px"><span style="font-size:13px">Poza privada</span><span class="fw5" style="color:var(--wn)">16%</span></div><div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--sf2);border-radius:6px"><span style="font-size:13px">Paq. relajación</span><span class="fw5" style="color:var(--tx2)">6%</span></div></div><div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bd);font-size:12px;color:var(--tx2)">Hora pico: <span class="fw5" style="color:var(--tx)">10:00 – 12:00</span></div></div>
+    <div class="card"><div class="card-title">Ocupación hospedaje — mes</div><div style="display:flex;align-items:center;gap:16px"><div style="text-align:center"><div style="font-size:32px;font-weight:600;color:var(--pr)">72%</div><div style="font-size:11px;color:var(--tx2)">Tasa promedio</div></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;font-size:12px"><span class="tm">Simple</span><span>68%</span></div><div style="display:flex;justify-content:space-between;font-size:12px"><span class="tm">Matrimonial</span><span>81%</span></div><div style="display:flex;justify-content:space-between;font-size:12px"><span class="tm">Familiar</span><span>75%</span></div><div style="display:flex;justify-content:space-between;font-size:12px"><span class="tm">Suite</span><span>58%</span></div></div></div></div>
+    <div class="card"><div class="card-title">Más vendidos — Tienda</div><div style="display:flex;flex-direction:column;gap:0"><div style="display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid var(--bd)"><span>Agua mineral</span><span class="fw5">120 und.</span></div><div style="display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid var(--bd)"><span>Snack mix andino</span><span class="fw5">86 und.</span></div><div style="display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid var(--bd)"><span>Recuerdo artesanal</span><span class="fw5">44 und.</span></div><div style="display:flex;justify-content:space-between;font-size:13px;padding:7px 0"><span>Gorra termal logo</span><span class="fw5">28 und.</span></div></div></div>
   </div>
 </div>
 
-<!-- ═══════════════ PANTALLA: COCINA ═══════════════ -->
-<div class="screen" id="screen-cocina">
-  <div class="app">
-    <div class="sidebar">
-      <div class="sidebar-brand"><h1>Aguas Termales</h1><span>SISTEMA DE GESTIÓN</span></div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Comedor</div>
-        <div class="nav-item" onclick="showScreen('mesero')"><i class="ti ti-tools-kitchen-2"></i> Vista Mesero</div>
-        <div class="nav-item active"><i class="ti ti-chef-hat"></i> Vista Cocina</div>
-      </div>
-      <div class="sidebar-user"><div class="user-avatar">RQ</div><div class="user-info"><p>Rosa Quispe</p><span>Cocinero</span></div></div>
-    </div>
-    <div class="main">
-      <div class="topbar">
-        <span class="topbar-title">Pantalla de Cocina</span>
-        <div style="display:flex; gap:8px; align-items:center;">
-          <span class="badge badge-amber"><i class="ti ti-clock" style="font-size:12px;"></i> 4 pedidos pendientes</span>
-          <span class="topbar-date">10:52 am</span>
-        </div>
-      </div>
-      <div class="content">
-        <div class="grid-3">
-          <div>
-            <div style="font-size:12px; font-weight:500; color:var(--danger); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; display:flex; align-items:center; gap:6px;"><span class="dot dot-red"></span> Pendientes (2)</div>
-            
-            <div class="pedido-card" style="border-left:3px solid var(--danger);">
-              <div class="pedido-header">
-                <div><div class="pedido-mesa">Mesa 3</div><div class="pedido-time">Hace 8 min</div></div>
-                <span class="badge badge-red">Urgente</span>
-              </div>
-              <div class="pedido-item"><span class="item-qty">2x</span><span class="item-name">Trucha frita</span></div>
-              <div class="pedido-item"><span class="item-qty">1x</span><span class="item-name">Caldo de gallina</span></div>
-              <div class="pedido-item"><span class="item-qty">1x</span><span class="item-name">Limonada</span></div>
-              <button class="btn btn-sm btn-accent w-full" style="justify-content:center; margin-top:10px;"><i class="ti ti-player-play"></i> Iniciar preparación</button>
-            </div>
-
-            <div class="pedido-card" style="border-left:3px solid var(--danger);">
-              <div class="pedido-header">
-                <div><div class="pedido-mesa">Mesa 7</div><div class="pedido-time">Hace 3 min</div></div>
-                <span class="badge badge-red">Nuevo</span>
-              </div>
-              <div class="pedido-item"><span class="item-qty">3x</span><span class="item-name">Lomo saltado</span></div>
-              <div class="pedido-item"><span class="item-qty">1x</span><span class="item-name">Ají de gallina</span></div>
-              <button class="btn btn-sm btn-accent w-full" style="justify-content:center; margin-top:10px;"><i class="ti ti-player-play"></i> Iniciar preparación</button>
-            </div>
-          </div>
-
-          <div>
-            <div style="font-size:12px; font-weight:500; color:var(--warning); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; display:flex; align-items:center; gap:6px;"><span class="dot dot-amber"></span> En preparación (2)</div>
-
-            <div class="pedido-card" style="border-left:3px solid var(--warning);">
-              <div class="pedido-header">
-                <div><div class="pedido-mesa">Mesa 2</div><div class="pedido-time">Hace 15 min</div></div>
-                <span class="badge badge-amber">Preparando</span>
-              </div>
-              <div class="pedido-item"><span class="item-qty">2x</span><span class="item-name">Caldo de gallina</span></div>
-              <div class="pedido-item" style="text-decoration:line-through; opacity:0.5;"><span class="item-qty">1x</span><span class="item-name">Chicha morada ✓</span></div>
-              <button class="btn btn-sm btn-primary w-full" style="justify-content:center; margin-top:10px;"><i class="ti ti-check"></i> Marcar como listo</button>
-            </div>
-
-            <div class="pedido-card" style="border-left:3px solid var(--warning);">
-              <div class="pedido-header">
-                <div><div class="pedido-mesa">Mesa 10</div><div class="pedido-time">Hace 10 min</div></div>
-                <span class="badge badge-amber">Preparando</span>
-              </div>
-              <div class="pedido-item"><span class="item-qty">1x</span><span class="item-name">Trucha frita</span></div>
-              <div class="pedido-item"><span class="item-qty">2x</span><span class="item-name">Papas fritas</span></div>
-              <button class="btn btn-sm btn-primary w-full" style="justify-content:center; margin-top:10px;"><i class="ti ti-check"></i> Marcar como listo</button>
-            </div>
-          </div>
-
-          <div>
-            <div style="font-size:12px; font-weight:500; color:var(--success); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; display:flex; align-items:center; gap:6px;"><span class="dot dot-green"></span> Listos para servir (1)</div>
-
-            <div class="pedido-card" style="border-left:3px solid var(--success); opacity:0.8;">
-              <div class="pedido-header">
-                <div><div class="pedido-mesa">Mesa 5</div><div class="pedido-time">Hace 2 min</div></div>
-                <span class="badge badge-green">Listo</span>
-              </div>
-              <div class="pedido-item"><span class="item-qty">4x</span><span class="item-name">Menú del día</span></div>
-              <div class="pedido-item"><span class="item-qty">4x</span><span class="item-name">Chicha morada</span></div>
-              <button class="btn btn-sm w-full" style="justify-content:center; margin-top:10px; background:var(--success-light); color:var(--success);"><i class="ti ti-check"></i> Servido — cerrar</button>
-            </div>
-
-            <div style="margin-top:20px; padding:14px; background:var(--surface2); border-radius:var(--radius);">
-              <p style="font-size:12px; font-weight:500; color:var(--text2); margin-bottom:8px;">Resumen del turno</p>
-              <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span class="text-muted">Pedidos completados</span><span class="fw-500">24</span></div>
-              <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span class="text-muted">Tiempo prom. preparación</span><span class="fw-500">14 min</span></div>
-              <div style="display:flex; justify-content:space-between; font-size:13px;"><span class="text-muted">Platillo más pedido</span><span class="fw-500">Trucha frita</span></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════ PANTALLA: TIENDA POS ═══════════════ -->
-<div class="screen" id="screen-tienda">
-  <div class="app">
-    <div class="sidebar">
-      <div class="sidebar-brand"><h1>Aguas Termales</h1><span>SISTEMA DE GESTIÓN</span></div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Módulos</div>
-        <div class="nav-item active"><i class="ti ti-shopping-bag"></i> Tienda</div>
-        <div class="nav-item" onclick="showScreen('inventario')"><i class="ti ti-box"></i> Inventario</div>
-      </div>
-      <div class="sidebar-user"><div class="user-avatar">AT</div><div class="user-info"><p>Ana Torres</p><span>Enc. Tienda</span></div></div>
-    </div>
-    <div class="main">
-      <div class="topbar">
-        <span class="topbar-title">Tienda — Punto de Venta</span>
-        <span class="badge badge-green">Caja abierta</span>
-      </div>
-      <div class="content">
-        <div class="pos-layout">
-          <div>
-            <div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
-              <button class="inv-tab active">Todos</button>
-              <button class="inv-tab">Bebidas</button>
-              <button class="inv-tab">Alimentos</button>
-              <button class="inv-tab">Artesanía</button>
-              <button class="inv-tab">Cosmético</button>
-              <button class="inv-tab">Ropa</button>
-              <input type="text" class="form-control" placeholder="Buscar producto..." style="width:160px; margin-left:auto;">
-            </div>
-            <div class="pos-products">
-              <div class="pos-product"><div class="p-name">Agua mineral 600ml</div><div class="p-price">S/ 3.00</div><div class="p-stock">Stock: 145</div></div>
-              <div class="pos-product"><div class="p-name">Snack mix andino</div><div class="p-price">S/ 8.00</div><div class="p-stock">Stock: 38</div></div>
-              <div class="pos-product"><div class="p-name">Recuerdo artesanal</div><div class="p-price">S/ 25.00</div><div class="p-stock">Stock: 22</div></div>
-              <div class="pos-product" style="opacity:0.5; cursor:not-allowed;"><div class="p-name">Crema termal 50ml</div><div class="p-price">S/ 35.00</div><div class="p-stock" style="color:var(--danger);">Sin stock</div></div>
-              <div class="pos-product"><div class="p-name">Gorra termal logo</div><div class="p-price">S/ 20.00</div><div class="p-stock">Stock: 18</div></div>
-              <div class="pos-product"><div class="p-name">Poncho de baño</div><div class="p-price">S/ 45.00</div><div class="p-stock" style="color:var(--warning);">Stock: 7</div></div>
-              <div class="pos-product"><div class="p-name">Chicha morada 500ml</div><div class="p-price">S/ 5.00</div><div class="p-stock">Stock: 60</div></div>
-              <div class="pos-product"><div class="p-name">Herboristería termal</div><div class="p-price">S/ 18.00</div><div class="p-stock">Stock: 14</div></div>
-              <div class="pos-product"><div class="p-name">Foto recuerdo impresa</div><div class="p-price">S/ 12.00</div><div class="p-stock">Stock: 200</div></div>
-            </div>
-          </div>
-
-          <div class="card" style="height:fit-content; position:sticky; top:0;">
-            <div class="section-title mb-3">Venta actual</div>
-            <div style="min-height:140px; border:1px dashed var(--border); border-radius:var(--radius); padding:12px; margin-bottom:12px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border); font-size:13px;">
-                <span>2x Agua mineral 600ml</span>
-                <div style="display:flex; align-items:center; gap:8px;"><span style="font-weight:500;">S/ 6.00</span><button class="btn btn-xs" style="padding:2px 6px;"><i class="ti ti-trash" style="font-size:12px;"></i></button></div>
-              </div>
-              <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border); font-size:13px;">
-                <span>1x Recuerdo artesanal</span>
-                <div style="display:flex; align-items:center; gap:8px;"><span style="font-weight:500;">S/ 25.00</span><button class="btn btn-xs" style="padding:2px 6px;"><i class="ti ti-trash" style="font-size:12px;"></i></button></div>
-              </div>
-              <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; font-size:13px;">
-                <span>1x Snack mix andino</span>
-                <div style="display:flex; align-items:center; gap:8px;"><span style="font-weight:500;">S/ 8.00</span><button class="btn btn-xs" style="padding:2px 6px;"><i class="ti ti-trash" style="font-size:12px;"></i></button></div>
-              </div>
-            </div>
-
-            <div style="border-top:1px solid var(--border); padding-top:12px; margin-bottom:12px;">
-              <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px;"><span class="text-muted">Subtotal</span><span>S/ 39.00</span></div>
-              <div style="display:flex; justify-content:space-between; font-size:15px; font-weight:600;"><span>Total</span><span style="color:var(--primary);">S/ 39.00</span></div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Medio de pago</label>
-              <select class="form-control">
-                <option>Efectivo</option>
-                <option>Yape / Plin</option>
-                <option>Tarjeta</option>
-                <option>Mixto</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Comprobante</label>
-              <select class="form-control">
-                <option>Boleta</option>
-                <option>Factura</option>
-                <option>Sin comprobante</option>
-              </select>
-            </div>
-
-            <div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
-              <button class="btn btn-primary" style="justify-content:center;"><i class="ti ti-check"></i> Cobrar S/ 39.00</button>
-              <button class="btn" style="justify-content:center; color:var(--danger);"><i class="ti ti-x"></i> Cancelar venta</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════ PANTALLA: CAJA ═══════════════ -->
-<div class="screen" id="screen-caja">
-  <div class="app">
-    <div class="sidebar">
-      <div class="sidebar-brand"><h1>Aguas Termales</h1><span>SISTEMA DE GESTIÓN</span></div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Gestión</div>
-        <div class="nav-item" onclick="showScreen('inventario')"><i class="ti ti-box"></i> Inventario</div>
-        <div class="nav-item active"><i class="ti ti-printer"></i> Caja y Facturación</div>
-        <div class="nav-item" onclick="showScreen('reportes')"><i class="ti ti-chart-bar"></i> Reportes</div>
-      </div>
-      <div class="sidebar-user"><div class="user-avatar">MC</div><div class="user-info"><p>María Condori</p><span>Cajero</span></div></div>
-    </div>
-    <div class="main">
-      <div class="topbar">
-        <span class="topbar-title">Caja y Facturación</span>
-        <div style="display:flex; gap:8px;">
-          <button class="btn btn-sm btn-accent"><i class="ti ti-lock"></i> Cerrar caja del día</button>
-        </div>
-      </div>
-      <div class="content">
-        <div class="caja-layout">
-          <div>
-            <div class="tabs mb-0">
-              <div class="tab active">Comprobantes</div>
-              <div class="tab">Caja Chica</div>
-              <div class="tab">Cierre de caja</div>
-              <div class="tab">Anulaciones</div>
-            </div>
-
-            <div class="card" style="border-radius:0 var(--radius-lg) var(--radius-lg); border-top:none;">
-              <div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; align-items:center;">
-                <input type="text" class="form-control" placeholder="Buscar N° comprobante..." style="width:220px;">
-                <select class="form-control" style="width:130px;"><option>Todos</option><option>Boleta</option><option>Factura</option></select>
-                <select class="form-control" style="width:130px;"><option>Hoy</option><option>Esta semana</option><option>Este mes</option></select>
-                <button class="btn btn-sm btn-primary" style="margin-left:auto;"><i class="ti ti-printer"></i> Nuevo comprobante</button>
-              </div>
-              <table>
-                <thead><tr><th>N°</th><th>Tipo</th><th>Fecha / Hora</th><th>Origen</th><th>Cliente</th><th>Total</th><th>Pago</th><th>Estado</th><th></th></tr></thead>
-                <tbody>
-                  <tr><td style="font-weight:500; color:var(--info);">B001-0142</td><td><span class="badge badge-info">Boleta</span></td><td>25/05 10:48</td><td class="text-muted">Baños</td><td class="text-muted">S/N</td><td style="font-weight:500;">S/ 40.00</td><td><span class="badge badge-green">Efectivo</span></td><td><span class="badge badge-green">Emitida</span></td><td><button class="btn btn-xs"><i class="ti ti-printer"></i></button></td></tr>
-                  <tr><td style="font-weight:500; color:var(--info);">B001-0141</td><td><span class="badge badge-info">Boleta</span></td><td>25/05 10:35</td><td class="text-muted">Hospedaje</td><td class="text-muted">S/N</td><td style="font-weight:500;">S/ 280.00</td><td><span class="badge badge-amber">Yape</span></td><td><span class="badge badge-green">Emitida</span></td><td><button class="btn btn-xs"><i class="ti ti-printer"></i></button></td></tr>
-                  <tr><td style="font-weight:500; color:var(--info);">F001-0038</td><td><span class="badge badge-amber">Factura</span></td><td>25/05 10:20</td><td class="text-muted">Comedor</td><td>Empresa SAC</td><td style="font-weight:500;">S/ 186.00</td><td><span class="badge badge-gray">Tarjeta</span></td><td><span class="badge badge-green">Emitida</span></td><td><button class="btn btn-xs"><i class="ti ti-printer"></i></button></td></tr>
-                  <tr><td style="font-weight:500; color:var(--danger); text-decoration:line-through;">B001-0139</td><td><span class="badge badge-info">Boleta</span></td><td>25/05 09:45</td><td class="text-muted">Tienda</td><td class="text-muted">S/N</td><td style="font-weight:500; color:var(--text2);">S/ 35.00</td><td><span class="badge badge-green">Efectivo</span></td><td><span class="badge badge-red">Anulada</span></td><td><button class="btn btn-xs"><i class="ti ti-eye"></i></button></td></tr>
-                  <tr><td style="font-weight:500; color:var(--info);">B001-0138</td><td><span class="badge badge-info">Boleta</span></td><td>25/05 09:30</td><td class="text-muted">Baños</td><td class="text-muted">S/N</td><td style="font-weight:500;">S/ 120.00</td><td><span class="badge badge-gray">Tarjeta</span></td><td><span class="badge badge-green">Emitida</span></td><td><button class="btn btn-xs"><i class="ti ti-printer"></i></button></td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Panel resumen de caja -->
-          <div style="display:flex; flex-direction:column; gap:12px;">
-            <div class="card">
-              <div class="section-title mb-3">Estado de caja — hoy</div>
-              <div style="display:flex; flex-direction:column; gap:8px;">
-                <div style="display:flex; justify-content:space-between; font-size:13px; padding:8px 0; border-bottom:1px solid var(--border);"><span class="text-muted">Apertura de caja</span><span class="fw-500">S/ 500.00</span></div>
-                <div style="display:flex; justify-content:space-between; font-size:13px; padding:8px 0; border-bottom:1px solid var(--border);"><span class="text-muted">Ingresos en efectivo</span><span class="fw-500" style="color:var(--success);">+ S/ 1,920.00</span></div>
-                <div style="display:flex; justify-content:space-between; font-size:13px; padding:8px 0; border-bottom:1px solid var(--border);"><span class="text-muted">Egresos caja chica</span><span class="fw-500" style="color:var(--danger);">- S/ 180.00</span></div>
-                <div style="display:flex; justify-content:space-between; font-size:15px; font-weight:600; padding:8px 0;"><span>En caja (efectivo)</span><span style="color:var(--primary);">S/ 2,240.00</span></div>
-              </div>
-            </div>
-
-            <div class="card">
-              <div class="section-title mb-3">Wallets digitales</div>
-              <div style="display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px solid var(--border);"><span class="text-muted">Yape</span><span class="fw-500">S/ 820.00</span></div>
-              <div style="display:flex; justify-content:space-between; font-size:13px; padding:6px 0;"><span class="text-muted">Plin</span><span class="fw-500">S/ 332.00</span></div>
-              <div style="display:flex; justify-content:space-between; font-size:14px; font-weight:600; padding:8px 0; margin-top:4px; border-top:1px solid var(--border);"><span>Subtotal wallets</span><span style="color:var(--info);">S/ 1,152.00</span></div>
-            </div>
-
-            <div class="card">
-              <div class="section-title mb-2">Total del día</div>
-              <div style="font-size:28px; font-weight:600; color:var(--primary); margin-bottom:4px;">S/ 3,840.00</div>
-              <div class="text-xs text-muted">Efectivo + Wallets + Tarjeta</div>
-              <button class="btn btn-sm btn-accent w-full" style="justify-content:center; margin-top:12px;"><i class="ti ti-lock"></i> Hacer cierre de caja</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════ PANTALLA: REPORTES ═══════════════ -->
-<div class="screen" id="screen-reportes">
-  <div class="app">
-    <div class="sidebar">
-      <div class="sidebar-brand"><h1>Aguas Termales</h1><span>SISTEMA DE GESTIÓN</span></div>
-      <div class="sidebar-section">
-        <div class="sidebar-label">Gestión</div>
-        <div class="nav-item" onclick="showScreen('inventario')"><i class="ti ti-box"></i> Inventario</div>
-        <div class="nav-item" onclick="showScreen('caja')"><i class="ti ti-printer"></i> Caja y Facturación</div>
-        <div class="nav-item active"><i class="ti ti-chart-bar"></i> Reportes</div>
-      </div>
-      <div class="sidebar-user"><div class="user-avatar">JR</div><div class="user-info"><p>Juan Ríos</p><span>Administrador</span></div></div>
-    </div>
-    <div class="main">
-      <div class="topbar">
-        <span class="topbar-title">Reportes</span>
-        <div style="display:flex; gap:8px; align-items:center;">
-          <select class="form-control" style="width:130px; height:32px; padding:4px 10px;"><option>Hoy</option><option>Esta semana</option><option>Este mes</option><option>Personalizado</option></select>
-          <button class="btn btn-sm"><i class="ti ti-download"></i> Exportar</button>
-        </div>
-      </div>
-      <div class="content">
-        <div class="tabs mb-0">
-          <div class="tab active">General</div>
-          <div class="tab">Baños Termales</div>
-          <div class="tab">Hospedaje</div>
-          <div class="tab">Comedor</div>
-          <div class="tab">Tienda</div>
-          <div class="tab">Inventario</div>
-          <div class="tab">Caja</div>
-        </div>
-
-        <div style="background:var(--surface); border:1px solid var(--border); border-top:none; border-radius:0 0 var(--radius-lg) var(--radius-lg); padding:20px;">
-          <div class="grid-4 mb-4">
-            <div class="metric green"><div class="metric-label">Ingresos del día</div><div class="metric-value">S/ 3,840</div><div class="metric-sub">↑ 12% vs ayer</div></div>
-            <div class="metric"><div class="metric-label">Total transacciones</div><div class="metric-value">142</div><div class="metric-sub">Boletas + Facturas</div></div>
-            <div class="metric amber"><div class="metric-label">Ticket promedio</div><div class="metric-value">S/ 27.04</div></div>
-            <div class="metric"><div class="metric-label">Clientes atendidos</div><div class="metric-value">138</div></div>
-          </div>
-
-          <div class="grid-2 mb-4">
-            <div class="card">
-              <div class="card-title">Ingresos por ambiente — semana</div>
-              <div style="display:flex; align-items:flex-end; gap:6px; height:120px; padding-top:10px;">
-                <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;"><span style="font-size:10px; color:var(--text2);">Lun</span><div style="width:100%; background:var(--primary); border-radius:3px 3px 0 0; height:70px;"></div></div>
-                <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;"><span style="font-size:10px; color:var(--text2);">Mar</span><div style="width:100%; background:var(--primary); border-radius:3px 3px 0 0; height:55px; opacity:0.7;"></div></div>
-                <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;"><span style="font-size:10px; color:var(--text2);">Mié</span><div style="width:100%; background:var(--primary); border-radius:3px 3px 0 0; height:80px; opacity:0.8;"></div></div>
-                <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;"><span style="font-size:10px; color:var(--text2);">Jue</span><div style="width:100%; background:var(--primary); border-radius:3px 3px 0 0; height:60px; opacity:0.6;"></div></div>
-                <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;"><span style="font-size:10px; color:var(--text2);">Vie</span><div style="width:100%; background:var(--accent); border-radius:3px 3px 0 0; height:100px;"></div></div>
-                <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;"><span style="font-size:10px; color:var(--text2);">Sáb</span><div style="width:100%; background:var(--accent); border-radius:3px 3px 0 0; height:115px;"></div></div>
-                <div style="display:flex; flex-direction:column; align-items:center; gap:4px; flex:1;"><span style="font-size:10px; color:var(--text2); font-weight:600;">Dom</span><div style="width:100%; background:var(--accent); border-radius:3px 3px 0 0; height:95px;"></div></div>
-              </div>
-              <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:11px; color:var(--text3);"><span>Total semana:</span><span style="font-weight:500; color:var(--text);">S/ 24,180.00</span></div>
-            </div>
-
-            <div class="card">
-              <div class="card-title">Platillos más vendidos — Comedor</div>
-              <div style="display:flex; flex-direction:column; gap:10px;">
-                <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Trucha frita</span><span class="fw-500">68 pedidos</span></div><div style="height:6px; background:var(--surface2); border-radius:3px;"><div style="height:6px; background:var(--primary); border-radius:3px; width:85%;"></div></div></div>
-                <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Caldo de gallina</span><span class="fw-500">54 pedidos</span></div><div style="height:6px; background:var(--surface2); border-radius:3px;"><div style="height:6px; background:var(--primary); border-radius:3px; width:68%; opacity:0.8;"></div></div></div>
-                <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Lomo saltado</span><span class="fw-500">42 pedidos</span></div><div style="height:6px; background:var(--surface2); border-radius:3px;"><div style="height:6px; background:var(--accent); border-radius:3px; width:53%;"></div></div></div>
-                <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Menú del día</span><span class="fw-500">38 pedidos</span></div><div style="height:6px; background:var(--surface2); border-radius:3px;"><div style="height:6px; background:var(--accent); border-radius:3px; width:48%; opacity:0.8;"></div></div></div>
-                <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Ají de gallina</span><span class="fw-500">29 pedidos</span></div><div style="height:6px; background:var(--surface2); border-radius:3px;"><div style="height:6px; background:var(--text3); border-radius:3px; width:36%;"></div></div></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="grid-3">
-            <div class="card">
-              <div class="card-title">Servicios más usados — Baños</div>
-              <div style="display:flex; flex-direction:column; gap:8px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; background:var(--success-light); border-radius:6px;"><span style="font-size:13px;">Piscina general</span><span style="font-weight:600; color:var(--success);">78%</span></div>
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; background:var(--warning-light); border-radius:6px;"><span style="font-size:13px;">Poza privada</span><span style="font-weight:600; color:var(--warning);">16%</span></div>
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; background:var(--surface2); border-radius:6px;"><span style="font-size:13px;">Paq. relajación</span><span style="font-weight:600; color:var(--text2);">6%</span></div>
-              </div>
-              <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);"><div style="font-size:12px; color:var(--text2);">Hora pico: <span style="font-weight:500; color:var(--text);">10:00 – 12:00</span></div></div>
-            </div>
-
-            <div class="card">
-              <div class="card-title">Ocupación hospedaje — mes</div>
-              <div style="display:flex; align-items:center; gap:16px;">
-                <div style="text-align:center;">
-                  <div style="font-size:32px; font-weight:600; color:var(--primary);">72%</div>
-                  <div style="font-size:11px; color:var(--text2);">Tasa promedio</div>
-                </div>
-                <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
-                  <div style="display:flex; justify-content:space-between; font-size:12px;"><span class="text-muted">Simple</span><span>68%</span></div>
-                  <div style="display:flex; justify-content:space-between; font-size:12px;"><span class="text-muted">Matrimonial</span><span>81%</span></div>
-                  <div style="display:flex; justify-content:space-between; font-size:12px;"><span class="text-muted">Familiar</span><span>75%</span></div>
-                  <div style="display:flex; justify-content:space-between; font-size:12px;"><span class="text-muted">Suite</span><span>58%</span></div>
-                </div>
-              </div>
-            </div>
-
-            <div class="card">
-              <div class="card-title">Productos más vendidos — Tienda</div>
-              <div style="display:flex; flex-direction:column; gap:6px;">
-                <div style="display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px solid var(--border);"><span>Agua mineral 600ml</span><span class="fw-500">120 und.</span></div>
-                <div style="display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px solid var(--border);"><span>Snack mix andino</span><span class="fw-500">86 und.</span></div>
-                <div style="display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px solid var(--border);"><span>Recuerdo artesanal</span><span class="fw-500">44 und.</span></div>
-                <div style="display:flex; justify-content:space-between; font-size:13px; padding:6px 0;"><span>Gorra termal logo</span><span class="fw-500">28 und.</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /root -->
 
 <script>
-function showScreen(name) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.snav-btn').forEach(b => b.classList.remove('active'));
-  const s = document.getElementById('screen-' + name);
-  const b = document.getElementById('snav-' + name);
-  if(s) s.classList.add('active');
-  if(b) b.classList.add('active');
-  window.scrollTo(0,0);
+const SCREENS = {
+  dashboard:  { title:'Dashboard General',              ni:'ni-dashboard' },
+  usuarios:   { title:'Usuarios y Roles',               ni:'ni-usuarios'  },
+  inventario: { title:'Inventario Central',             ni:'ni-inventario'},
+  termales:   { title:'Baños Termales — Recepción',     ni:'ni-termales'  },
+  hospedaje:  { title:'Hospedaje — Recepción',          ni:'ni-hospedaje' },
+  mesero:     { title:'Comedor — Vista Mesero',         ni:'ni-mesero'    },
+  cocina:     { title:'Pantalla de Cocina',             ni:'ni-cocina'    },
+  tienda:     { title:'Tienda — Punto de Venta',        ni:'ni-tienda'    },
+  caja:       { title:'Caja y Facturación',             ni:'ni-caja'      },
+  reportes:   { title:'Reportes',                       ni:'ni-reportes'  },
+};
+
+let current = 'dashboard';
+
+function go(name) {
+  if (!SCREENS[name]) return;
+  document.getElementById('panel-'+current).classList.remove('on');
+  document.getElementById('ni-'+current)?.classList.remove('on');
+  if (current==='mesero'||current==='cocina') document.getElementById('ni-comedor')?.classList.remove('on');
+  current = name;
+  document.getElementById('panel-'+name).classList.add('on');
+  document.getElementById('ni-'+name)?.classList.add('on');
+  if (name==='mesero'||name==='cocina') document.getElementById('ni-comedor')?.classList.add('on');
+  document.getElementById('topbar-title').textContent = SCREENS[name].title;
 }
 
-function setInvTab(el, section) {
-  document.querySelectorAll('.inv-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  const data = {
-    tienda: [
-      ['T-001','Agua mineral 600ml','Bebidas',145,50,'Unid.','20/05/2025','OK'],
-      ['T-002','Snack mix andino','Alimentos',38,40,'Unid.','18/05/2025','Stock bajo'],
-      ['T-003','Recuerdo artesanal','Artesanía',22,10,'Unid.','15/05/2025','OK'],
-      ['T-004','Crema termal 50ml','Cosmético',0,15,'Unid.','10/05/2025','Agotado'],
-    ],
-    cocina: [
-      ['C-001','Arroz largo','Granos',48,20,'kg','22/05/2025','OK'],
-      ['C-002','Trucha fresca','Proteína',12,8,'kg','24/05/2025','OK'],
-      ['C-003','Papa blanca','Verdura',30,15,'kg','23/05/2025','OK'],
-      ['C-004','Aceite vegetal','Aceite',4,6,'lt','20/05/2025','Stock bajo'],
-    ],
-    banios: [
-      ['B-001','Toallas grandes','Limpieza',8,20,'Unid.','15/05/2025','Stock bajo'],
-      ['B-002','Desinfectante piso','Limpieza',18,10,'lt','18/05/2025','OK'],
-      ['B-003','Shampú individual','Amenities',12,30,'Unid.','12/05/2025','Stock bajo'],
-    ],
-    hosped: [
-      ['H-001','Ropa de cama simple','Lencería',24,12,'Juegos','20/05/2025','OK'],
-      ['H-002','Jabón bar individual','Amenities',60,40,'Unid.','22/05/2025','OK'],
-      ['H-003','Papel higiénico','Limpieza',80,50,'Rollos','21/05/2025','OK'],
-    ]
-  };
-  const statClass = {'OK':'badge-green','Stock bajo':'badge-amber','Agotado':'badge-red'};
-  const tbody = document.getElementById('inv-tbody');
-  tbody.innerHTML = (data[section]||data.tienda).map(r=>`
-    <tr>
-      <td class="text-muted">${r[0]}</td>
-      <td style="font-weight:500;">${r[1]}</td>
-      <td><span class="badge badge-gray">${r[2]}</span></td>
-      <td>${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td>
-      <td>${r[6]}</td>
-      <td><span class="badge ${statClass[r[7]]||'badge-gray'}">${r[7]}</span></td>
-      <td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td>
-    </tr>`).join('');
+function doLogin() {
+  document.getElementById('login-overlay').style.display = 'none';
+  go('dashboard');
+}
+function doLogout() {
+  document.getElementById('login-overlay').style.display = 'flex';
+}
+
+function cajaTab(el, tab) {
+  document.querySelectorAll('#caja-tabs .tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.caja-tab-content').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('ctab-'+tab).classList.add('on');
+}
+
+const INV_DATA = {
+  tienda: [['T-001','Agua mineral 600ml','Bebidas',145,50,'Unid.','20/05/2025','OK'],['T-002','Snack mix andino','Alimentos',38,40,'Unid.','18/05/2025','Stock bajo'],['T-003','Recuerdo artesanal','Artesanía',22,10,'Unid.','15/05/2025','OK'],['T-004','Crema termal 50ml','Cosmético',0,15,'Unid.','10/05/2025','Agotado'],['T-005','Gorra termal logo','Ropa',18,10,'Unid.','12/05/2025','OK'],['T-006','Poncho de baño','Ropa',7,20,'Unid.','08/05/2025','Stock bajo']],
+  cocina: [['C-001','Arroz largo','Granos',48,20,'kg','22/05/2025','OK'],['C-002','Trucha fresca','Proteína',12,8,'kg','24/05/2025','OK'],['C-003','Papa blanca','Verdura',30,15,'kg','23/05/2025','OK'],['C-004','Aceite vegetal','Aceite',4,6,'lt','20/05/2025','Stock bajo'],['C-005','Ají amarillo','Condimento',2,3,'kg','19/05/2025','Stock bajo']],
+  banios: [['B-001','Toallas grandes','Limpieza',8,20,'Unid.','15/05/2025','Stock bajo'],['B-002','Desinfectante piso','Limpieza',18,10,'lt','18/05/2025','OK'],['B-003','Shampú individual','Amenities',12,30,'Unid.','12/05/2025','Stock bajo'],['B-004','Cloro líquido','Limpieza',22,10,'lt','20/05/2025','OK']],
+  hosped: [['H-001','Ropa de cama simple','Lencería',24,12,'Juegos','20/05/2025','OK'],['H-002','Jabón bar individual','Amenities',60,40,'Unid.','22/05/2025','OK'],['H-003','Papel higiénico','Limpieza',80,50,'Rollos','21/05/2025','OK'],['H-004','Toallas baño','Lencería',30,20,'Unid.','18/05/2025','OK']]
+};
+const SC = {OK:'<span class="b bg">OK</span>','Stock bajo':'<span class="b ba">Stock bajo</span>','Agotado':'<span class="b br">Agotado</span>'};
+
+function invTab(el, sec) {
+  document.querySelectorAll('.it').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('inv-tbody').innerHTML = (INV_DATA[sec]||INV_DATA.tienda).map(r=>`<tr><td class="tm">${r[0]}</td><td class="fw5">${r[1]}</td><td><span class="b bx">${r[2]}</span></td><td>${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td><td>${r[6]}</td><td>${SC[r[7]]||r[7]}</td><td><button class="btn btn-xs"><i class="ti ti-edit"></i></button></td></tr>`).join('');
 }
 </script>
 </body>
