@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +26,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IServicioService, ServicioService>();
         services.AddScoped<IPagoService, PagoService>();
         services.AddScoped<IAuthService, AuthService>();
+
+        // Singleton: el blacklist vive toda la vida de la aplicación
+        services.AddSingleton<ITokenBlacklist, TokenBlacklist>();
 
         return services;
     }
@@ -54,6 +58,19 @@ public static class ServiceCollectionExtensions
                 ValidAudience = jwt.Audience,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
                 ClockSkew = TimeSpan.Zero
+            };
+
+            // Rechaza tokens cuyo JTI esté en el blacklist
+            options.Events = new JwtBearerEvents
+            {
+                OnTokenValidated = ctx =>
+                {
+                    var blacklist = ctx.HttpContext.RequestServices.GetRequiredService<ITokenBlacklist>();
+                    var jti = ctx.Principal?.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+                    if (jti is not null && blacklist.EstaRevocado(jti))
+                        ctx.Fail("Token revocado");
+                    return Task.CompletedTask;
+                }
             };
         });
 
