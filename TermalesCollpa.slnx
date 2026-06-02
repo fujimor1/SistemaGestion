@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Termales.API/Termales.API.csproj" />
+  <Project Path="Termales.BLL/Termales.BLL.csproj" />
+  <Project Path="Termales.Common/Termales.Common.csproj" />
+  <Project Path="Termales.DAL/Termales.DAL.csproj" />
+  <Project Path="Termales.Entities/Termales.Entities.csproj" />
+</Solution>
