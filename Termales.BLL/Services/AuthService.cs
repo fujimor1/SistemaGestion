@@ -16,11 +16,13 @@ public class AuthService : IAuthService
 {
     private readonly TermalesDbContext _context;
     private readonly JwtSettings _jwt;
+    private readonly ITokenBlacklist _blacklist;
 
-    public AuthService(TermalesDbContext context, IOptions<JwtSettings> jwt)
+    public AuthService(TermalesDbContext context, IOptions<JwtSettings> jwt, ITokenBlacklist blacklist)
     {
         _context = context;
         _jwt = jwt.Value;
+        _blacklist = blacklist;
     }
 
     public async Task<ApiResponse<AuthResponseDto>> LoginAsync(LoginDto dto)
@@ -33,7 +35,7 @@ public class AuthService : IAuthService
             return ApiResponse<AuthResponseDto>.Fallido("Credenciales incorrectas");
 
         var expiracion = DateTime.UtcNow.AddHours(_jwt.DuracionHoras);
-        var token = GenerarToken(usuario.UsuarioId, usuario.Email, usuario.Rol.Nombre, expiracion);
+        var (token, jti) = GenerarToken(usuario.UsuarioId, usuario.Email, usuario.Rol.Nombre, expiracion);
 
         var respuesta = new AuthResponseDto
         {
@@ -51,17 +53,27 @@ public class AuthService : IAuthService
         return ApiResponse<AuthResponseDto>.Exitoso(respuesta, "Login exitoso");
     }
 
-    private string GenerarToken(int usuarioId, string email, string rol, DateTime expiracion)
+    public ApiResponse LogoutAsync(string jti, DateTime expiracionToken)
+    {
+        if (string.IsNullOrWhiteSpace(jti))
+            return ApiResponse.Fallido("Token inválido");
+
+        _blacklist.Revocar(jti, expiracionToken);
+        return ApiResponse.Exitoso("Sesión cerrada correctamente");
+    }
+
+    private (string Token, string Jti) GenerarToken(int usuarioId, string email, string rol, DateTime expiracion)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.SecretKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var jti = Guid.NewGuid().ToString();
 
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, usuarioId.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, email),
             new Claim(ClaimTypes.Role, rol),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new Claim(JwtRegisteredClaimNames.Jti, jti)
         };
 
         var tokenDescriptor = new JwtSecurityToken(
@@ -72,6 +84,6 @@ public class AuthService : IAuthService
             signingCredentials: creds
         );
 
-        return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
+        return (new JwtSecurityTokenHandler().WriteToken(tokenDescriptor), jti);
     }
 }
