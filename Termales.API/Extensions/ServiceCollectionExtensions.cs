@@ -26,6 +26,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IServicioService, ServicioService>();
         services.AddScoped<IPagoService, PagoService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<ITurnoService, TurnoService>();
 
         // Singleton: el blacklist vive toda la vida de la aplicación
         services.AddSingleton<ITokenBlacklist, TokenBlacklist>();

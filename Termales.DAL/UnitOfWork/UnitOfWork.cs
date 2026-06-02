@@ -14,6 +14,9 @@ public class UnitOfWork : IUnitOfWork
     public IPiscinaRepository Piscinas { get; }
     public IServicioRepository Servicios { get; }
     public IPagoRepository Pagos { get; }
+    public ITipoServicioRepository TiposServicio { get; }
+    public ITurnoRepository Turnos { get; }
+    public IAforoRepository Aforos { get; }
 
     public UnitOfWork(TermalesDbContext context)
     {
@@ -23,6 +26,9 @@ public class UnitOfWork : IUnitOfWork
         Piscinas = new PiscinaRepository(context);
         Servicios = new ServicioRepository(context);
         Pagos = new PagoRepository(context);
+        TiposServicio = new TipoServicioRepository(context);
+        Turnos = new TurnoRepository(context);
+        Aforos = new AforoRepository(context);
     }
 
     public async Task<int> GuardarCambiosAsync() =>

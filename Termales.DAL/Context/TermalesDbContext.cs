@@ -22,6 +22,11 @@ public class TermalesDbContext : DbContext
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<UsuarioRol> UsuarioRoles => Set<UsuarioRol>();
 
+    // Módulo de baños termales
+    public DbSet<TipoServicio> TiposServicio => Set<TipoServicio>();
+    public DbSet<Turno> Turnos => Set<Turno>();
+    public DbSet<Aforo> Aforos => Set<Aforo>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

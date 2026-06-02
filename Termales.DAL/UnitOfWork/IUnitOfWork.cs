@@ -9,6 +9,9 @@ public interface IUnitOfWork : IDisposable
     IPiscinaRepository Piscinas { get; }
     IServicioRepository Servicios { get; }
     IPagoRepository Pagos { get; }
+    ITipoServicioRepository TiposServicio { get; }
+    ITurnoRepository Turnos { get; }
+    IAforoRepository Aforos { get; }
 
     Task<int> GuardarCambiosAsync();
 }
