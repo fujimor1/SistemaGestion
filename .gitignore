@@ -18,6 +18,7 @@ project.fragment.lock.json
 ## User secrets
 appsettings.Local.json
 secrets.json
+Termales.ImpresoraPuente/appsettings.json
 
 ## OS
 .DS_Store
