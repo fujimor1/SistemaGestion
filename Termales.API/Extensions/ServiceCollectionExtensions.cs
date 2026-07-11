@@ -4,7 +4,16 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Termales.BLL.Interfaces;
+using Termales.BLL.Interfaces.Comedor;
+using Termales.BLL.Interfaces.Compras;
+using Termales.BLL.Interfaces.Inventario;
+using Termales.BLL.Interfaces.Tienda;
 using Termales.BLL.Services;
+using Termales.BLL.Services.Comedor;
+using Termales.BLL.Services.Compras;
+using Termales.BLL.Services.Inventario;
+using Termales.BLL.Services.Tienda;
+
 using Termales.Common.Settings;
 using Termales.DAL.Context;
 using Termales.DAL.UnitOfWork;
@@ -27,9 +36,52 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPagoService, PagoService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ITurnoService, TurnoService>();
+        services.AddScoped<ITipoServicioService, TipoServicioService>();
+        services.AddScoped<IAforoService, AforoService>();
+        services.AddScoped<IEmpleadoService, EmpleadoService>();
+        services.AddScoped<IUsuarioService, UsuarioService>();
+        services.AddScoped<IHabitacionService, HabitacionService>();
+        services.AddScoped<IPaqueteBanioService, PaqueteBanioService>();
+
+        // Comedor
+        services.AddScoped<ICategoriaMenuService, CategoriaMenuService>();
+        services.AddScoped<IItemMenuService, ItemMenuService>();
+        services.AddScoped<IMesaService, MesaService>();
+        services.AddScoped<IOrdenService, OrdenService>();
+        services.Configure<ImpresoraComandaSettings>(config.GetSection("ImpresoraComanda"));
+        services.AddScoped<IComandaPrinterService, ComandaPrinterService>();
+
+        // Tienda
+        services.AddScoped<IProductoService, ProductoService>();
+
+        // Inventario
+        services.AddScoped<IInsumoService, InsumoService>();
+        services.AddScoped<IEntradaInsumoService, EntradaInsumoService>();
+        services.AddScoped<IEntradaProductoService, EntradaProductoService>();
+        services.AddScoped<ISalidaInsumoService, SalidaInsumoService>();
+
+        // Dashboard
+        services.AddScoped<IDashboardService, DashboardService>();
+
+        // Reportes
+        services.AddScoped<IReporteService, ReporteService>();
+
+        // Caja
+        services.AddScoped<ICajaService, CajaService>();
+
+        // Proveedores / Compras
+        services.AddScoped<IProveedorService, ProveedorService>();
+        services.AddScoped<ICompraService, CompraService>();
 
         // Singleton: el blacklist vive toda la vida de la aplicación
         services.AddSingleton<ITokenBlacklist, TokenBlacklist>();
+
+        // Comprobantes electrónicos (Nubefact)
+        services.AddHttpContextAccessor();
+        services.Configure<NubefactSettings>(config.GetSection("Nubefact"));
+        services.AddHttpClient("Nubefact");
+        services.AddScoped<ISolicitudAnulacionService, SolicitudAnulacionService>();
+        services.AddScoped<IComprobanteService, ComprobanteService>();
 
         return services;
     }
@@ -61,9 +113,21 @@ public static class ServiceCollectionExtensions
                 ClockSkew = TimeSpan.Zero
             };
 
-            // Rechaza tokens cuyo JTI esté en el blacklist
             options.Events = new JwtBearerEvents
             {
+                // El cliente de SignalR (transporte WebSocket) no puede mandar el
+                // header Authorization en el handshake; envía el JWT por query
+                // string (?access_token=...) en su lugar. Sin esto, el puente de
+                // impresión (y cualquier cliente SignalR) recibe 401 siempre.
+                OnMessageReceived = ctx =>
+                {
+                    var accessToken = ctx.Request.Query["access_token"];
+                    if (!string.IsNullOrEmpty(accessToken) && ctx.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                        ctx.Token = accessToken;
+                    return Task.CompletedTask;
+                },
+
+                // Rechaza tokens cuyo JTI esté en el blacklist
                 OnTokenValidated = ctx =>
                 {
                     var blacklist = ctx.HttpContext.RequestServices.GetRequiredService<ITokenBlacklist>();

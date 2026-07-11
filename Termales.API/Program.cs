@@ -1,5 +1,9 @@
 using Microsoft.OpenApi.Models;
 using Termales.API.Extensions;
+using Termales.BLL.Services.Comedor;
+using Termales.API.Seed;
+
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,6 +37,7 @@ builder.Services.AddSwaggerGen(c =>
 
 builder.Services.AddTermalesServices(builder.Configuration);
 builder.Services.AddTermalesJwt(builder.Configuration);
+builder.Services.AddSignalR();
 
 builder.Services.AddCors(options =>
 {
@@ -53,5 +58,8 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<ComandaHub>("/hubs/comanda");
+
+await DataSeeder.SeedAsync(app.Services);
 
 app.Run();

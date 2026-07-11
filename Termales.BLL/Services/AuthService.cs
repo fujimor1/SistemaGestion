@@ -29,13 +29,15 @@ public class AuthService : IAuthService
     {
         var usuario = await _context.Usuarios
             .Include(u => u.Rol)
+            .Include(u => u.Empleado)
             .FirstOrDefaultAsync(u => u.Email == dto.Email && u.Activo);
 
         if (usuario is null || !BCrypt.Net.BCrypt.Verify(dto.Password, usuario.PasswordHash))
             return ApiResponse<AuthResponseDto>.Fallido("Credenciales incorrectas");
 
         var expiracion = DateTime.UtcNow.AddHours(_jwt.DuracionHoras);
-        var (token, jti) = GenerarToken(usuario.UsuarioId, usuario.Email, usuario.Rol.Nombre, expiracion);
+        var nombreCompleto = $"{usuario.Empleado.Nombres} {usuario.Empleado.Apellidos}".Trim();
+        var (token, jti) = GenerarToken(usuario.UsuarioId, usuario.Email, usuario.Rol.Nombre, nombreCompleto, expiracion);
 
         var respuesta = new AuthResponseDto
         {
@@ -44,7 +46,7 @@ public class AuthService : IAuthService
             Usuario = new UsuarioInfoDto
             {
                 UsuarioId = usuario.UsuarioId,
-                NombreCompleto = $"{usuario.Nombre} {usuario.Apellido}",
+                NombreCompleto = nombreCompleto,
                 Email = usuario.Email,
                 Rol = usuario.Rol.Nombre
             }
@@ -62,7 +64,26 @@ public class AuthService : IAuthService
         return ApiResponse.Exitoso("Sesión cerrada correctamente");
     }
 
-    private (string Token, string Jti) GenerarToken(int usuarioId, string email, string rol, DateTime expiracion)
+    private static readonly HashSet<string> _rolesAutorizadores =
+        new(StringComparer.OrdinalIgnoreCase) { "Supervisor" };
+
+    public async Task<string?> ValidarSupervisorAsync(string email, string password)
+    {
+        var usuario = await _context.Usuarios
+            .Include(u => u.Rol)
+            .Include(u => u.Empleado)
+            .FirstOrDefaultAsync(u => u.Email == email && u.Activo);
+
+        if (usuario is null || !BCrypt.Net.BCrypt.Verify(password, usuario.PasswordHash))
+            return null;
+
+        if (!_rolesAutorizadores.Contains(usuario.Rol.Nombre))
+            return null;
+
+        return $"{usuario.Empleado.Nombres} {usuario.Empleado.Apellidos}".Trim();
+    }
+
+    private (string Token, string Jti) GenerarToken(int usuarioId, string email, string rol, string nombreCompleto, DateTime expiracion)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.SecretKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -70,10 +91,11 @@ public class AuthService : IAuthService
 
         var claims = new[]
         {
-            new Claim(JwtRegisteredClaimNames.Sub, usuarioId.ToString()),
+            new Claim(JwtRegisteredClaimNames.Sub,   usuarioId.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, email),
-            new Claim(ClaimTypes.Role, rol),
-            new Claim(JwtRegisteredClaimNames.Jti, jti)
+            new Claim(JwtRegisteredClaimNames.Name,  nombreCompleto),
+            new Claim(ClaimTypes.Role,               rol),
+            new Claim(JwtRegisteredClaimNames.Jti,   jti)
         };
 
         var tokenDescriptor = new JwtSecurityToken(

@@ -18,8 +18,8 @@ public class TipoServicioConfiguration : IEntityTypeConfiguration<TipoServicio>
         builder.Property(t => t.Activo).HasColumnName("activo").HasDefaultValue(true);
 
         builder.HasData(
-            new TipoServicio { TipoServicioId = 1, Nombre = "Piscina", Descripcion = "Acceso a piscina termal", CapacidadMaxima = 50, PrecioPorPersona = 15.00m, Activo = true },
-            new TipoServicio { TipoServicioId = 2, Nombre = "Baño Privado", Descripcion = "Baño privado con agua termal", CapacidadMaxima = 4, PrecioPorPersona = 25.00m, Activo = true }
+            new TipoServicio { TipoServicioId = 1, Nombre = "Piscina", Descripcion = "Acceso a piscina termal", CapacidadMaxima = 50, PrecioPorPersona = 5.00m, Activo = true },
+            new TipoServicio { TipoServicioId = 2, Nombre = "Baño Privado", Descripcion = "Baño privado con agua termal", CapacidadMaxima = 4, PrecioPorPersona = 5.00m, Activo = true }
         );
     }
 }

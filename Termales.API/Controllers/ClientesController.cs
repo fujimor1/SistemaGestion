@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Termales.BLL.Interfaces;
 using Termales.Common.DTOs;
@@ -6,6 +7,7 @@ namespace Termales.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class ClientesController : ControllerBase
 {
     private readonly IClienteService _service;

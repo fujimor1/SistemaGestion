@@ -22,3 +22,5 @@ secrets.json
 ## OS
 .DS_Store
 Thumbs.db
+.claude/
+publish_output/

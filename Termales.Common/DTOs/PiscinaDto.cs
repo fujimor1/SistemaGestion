@@ -11,12 +11,13 @@ public class PiscinaDto
     public int CapacidadPersonas { get; set; }
     public decimal TarifaPorHora { get; set; }
     public bool Disponible { get; set; }
+    public int TipoBanio { get; set; }
+    public string TipoBanioDescripcion { get; set; } = string.Empty;
 }
 
 public class CrearPiscinaDto
 {
-    [Required]
-    [StringLength(100)]
+    [Required][StringLength(100)]
     public string Nombre { get; set; } = string.Empty;
 
     [StringLength(500)]
@@ -30,6 +31,9 @@ public class CrearPiscinaDto
 
     [Range(0.01, 9999.99)]
     public decimal TarifaPorHora { get; set; }
+
+    [Range(1, 2)]
+    public int TipoBanio { get; set; } = 2;
 }
 
 public class ActualizarPiscinaDto : CrearPiscinaDto

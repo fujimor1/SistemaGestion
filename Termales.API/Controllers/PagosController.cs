@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Termales.API.Authorization;
 using Termales.BLL.Interfaces;
 using Termales.Common.DTOs;
 
@@ -6,6 +8,7 @@ namespace Termales.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = Modulos.Operaciones)]
 public class PagosController : ControllerBase
 {
     private readonly IPagoService _service;

@@ -17,5 +17,6 @@ public class PiscinaConfiguration : IEntityTypeConfiguration<Piscina>
         builder.Property(p => p.CapacidadPersonas).HasColumnName("capacidad_personas");
         builder.Property(p => p.TarifaPorHora).HasColumnName("tarifa_por_hora").HasColumnType("decimal(10,2)");
         builder.Property(p => p.Disponible).HasColumnName("disponible").HasDefaultValue(true);
+        builder.Property(p => p.TipoBanio).HasColumnName("tipo_banio").HasConversion<int>().HasDefaultValue(Termales.Entities.Enums.TipoBanio.BanoPrivado);
     }
 }

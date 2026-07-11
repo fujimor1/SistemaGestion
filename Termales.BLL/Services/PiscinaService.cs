@@ -2,6 +2,7 @@ using Termales.BLL.Interfaces;
 using Termales.Common.DTOs;
 using Termales.Common.Wrappers;
 using Termales.DAL.UnitOfWork;
+using Termales.Entities.Enums;
 using Termales.Entities.Models;
 
 namespace Termales.BLL.Services;
@@ -49,7 +50,8 @@ public class PiscinaService : IPiscinaService
             Descripcion = dto.Descripcion,
             TemperaturaGrados = dto.TemperaturaGrados,
             CapacidadPersonas = dto.CapacidadPersonas,
-            TarifaPorHora = dto.TarifaPorHora
+            TarifaPorHora = dto.TarifaPorHora,
+            TipoBanio = (TipoBanio)dto.TipoBanio
         };
 
         await _uow.Piscinas.AgregarAsync(piscina);
@@ -69,6 +71,7 @@ public class PiscinaService : IPiscinaService
         piscina.CapacidadPersonas = dto.CapacidadPersonas;
         piscina.TarifaPorHora = dto.TarifaPorHora;
         piscina.Disponible = dto.Disponible;
+        piscina.TipoBanio = (TipoBanio)dto.TipoBanio;
 
         await _uow.Piscinas.ActualizarAsync(piscina);
         await _uow.GuardarCambiosAsync();
@@ -95,6 +98,8 @@ public class PiscinaService : IPiscinaService
         TemperaturaGrados = p.TemperaturaGrados,
         CapacidadPersonas = p.CapacidadPersonas,
         TarifaPorHora = p.TarifaPorHora,
-        Disponible = p.Disponible
+        Disponible = p.Disponible,
+        TipoBanio = (int)p.TipoBanio,
+        TipoBanioDescripcion = p.TipoBanio == TipoBanio.Piscina ? "Piscina Termal" : "Baño Privado"
     };
 }

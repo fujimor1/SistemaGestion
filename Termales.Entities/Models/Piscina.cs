@@ -1,3 +1,5 @@
+using Termales.Entities.Enums;
+
 namespace Termales.Entities.Models;
 
 public class Piscina
@@ -9,6 +11,7 @@ public class Piscina
     public int CapacidadPersonas { get; set; }
     public decimal TarifaPorHora { get; set; }
     public bool Disponible { get; set; } = true;
+    public TipoBanio TipoBanio { get; set; } = TipoBanio.BanoPrivado;
 
     public ICollection<Reserva> Reservas { get; set; } = new List<Reserva>();
 }
