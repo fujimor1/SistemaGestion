@@ -16,6 +16,7 @@ public class InsumoConfiguration : IEntityTypeConfiguration<Insumo>
         builder.Property(i => i.TipoArticulo).HasColumnName("tipo_articulo").HasMaxLength(20).HasDefaultValue("insumo");
         builder.Property(i => i.Unidad).HasColumnName("unidad").HasMaxLength(30);
         builder.Property(i => i.StockActual).HasColumnName("stock_actual").HasPrecision(12, 3).HasDefaultValue(0m);
+        builder.Property(i => i.StockMinimo).HasColumnName("stock_minimo").HasPrecision(12, 3).HasDefaultValue(0m);
         builder.Property(i => i.PrecioReferencia).HasColumnName("precio_referencia").HasPrecision(10, 2).HasDefaultValue(0m);
         builder.Property(i => i.Activo).HasColumnName("activo").HasDefaultValue(true);
         builder.Property(i => i.FechaRegistro).HasColumnName("fecha_registro");

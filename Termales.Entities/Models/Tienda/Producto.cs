@@ -9,6 +9,7 @@ public class Producto
     public decimal PrecioCompra { get; set; }
     public decimal Precio { get; set; }
     public int Stock { get; set; }
+    public int StockMinimo { get; set; }
     public bool Activo { get; set; } = true;
     public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
 }

@@ -502,4 +502,21 @@ public class ReporteService : IReporteService
             Detalle               = detalle,
         };
     }
+
+    // ── Stock mínimo ──────────────────────────────────────────────────────────
+
+    public async Task<ReporteStockMinimoDto> ReporteStockMinimoAsync()
+    {
+        var insumos = await _db.Insumos.AsNoTracking()
+            .Where(i => i.Activo && i.StockMinimo > 0 && i.StockActual <= i.StockMinimo)
+            .Select(i => new StockBajoDto { Nombre = i.Nombre, Unidad = i.Unidad, StockActual = i.StockActual, StockMinimo = i.StockMinimo })
+            .ToListAsync();
+
+        var productos = await _db.Productos.AsNoTracking()
+            .Where(p => p.Activo && p.StockMinimo > 0 && p.Stock <= p.StockMinimo)
+            .Select(p => new StockBajoDto { Nombre = p.Nombre, Unidad = null, StockActual = p.Stock, StockMinimo = p.StockMinimo })
+            .ToListAsync();
+
+        return new ReporteStockMinimoDto { Insumos = insumos, Productos = productos };
+    }
 }

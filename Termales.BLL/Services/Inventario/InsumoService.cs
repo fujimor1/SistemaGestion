@@ -32,6 +32,7 @@ public class InsumoService : IInsumoService
             TipoArticulo = dto.TipoArticulo,
             Unidad = dto.Unidad,
             StockActual = dto.StockActual,
+            StockMinimo = dto.StockMinimo,
             PrecioReferencia = dto.PrecioReferencia
         };
         await _uow.Insumos.AgregarAsync(insumo);
@@ -46,6 +47,7 @@ public class InsumoService : IInsumoService
 
         insumo.Nombre = dto.Nombre;
         insumo.Unidad = dto.Unidad;
+        insumo.StockMinimo = dto.StockMinimo;
         insumo.PrecioReferencia = dto.PrecioReferencia;
         insumo.Activo = dto.Activo;
 
@@ -73,6 +75,7 @@ public class InsumoService : IInsumoService
         TipoArticulo = i.TipoArticulo,
         Unidad = i.Unidad,
         StockActual = i.StockActual,
+        StockMinimo = i.StockMinimo,
         PrecioReferencia = i.PrecioReferencia,
         Activo = i.Activo,
         FechaRegistro = i.FechaRegistro

@@ -8,6 +8,7 @@ public class ProductoDto
     public string? CodigoBarras { get; set; }
     public decimal Precio { get; set; }
     public int Stock { get; set; }
+    public int StockMinimo { get; set; }
     public bool Activo { get; set; }
     public DateTime FechaRegistro { get; set; }
 }
@@ -19,6 +20,7 @@ public class CrearProductoDto
     public string? CodigoBarras { get; set; }
     public decimal Precio { get; set; }
     public int Stock { get; set; }
+    public int StockMinimo { get; set; }
 }
 
 public class ActualizarProductoDto
@@ -28,5 +30,6 @@ public class ActualizarProductoDto
     public string? CodigoBarras { get; set; }
     public decimal Precio { get; set; }
     public int Stock { get; set; }
+    public int StockMinimo { get; set; }
     public bool Activo { get; set; }
 }

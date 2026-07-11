@@ -15,4 +15,5 @@ public interface IReporteService
     Task<CatalogoDto>            ObtenerCatalogoAsync();
     Task<ReportePagoQrDto>       ReportePagoQrAsync(string mes);
     Task<ReporteComandasDto>     ReporteComandasAsync(string mes);
+    Task<ReporteStockMinimoDto>  ReporteStockMinimoAsync();
 }

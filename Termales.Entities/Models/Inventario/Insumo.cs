@@ -10,6 +10,7 @@ public class Insumo
     public string TipoArticulo { get; set; } = "insumo";
     public string? Unidad { get; set; }
     public decimal StockActual { get; set; }
+    public decimal StockMinimo { get; set; }
     public decimal PrecioReferencia { get; set; }
     public bool Activo { get; set; } = true;
     public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;

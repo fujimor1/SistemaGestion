@@ -17,6 +17,7 @@ public class ProductoConfiguration : IEntityTypeConfiguration<Producto>
         builder.Property(p => p.PrecioCompra).HasColumnName("precio_compra").HasPrecision(10, 2).HasDefaultValue(0m);
         builder.Property(p => p.Precio).HasColumnName("precio").HasPrecision(10, 2);
         builder.Property(p => p.Stock).HasColumnName("stock").HasDefaultValue(0);
+        builder.Property(p => p.StockMinimo).HasColumnName("stock_minimo").HasDefaultValue(0);
         builder.Property(p => p.Activo).HasColumnName("activo").HasDefaultValue(true);
         builder.Property(p => p.FechaRegistro).HasColumnName("fecha_registro");
 

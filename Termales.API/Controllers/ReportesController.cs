@@ -137,4 +137,12 @@ public class ReportesController : ControllerBase
         var resultado = await _service.ReporteComandasAsync(mes);
         return Ok(resultado);
     }
+
+    /// <summary>Insumos y productos por debajo de su stock mínimo configurado.</summary>
+    [HttpGet("stock-minimo")]
+    public async Task<IActionResult> GetStockMinimo()
+    {
+        var resultado = await _service.ReporteStockMinimoAsync();
+        return Ok(resultado);
+    }
 }

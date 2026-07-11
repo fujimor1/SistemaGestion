@@ -57,6 +57,7 @@ public class ProductoService : IProductoService
             CodigoBarras = dto.CodigoBarras?.Trim(),
             Precio       = dto.Precio,
             Stock        = dto.Stock,
+            StockMinimo  = dto.StockMinimo,
         };
 
         await _uow.Productos.AgregarAsync(producto);
@@ -83,6 +84,7 @@ public class ProductoService : IProductoService
         producto.CodigoBarras = dto.CodigoBarras?.Trim();
         producto.Precio       = dto.Precio;
         producto.Stock        = dto.Stock;
+        producto.StockMinimo  = dto.StockMinimo;
         producto.Activo       = dto.Activo;
 
         await _uow.Productos.ActualizarAsync(producto);
@@ -112,6 +114,7 @@ public class ProductoService : IProductoService
         CodigoBarras  = p.CodigoBarras,
         Precio        = p.Precio,
         Stock         = p.Stock,
+        StockMinimo   = p.StockMinimo,
         Activo        = p.Activo,
         FechaRegistro = p.FechaRegistro,
     };
