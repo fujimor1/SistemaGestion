@@ -3,7 +3,8 @@ namespace Termales.Entities.Models.Compras;
 public class Compra
 {
     public int CompraId { get; set; }
-    public int ProveedorId { get; set; }
+    public int? ProveedorId { get; set; }
+    public string? NombreProveedorManual { get; set; }
 
     public string TipoComprobante { get; set; } = string.Empty; // FACTURA | BOLETA | GUIA
     public string Serie { get; set; } = string.Empty;
@@ -26,6 +27,6 @@ public class Compra
     public DateTime? FechaPago { get; set; }
     public int? EgresoCajaChicaId { get; set; }
 
-    public Proveedor Proveedor { get; set; } = null!;
+    public Proveedor? Proveedor { get; set; }
     public ICollection<DetalleCompra> Detalles { get; set; } = new List<DetalleCompra>();
 }

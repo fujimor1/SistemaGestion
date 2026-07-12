@@ -1847,3 +1847,29 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260712130129_ProveedorOpcionalEnCompras') THEN
+    ALTER TABLE compras.compras ALTER COLUMN proveedor_id DROP NOT NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260712130129_ProveedorOpcionalEnCompras') THEN
+    ALTER TABLE compras.compras ADD nombre_proveedor_manual character varying(200);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260712130129_ProveedorOpcionalEnCompras') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260712130129_ProveedorOpcionalEnCompras', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

@@ -13,6 +13,7 @@ public class CompraConfiguration : IEntityTypeConfiguration<Compra>
         builder.HasKey(c => c.CompraId);
         builder.Property(c => c.CompraId).HasColumnName("compra_id").ValueGeneratedOnAdd();
         builder.Property(c => c.ProveedorId).HasColumnName("proveedor_id");
+        builder.Property(c => c.NombreProveedorManual).HasColumnName("nombre_proveedor_manual").HasMaxLength(200);
         builder.Property(c => c.TipoComprobante).HasColumnName("tipo_comprobante").HasMaxLength(20).IsRequired();
         builder.Property(c => c.Serie).HasColumnName("serie").HasMaxLength(10).IsRequired();
         builder.Property(c => c.Numero).HasColumnName("numero").IsRequired();

@@ -37,8 +37,17 @@ public class CompraService : ICompraService
         if (dto.Detalles.Count == 0)
             throw new InvalidOperationException("La compra debe tener al menos una línea de detalle");
 
-        var proveedor = await _uow.Proveedores.ObtenerPorIdAsync(dto.ProveedorId)
-            ?? throw new Exception($"Proveedor {dto.ProveedorId} no encontrado");
+        Proveedor? proveedor = null;
+        if (dto.ProveedorId.HasValue)
+        {
+            proveedor = await _uow.Proveedores.ObtenerPorIdAsync(dto.ProveedorId.Value)
+                ?? throw new Exception($"Proveedor {dto.ProveedorId} no encontrado");
+        }
+        else if (string.IsNullOrWhiteSpace(dto.NombreProveedorManual))
+        {
+            throw new InvalidOperationException(
+                "Debe seleccionar un proveedor o indicar a quién se le realizó la compra");
+        }
 
         if (await _uow.Compras.ExisteAsync(c =>
                 c.ProveedorId == dto.ProveedorId && c.Serie == dto.Serie && c.Numero == dto.Numero))
@@ -49,6 +58,7 @@ public class CompraService : ICompraService
         {
             ProveedorId = dto.ProveedorId,
             Proveedor = proveedor,
+            NombreProveedorManual = proveedor is null ? dto.NombreProveedorManual!.Trim() : null,
             TipoComprobante = dto.TipoComprobante,
             Serie = dto.Serie,
             Numero = dto.Numero,
@@ -153,7 +163,7 @@ public class CompraService : ICompraService
         {
             var egresoDto = new RegistrarEgresoDto
             {
-                Concepto = $"Pago proveedor: {compra.Proveedor.RazonSocial} - {compra.TipoComprobante} {compra.Serie}-{compra.Numero}",
+                Concepto = $"Pago proveedor: {compra.Proveedor?.RazonSocial ?? compra.NombreProveedorManual} - {compra.TipoComprobante} {compra.Serie}-{compra.Numero}",
                 Monto = compra.Total,
                 TipoDocumento = compra.TipoComprobante,
                 NumeroDocumento = $"{compra.Serie}-{compra.Numero}",
@@ -177,7 +187,7 @@ public class CompraService : ICompraService
         CompraId = c.CompraId,
         ProveedorId = c.ProveedorId,
         RucProveedor = c.Proveedor?.Ruc ?? string.Empty,
-        RazonSocialProveedor = c.Proveedor?.RazonSocial ?? string.Empty,
+        RazonSocialProveedor = c.Proveedor?.RazonSocial ?? c.NombreProveedorManual ?? string.Empty,
         TipoComprobante = c.TipoComprobante,
         Serie = c.Serie,
         Numero = c.Numero,

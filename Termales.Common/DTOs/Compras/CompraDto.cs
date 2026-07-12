@@ -5,7 +5,7 @@ namespace Termales.Common.DTOs.Compras;
 public class CompraDto
 {
     public int CompraId { get; set; }
-    public int ProveedorId { get; set; }
+    public int? ProveedorId { get; set; }
     public string RucProveedor { get; set; } = string.Empty;
     public string RazonSocialProveedor { get; set; } = string.Empty;
 
@@ -48,8 +48,9 @@ public class DetalleCompraDto
 
 public class RegistrarCompraDto
 {
-    [Required]
-    public int ProveedorId { get; set; }
+    public int? ProveedorId { get; set; }
+
+    public string? NombreProveedorManual { get; set; }
 
     [Required]
     public string TipoComprobante { get; set; } = string.Empty;

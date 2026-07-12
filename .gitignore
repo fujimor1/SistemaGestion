@@ -25,3 +25,6 @@ Termales.ImpresoraPuente/appsettings.json
 Thumbs.db
 .claude/
 publish_output/
+publish_output_new/
+publish_linux/
+*.tar.gz
