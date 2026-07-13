@@ -8,6 +8,10 @@ public interface ICajaService
     Task<AperturaCajaDto?> ObtenerAperturaHoyAsync();
     Task<AperturaCajaDto> AbrirCajaAsync(AbrirCajaDto dto, string registradoPor);
 
+    /// <summary>True si hay una apertura de caja para hoy y todavía no se
+    /// registró su cierre — requisito para compras, ventas y egresos.</summary>
+    Task<bool> HayCajaAbiertaAsync();
+
     // Egresos
     Task<IEnumerable<EgresoCajaChicaDto>> ObtenerEgresosHoyAsync();
     Task<IEnumerable<EgresoCajaChicaDto>> ObtenerEgresosPorFechaAsync(DateTime fecha);

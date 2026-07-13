@@ -50,6 +50,16 @@ public class CajaService : ICajaService
         return MapApertura(apertura);
     }
 
+    public async Task<bool> HayCajaAbiertaAsync()
+    {
+        var hoy = DateTime.UtcNow.Date;
+        var hayApertura = await _db.AperturasCaja.AsNoTracking().AnyAsync(a => a.Fecha.Date == hoy);
+        if (!hayApertura) return false;
+
+        var yaCerrada = await _db.CierresCaja.AsNoTracking().AnyAsync(c => c.Fecha.Date == hoy);
+        return !yaCerrada;
+    }
+
     // ── Egresos ───────────────────────────────────────────────────────────────
 
     public async Task<IEnumerable<EgresoCajaChicaDto>> ObtenerEgresosHoyAsync()

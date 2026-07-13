@@ -35,6 +35,9 @@ public class CompraService : ICompraService
 
     public async Task<CompraDto> RegistrarAsync(RegistrarCompraDto dto, string registradoPor)
     {
+        if (!await _cajaService.HayCajaAbiertaAsync())
+            throw new InvalidOperationException("Debes abrir la caja antes de registrar una compra");
+
         if (dto.Detalles.Count == 0)
             throw new InvalidOperationException("La compra debe tener al menos una línea de detalle");
 

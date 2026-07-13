@@ -22,6 +22,7 @@ public class ComprobanteService : IComprobanteService
     private readonly IHttpContextAccessor _accessor;
     private readonly ISolicitudAnulacionService _solicitudes;
     private readonly IReciboPrinterService _reciboPrinter;
+    private readonly ICajaService _cajaService;
 
     public ComprobanteService(
         IUnitOfWork uow,
@@ -29,7 +30,8 @@ public class ComprobanteService : IComprobanteService
         IOptions<NubefactSettings> cfg,
         IHttpContextAccessor accessor,
         ISolicitudAnulacionService solicitudes,
-        IReciboPrinterService reciboPrinter)
+        IReciboPrinterService reciboPrinter,
+        ICajaService cajaService)
     {
         _uow          = uow;
         _nubefactHttp = httpFactory.CreateClient("Nubefact");
@@ -37,6 +39,7 @@ public class ComprobanteService : IComprobanteService
         _accessor     = accessor;
         _solicitudes  = solicitudes;
         _reciboPrinter = reciboPrinter;
+        _cajaService  = cajaService;
     }
 
     private string ObtenerCajero() =>
@@ -266,6 +269,9 @@ public class ComprobanteService : IComprobanteService
         GenerarComprobanteDto dto, decimal total,
         List<ItemComprobante> items, string tipoAmbiente, int referenciaId)
     {
+        if (!await _cajaService.HayCajaAbiertaAsync())
+            return ApiResponse<ComprobanteResultadoDto>.Fallido("Debes abrir la caja antes de registrar una venta");
+
         var resultado = await (dto.TipoComprobante switch
         {
             "NV" => EmitirNotaVenta(dto, total, items, tipoAmbiente, referenciaId),
