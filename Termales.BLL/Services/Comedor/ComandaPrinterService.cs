@@ -82,43 +82,62 @@ public class ComandaPrinterService : IComandaPrinterService
         return Task.Run(() => RawPrinterHelper.SendBytesToPrinter(_cfg.NombreImpresora, bytes));
     }
 
+    private static string EtiquetaMesa(Orden orden)
+    {
+        if (orden.Mesa is null) return "PARA LLEVAR";
+        var numeros = new[] { orden.Mesa.Numero }.Concat(orden.Mesa.MesasSecundarias.Select(s => s.Numero)).OrderBy(n => n);
+        return $"MESA {string.Join("+", numeros)}";
+    }
+
     private byte[] ConstruirTicket(Orden orden, IEnumerable<OrdenDetalle> detalles, string titulo)
     {
         var ancho = _cfg.AnchoTicket;
         var linea = new string('-', ancho);
 
-        var cuerpo = new StringBuilder();
-        cuerpo.AppendLine(linea);
-        cuerpo.AppendLine($"Mesa: {orden.Mesa?.Numero.ToString() ?? "-"}");
-        cuerpo.AppendLine($"Mesero: {NombreMesero(orden)}");
-        cuerpo.AppendLine($"Orden #{orden.OrdenId}  {DateTime.Now:dd/MM HH:mm}");
-        cuerpo.AppendLine(linea);
+        var cabecera = new StringBuilder();
+        cabecera.AppendLine($"Mesero: {NombreMesero(orden)}");
+        cabecera.AppendLine($"Orden #{orden.OrdenId}  {DateTime.Now:dd/MM HH:mm}  — {titulo}");
+        cabecera.AppendLine(linea);
 
-        foreach (var d in detalles)
-        {
-            cuerpo.AppendLine($"x{d.Cantidad}  {d.ItemMenu?.Nombre ?? $"Item {d.ItemMenuId}"}");
-            if (!string.IsNullOrWhiteSpace(d.Observaciones))
-                cuerpo.AppendLine($"    obs: {d.Observaciones}");
-        }
-
-        cuerpo.AppendLine(linea);
+        var pie = new StringBuilder();
+        pie.AppendLine(linea);
         if (!string.IsNullOrWhiteSpace(orden.Observaciones))
         {
-            cuerpo.AppendLine($"Obs. orden: {orden.Observaciones}");
-            cuerpo.AppendLine(linea);
+            pie.AppendLine($"Obs. orden: {orden.Observaciones}");
+            pie.AppendLine(linea);
         }
-        cuerpo.AppendLine();
-        cuerpo.AppendLine();
-        cuerpo.AppendLine();
+        pie.AppendLine();
+        pie.AppendLine();
+        pie.AppendLine();
 
         using var ms = new MemoryStream();
         ms.WriteByte(ESC); ms.WriteByte(0x40);                       // ESC @  — reset/inicializar
+
+        // Encabezado: la mesa (o "para llevar"), en el tamaño más grande
+        // posible, para que se lea a distancia en la cocina.
         ms.WriteByte(ESC); ms.WriteByte(0x61); ms.WriteByte(0x01);   // ESC a 1 — centrar
         ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x01);   // ESC E 1 — negrita on
-        ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(CentrarTexto(titulo, ancho)) + "\n"));
+        ms.WriteByte(GS);  ms.WriteByte(0x21); ms.WriteByte(0x11);   // GS ! 0x11 — doble alto y doble ancho
+        ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(EtiquetaMesa(orden)) + "\n"));
+        ms.WriteByte(GS);  ms.WriteByte(0x21); ms.WriteByte(0x00);   // GS ! 0 — tamaño normal
         ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x00);   // negrita off
         ms.WriteByte(ESC); ms.WriteByte(0x61); ms.WriteByte(0x00);   // alinear izquierda
-        ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(cuerpo.ToString())));
+        ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(cabecera.ToString())));
+
+        // Pedido: cada plato en doble alto (más grande que el resto del
+        // ticket) para que se lea fácil desde la plancha/cocina.
+        foreach (var d in detalles)
+        {
+            ms.WriteByte(GS); ms.WriteByte(0x21); ms.WriteByte(0x01);   // GS ! 1 — doble alto
+            ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x01);  // negrita on
+            ms.Write(Encoding.ASCII.GetBytes(QuitarTildes($"x{d.Cantidad} {d.ItemMenu?.Nombre ?? $"Item {d.ItemMenuId}"}") + "\n"));
+            ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x00);  // negrita off
+            ms.WriteByte(GS); ms.WriteByte(0x21); ms.WriteByte(0x00);   // tamaño normal
+            if (!string.IsNullOrWhiteSpace(d.Observaciones))
+                ms.Write(Encoding.ASCII.GetBytes(QuitarTildes($"    obs: {d.Observaciones}") + "\n"));
+        }
+
+        ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(pie.ToString())));
 
         ms.WriteByte(GS); ms.WriteByte(0x56); ms.WriteByte(0x01);    // GS V 1 — corte parcial
 
