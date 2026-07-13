@@ -21,19 +21,22 @@ public class ComprobanteService : IComprobanteService
     private readonly NubefactSettings _cfg;
     private readonly IHttpContextAccessor _accessor;
     private readonly ISolicitudAnulacionService _solicitudes;
+    private readonly IReciboPrinterService _reciboPrinter;
 
     public ComprobanteService(
         IUnitOfWork uow,
         IHttpClientFactory httpFactory,
         IOptions<NubefactSettings> cfg,
         IHttpContextAccessor accessor,
-        ISolicitudAnulacionService solicitudes)
+        ISolicitudAnulacionService solicitudes,
+        IReciboPrinterService reciboPrinter)
     {
         _uow          = uow;
         _nubefactHttp = httpFactory.CreateClient("Nubefact");
         _cfg          = cfg.Value;
         _accessor     = accessor;
         _solicitudes  = solicitudes;
+        _reciboPrinter = reciboPrinter;
     }
 
     private string ObtenerCajero() =>
@@ -233,17 +236,36 @@ public class ComprobanteService : IComprobanteService
     }
 
     // ── Router: NV / BI / FI ─────────────────────────────────────────
-    private Task<ApiResponse<ComprobanteResultadoDto>> Emitir(
+    private async Task<ApiResponse<ComprobanteResultadoDto>> Emitir(
         GenerarComprobanteDto dto, decimal total,
         List<ItemComprobante> items, string tipoAmbiente, int referenciaId)
     {
-        return dto.TipoComprobante switch
+        var resultado = await (dto.TipoComprobante switch
         {
             "NV" => EmitirNotaVenta(dto, total, items, tipoAmbiente, referenciaId),
             "BI" => EmitirConNubefact(dto, total, items, tipoAmbiente, referenciaId, tipoDoc: 2, serie: _cfg.SerieBoleta),
             "FI" => EmitirConNubefact(dto, total, items, tipoAmbiente, referenciaId, tipoDoc: 1, serie: _cfg.SerieFactura),
             _    => Task.FromResult(ApiResponse<ComprobanteResultadoDto>.Fallido("Tipo de comprobante no válido"))
-        };
+        });
+
+        if (resultado.Exito)
+        {
+            var clienteLabel = dto.TipoComprobante == "FI"
+                ? dto.ClienteRazonSocial ?? dto.ClienteRuc ?? "Empresa"
+                : dto.ClienteNombre ?? dto.ClienteDni ?? "CLIENTES VARIOS";
+
+            var itemsRecibo = items.Select(i => new ItemReciboDto
+            {
+                Descripcion    = i.Descripcion,
+                Cantidad       = i.Cantidad,
+                PrecioUnitario = i.PrecioUnitario,
+                Total          = i.Total,
+            });
+
+            await _reciboPrinter.ImprimirAsync(resultado.Data!, itemsRecibo, clienteLabel);
+        }
+
+        return resultado;
     }
 
     // ── Nota de Venta (local, sin SUNAT) ─────────────────────────────

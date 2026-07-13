@@ -43,7 +43,23 @@ connection.On<string>("ImprimirComanda", async ticketBase64 =>
     catch (Exception ex)
     {
         Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Error al imprimir: {ex.Message}");
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Error al imprimir comanda: {ex.Message}");
+        Console.ResetColor();
+    }
+});
+
+connection.On<string>("ImprimirBoleta", async ticketBase64 =>
+{
+    try
+    {
+        var bytes = Convert.FromBase64String(ticketBase64);
+        await ImprimirAsync(cfg, bytes);
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Boleta impresa OK.");
+    }
+    catch (Exception ex)
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Error al imprimir boleta: {ex.Message}");
         Console.ResetColor();
     }
 });
@@ -58,8 +74,8 @@ connection.Reconnecting += ex =>
 
 connection.Reconnected += async _ =>
 {
-    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Reconectado, uniéndose al grupo de impresión...");
-    await connection.InvokeAsync("UnirseComoImpresora");
+    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Reconectado, uniéndose a los grupos de impresión...");
+    await UnirseSegunRolAsync(connection, cfg);
 };
 
 connection.Closed += async ex =>
@@ -68,11 +84,11 @@ connection.Closed += async ex =>
     Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Conexión cerrada: {ex?.Message}. Reintentando en 5s...");
     Console.ResetColor();
     await Task.Delay(5000);
-    await ConectarConReintentosAsync(connection);
+    await ConectarConReintentosAsync(connection, cfg);
 };
 
-await ConectarConReintentosAsync(connection);
-Console.WriteLine("Conectado y esperando comandas. Presiona Ctrl+C para salir.");
+await ConectarConReintentosAsync(connection, cfg);
+Console.WriteLine($"Conectado (rol: {cfg.Rol}) y esperando comandas/boletas. Presiona Ctrl+C para salir.");
 
 var salir = new TaskCompletionSource();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; salir.SetResult(); };
@@ -91,14 +107,14 @@ static async Task<string> LoginAsync(Config cfg)
     return string.IsNullOrEmpty(token) ? throw new InvalidOperationException("La respuesta de login no trajo token") : token;
 }
 
-static async Task ConectarConReintentosAsync(HubConnection connection)
+static async Task ConectarConReintentosAsync(HubConnection connection, Config cfg)
 {
     while (true)
     {
         try
         {
             await connection.StartAsync();
-            await connection.InvokeAsync("UnirseComoImpresora");
+            await UnirseSegunRolAsync(connection, cfg);
             return;
         }
         catch (Exception ex)
@@ -109,6 +125,18 @@ static async Task ConectarConReintentosAsync(HubConnection connection)
             await Task.Delay(5000);
         }
     }
+}
+
+// "cocina" | "caja" | "ambas" — con "ambas" se une a los dos grupos, así una
+// sola impresora conectada a esta PC puede imprimir comandas y boletas
+// mientras el negocio no tenga una impresora dedicada para cada una.
+static async Task UnirseSegunRolAsync(HubConnection connection, Config cfg)
+{
+    var rol = cfg.Rol.Trim().ToLowerInvariant();
+    if (rol is "cocina" or "ambas")
+        await connection.InvokeAsync("UnirseComoImpresoraCocina");
+    if (rol is "caja" or "ambas")
+        await connection.InvokeAsync("UnirseComoImpresoraCaja");
 }
 
 static async Task ImprimirAsync(Config cfg, byte[] bytes)
