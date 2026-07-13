@@ -17,3 +17,17 @@ public class RegistrarSalidaInsumoDto
     public decimal Cantidad { get; set; }
     public string? Observacion { get; set; }
 }
+
+/// <summary>Consumo actual: registra la salida de varios insumos a la vez para
+/// un ambiente y emite un ticket de referencia con el detalle.</summary>
+public class RegistrarConsumoActualDto
+{
+    public string Ambiente { get; set; } = string.Empty;
+    public List<ItemConsumoActualDto> Items { get; set; } = new();
+}
+
+public class ItemConsumoActualDto
+{
+    public int InsumoId { get; set; }
+    public decimal Cantidad { get; set; }
+}
