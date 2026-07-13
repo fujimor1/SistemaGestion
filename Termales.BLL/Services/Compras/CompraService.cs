@@ -50,7 +50,13 @@ public class CompraService : ICompraService
                 "Debe seleccionar un proveedor o indicar a quién se le realizó la compra");
         }
 
-        if (await _uow.Compras.ExisteAsync(c =>
+        // Las guías de remisión a veces no traen serie/número; factura y
+        // boleta sí los necesitan siempre.
+        var esGuia = dto.TipoComprobante.Equals("GUIA", StringComparison.OrdinalIgnoreCase);
+        if (!esGuia && (string.IsNullOrWhiteSpace(dto.Serie) || dto.Numero is null))
+            throw new InvalidOperationException("Debes indicar la serie y el número del comprobante");
+
+        if (!esGuia && await _uow.Compras.ExisteAsync(c =>
                 c.ProveedorId == dto.ProveedorId && c.Serie == dto.Serie && c.Numero == dto.Numero))
             throw new InvalidOperationException(
                 "Ya existe una compra registrada con esa serie y número para este proveedor");
@@ -61,8 +67,8 @@ public class CompraService : ICompraService
             Proveedor = proveedor,
             NombreProveedorManual = proveedor is null ? dto.NombreProveedorManual!.Trim() : null,
             TipoComprobante = dto.TipoComprobante,
-            Serie = dto.Serie,
-            Numero = dto.Numero,
+            Serie = esGuia ? null : dto.Serie,
+            Numero = esGuia ? null : dto.Numero,
             FechaEmision = dto.FechaEmision,
             FormaPago = dto.FormaPago,
             FechaVencimiento = dto.FechaVencimiento,

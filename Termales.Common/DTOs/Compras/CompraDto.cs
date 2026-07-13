@@ -10,9 +10,9 @@ public class CompraDto
     public string RazonSocialProveedor { get; set; } = string.Empty;
 
     public string TipoComprobante { get; set; } = string.Empty;
-    public string Serie { get; set; } = string.Empty;
-    public int Numero { get; set; }
-    public string NumeroFormateado => $"{Serie}-{Numero:D5}";
+    public string? Serie { get; set; }
+    public int? Numero { get; set; }
+    public string NumeroFormateado => Serie is not null && Numero is not null ? $"{Serie}-{Numero:D5}" : "S/N";
     public DateTime FechaEmision { get; set; }
 
     public string FormaPago { get; set; } = string.Empty;
@@ -55,11 +55,10 @@ public class RegistrarCompraDto
     [Required]
     public string TipoComprobante { get; set; } = string.Empty;
 
-    [Required]
-    public string Serie { get; set; } = string.Empty;
-
-    [Required]
-    public int Numero { get; set; }
+    // No son obligatorios porque una GUIA puede no traer serie/número
+    // (se valida en el servicio para FACTURA/BOLETA, que sí los necesitan).
+    public string? Serie { get; set; }
+    public int? Numero { get; set; }
 
     [Required]
     public DateTime FechaEmision { get; set; }

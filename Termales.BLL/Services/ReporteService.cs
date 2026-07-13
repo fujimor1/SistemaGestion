@@ -187,8 +187,8 @@ public class ReporteService : IReporteService
 
         var detalle = compras.Select(c => new DetalleCompraReporteDto
         {
-            Ruc             = c.Proveedor.Ruc,
-            RazonSocial     = c.Proveedor.RazonSocial,
+            Ruc             = c.Proveedor?.Ruc ?? string.Empty,
+            RazonSocial     = c.Proveedor?.RazonSocial ?? c.NombreProveedorManual ?? string.Empty,
             TipoComprobante = c.TipoComprobante,
             Serie           = c.Serie,
             Numero          = c.Numero,

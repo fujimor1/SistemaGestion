@@ -15,8 +15,8 @@ public class DetalleCompraReporteDto
     public string Ruc { get; set; } = string.Empty;
     public string RazonSocial { get; set; } = string.Empty;
     public string TipoComprobante { get; set; } = string.Empty;
-    public string Serie { get; set; } = string.Empty;
-    public int Numero { get; set; }
+    public string? Serie { get; set; }
+    public int? Numero { get; set; }
     public DateTime FechaEmision { get; set; }
     public decimal TotalGravada { get; set; }
     public decimal Igv { get; set; }

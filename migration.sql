@@ -1925,3 +1925,29 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260713122900_SerieNumeroOpcionalEnCompras') THEN
+    ALTER TABLE compras.compras ALTER COLUMN serie DROP NOT NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260713122900_SerieNumeroOpcionalEnCompras') THEN
+    ALTER TABLE compras.compras ALTER COLUMN numero DROP NOT NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260713122900_SerieNumeroOpcionalEnCompras') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260713122900_SerieNumeroOpcionalEnCompras', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
