@@ -48,6 +48,14 @@ public class OrdenesController : ControllerBase
         return Ok(resultado);
     }
 
+    [HttpGet("llevar/activas")]
+    [Authorize(Roles = Modulos.ComedorLectura)]
+    public async Task<IActionResult> ObtenerLlevarActivas()
+    {
+        var resultado = await _service.ObtenerLlevarActivasAsync();
+        return Ok(resultado);
+    }
+
     [HttpPost]
     public async Task<IActionResult> Crear([FromBody] CrearOrdenDto dto)
     {

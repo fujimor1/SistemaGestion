@@ -11,6 +11,11 @@ public class MesaDto
     public EstadoMesa Estado { get; set; }
     public string EstadoDescripcion => Estado.ToString();
     public bool Activo { get; set; }
+
+    /// <summary>Si esta mesa está unida a otra como secundaria, el ID de la principal.</summary>
+    public int? MesaPrincipalId { get; set; }
+    /// <summary>Números de las mesas secundarias unidas a esta (vacío si no es principal de ningún grupo).</summary>
+    public List<int> NumerosMesasSecundarias { get; set; } = new();
 }
 
 public class CrearMesaDto

@@ -14,6 +14,7 @@ public class OrdenConfiguration : IEntityTypeConfiguration<Orden>
         builder.Property(o => o.MesaId).HasColumnName("mesa_id");
         builder.Property(o => o.UsuarioId).HasColumnName("usuario_id");
         builder.Property(o => o.Estado).HasColumnName("estado").HasConversion<int>();
+        builder.Property(o => o.TipoEntrega).HasColumnName("tipo_entrega").HasMaxLength(20).HasDefaultValue("comedor");
         builder.Property(o => o.Total).HasColumnName("total").HasPrecision(10, 2);
         builder.Property(o => o.Observaciones).HasColumnName("observaciones").HasMaxLength(300);
         builder.Property(o => o.MotivoCancelacion).HasColumnName("motivo_cancelacion").HasMaxLength(300);

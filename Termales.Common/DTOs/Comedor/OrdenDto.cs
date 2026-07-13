@@ -6,12 +6,16 @@ namespace Termales.Common.DTOs.Comedor;
 public class OrdenDto
 {
     public int OrdenId { get; set; }
-    public int MesaId { get; set; }
-    public int NumeroMesa { get; set; }
+    public int? MesaId { get; set; }
+    public int? NumeroMesa { get; set; }
+    /// <summary>Números de las mesas unidas a esta orden, ej. "3+4". Igual a NumeroMesa si no hay unión.</summary>
+    public string? MesasLabel { get; set; }
     public int UsuarioId { get; set; }
     public string NombreMesero { get; set; } = string.Empty;
     public EstadoOrden Estado { get; set; }
     public string EstadoDescripcion => Estado.ToString();
+    /// <summary>"comedor" | "llevar".</summary>
+    public string TipoEntrega { get; set; } = "comedor";
     public decimal Total { get; set; }
     public string? Observaciones { get; set; }
     public string? MotivoCancelacion { get; set; }
@@ -40,8 +44,12 @@ public class OrdenDetalleDto
 
 public class CrearOrdenDto
 {
-    [Required]
-    public int MesaId { get; set; }
+    // Requerido solo si TipoEntrega es "comedor"; un pedido "llevar" no
+    // necesita mesa (se valida en el servicio).
+    public int? MesaId { get; set; }
+
+    /// <summary>"comedor" | "llevar". Por defecto "comedor" para no romper clientes viejos.</summary>
+    public string TipoEntrega { get; set; } = "comedor";
 
     [Required]
     public int UsuarioId { get; set; }
@@ -81,4 +89,10 @@ public class CancelarOrdenDto
 {
     [Required, MinLength(5, ErrorMessage = "Describe el motivo con más detalle")]
     public string Motivo { get; set; } = string.Empty;
+}
+
+public class UnirMesaDto
+{
+    [Required]
+    public int MesaSecundariaId { get; set; }
 }

@@ -12,7 +12,7 @@ public class OrdenRepository : GenericRepository<Orden>, IOrdenRepository
 
     public async Task<Orden?> ObtenerConDetallesAsync(int ordenId) =>
         await _dbSet
-            .Include(o => o.Mesa)
+            .Include(o => o.Mesa).ThenInclude(m => m!.MesasSecundarias)
             .Include(o => o.Usuario).ThenInclude(u => u.Empleado)
             .Include(o => o.Detalles.OrderBy(d => d.OrdenDetalleId)).ThenInclude(d => d.ItemMenu)
             .Include(o => o.Detalles.OrderBy(d => d.OrdenDetalleId)).ThenInclude(d => d.Producto)
@@ -20,6 +20,7 @@ public class OrdenRepository : GenericRepository<Orden>, IOrdenRepository
 
     public async Task<Orden?> ObtenerActivaPorMesaAsync(int mesaId) =>
         await _dbSet
+            .Include(o => o.Mesa).ThenInclude(m => m!.MesasSecundarias)
             .Include(o => o.Detalles.OrderBy(d => d.OrdenDetalleId)).ThenInclude(d => d.ItemMenu)
             .Include(o => o.Detalles.OrderBy(d => d.OrdenDetalleId)).ThenInclude(d => d.Producto)
             .FirstOrDefaultAsync(o => o.MesaId == mesaId &&
@@ -28,16 +29,26 @@ public class OrdenRepository : GenericRepository<Orden>, IOrdenRepository
 
     public async Task<IEnumerable<Orden>> ObtenerPorEstadoAsync(EstadoOrden estado) =>
         await _dbSet
-            .Include(o => o.Mesa)
+            .Include(o => o.Mesa).ThenInclude(m => m!.MesasSecundarias)
             .Include(o => o.Detalles.OrderBy(d => d.OrdenDetalleId)).ThenInclude(d => d.ItemMenu)
             .Include(o => o.Detalles.OrderBy(d => d.OrdenDetalleId)).ThenInclude(d => d.Producto)
             .Where(o => o.Estado == estado)
             .OrderBy(o => o.FechaApertura)
             .ToListAsync();
 
+    public async Task<IEnumerable<Orden>> ObtenerLlevarActivasAsync() =>
+        await _dbSet
+            .Include(o => o.Detalles.OrderBy(d => d.OrdenDetalleId)).ThenInclude(d => d.ItemMenu)
+            .Include(o => o.Detalles.OrderBy(d => d.OrdenDetalleId)).ThenInclude(d => d.Producto)
+            .Where(o => o.TipoEntrega == "llevar" &&
+                o.Estado != EstadoOrden.Pagada &&
+                o.Estado != EstadoOrden.Cancelada)
+            .OrderBy(o => o.FechaApertura)
+            .ToListAsync();
+
     public async Task<IEnumerable<Orden>> ObtenerPorFechaAsync(DateTime fecha) =>
         await _dbSet
-            .Include(o => o.Mesa)
+            .Include(o => o.Mesa).ThenInclude(m => m!.MesasSecundarias)
             .Include(o => o.Detalles.OrderBy(d => d.OrdenDetalleId)).ThenInclude(d => d.ItemMenu)
             .Include(o => o.Detalles.OrderBy(d => d.OrdenDetalleId)).ThenInclude(d => d.Producto)
             .Where(o => o.FechaApertura.Date == fecha.Date)

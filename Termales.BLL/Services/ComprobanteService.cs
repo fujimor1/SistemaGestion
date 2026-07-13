@@ -99,8 +99,21 @@ public class ComprobanteService : IComprobanteService
         {
             orden.Estado      = EstadoOrden.Pagada;
             orden.FechaCierre = DateTime.UtcNow;
-            var mesa = await _uow.Mesas.ObtenerPorIdAsync(orden.MesaId);
-            if (mesa is not null) { mesa.Estado = EstadoMesa.Disponible; await _uow.Mesas.ActualizarAsync(mesa); }
+            if (orden.MesaId is int mesaId)
+            {
+                var mesa = await _uow.Mesas.ObtenerConSecundariasAsync(mesaId);
+                if (mesa is not null)
+                {
+                    mesa.Estado = EstadoMesa.Disponible;
+                    await _uow.Mesas.ActualizarAsync(mesa);
+                    foreach (var secundaria in mesa.MesasSecundarias)
+                    {
+                        secundaria.MesaPrincipalId = null;
+                        secundaria.Estado = EstadoMesa.Disponible;
+                        await _uow.Mesas.ActualizarAsync(secundaria);
+                    }
+                }
+            }
         }
 
         await _uow.GuardarCambiosAsync();

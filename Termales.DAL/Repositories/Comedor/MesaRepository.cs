@@ -11,7 +11,11 @@ public class MesaRepository : GenericRepository<Mesa>, IMesaRepository
     public MesaRepository(TermalesDbContext context) : base(context) { }
 
     public async Task<IEnumerable<Mesa>> ObtenerActivasAsync() =>
-        await _dbSet.Where(m => m.Activo).OrderBy(m => m.Numero).ToListAsync();
+        await _dbSet.Include(m => m.MesasSecundarias)
+            .Where(m => m.Activo).OrderBy(m => m.Numero).ToListAsync();
+
+    public async Task<Mesa?> ObtenerConSecundariasAsync(int mesaId) =>
+        await _dbSet.Include(m => m.MesasSecundarias).FirstOrDefaultAsync(m => m.MesaId == mesaId);
 
     public async Task<Mesa?> ObtenerConOrdenActivaAsync(int mesaId) =>
         await _dbSet

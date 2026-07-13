@@ -32,10 +32,20 @@ public class OrdenService : IOrdenService
 
     public async Task<ApiResponse<OrdenDto>> ObtenerActivaPorMesaAsync(int mesaId)
     {
-        var orden = await _uow.Ordenes.ObtenerActivaPorMesaAsync(mesaId);
+        var mesaEfectiva = await ResolverMesaEfectivaIdAsync(mesaId);
+        var orden = await _uow.Ordenes.ObtenerActivaPorMesaAsync(mesaEfectiva);
         if (orden is null)
             return ApiResponse<OrdenDto>.Fallido("No hay orden activa en esta mesa");
         return ApiResponse<OrdenDto>.Exitoso(MapearDto(orden));
+    }
+
+    // Si la mesa consultada es "secundaria" (está unida a otra), la orden en
+    // realidad vive en la mesa "principal" del grupo — acá se resuelve cuál
+    // ID de mesa usar de verdad.
+    private async Task<int> ResolverMesaEfectivaIdAsync(int mesaId)
+    {
+        var mesa = await _uow.Mesas.ObtenerPorIdAsync(mesaId);
+        return mesa?.MesaPrincipalId ?? mesaId;
     }
 
     public async Task<ApiResponse<IEnumerable<OrdenDto>>> ObtenerPorEstadoAsync(EstadoOrden estado)
@@ -50,15 +60,43 @@ public class OrdenService : IOrdenService
         return ApiResponse<IEnumerable<OrdenDto>>.Exitoso(ordenes.Select(MapearDto));
     }
 
+    public async Task<ApiResponse<IEnumerable<OrdenDto>>> ObtenerLlevarActivasAsync()
+    {
+        var ordenes = await _uow.Ordenes.ObtenerLlevarActivasAsync();
+        return ApiResponse<IEnumerable<OrdenDto>>.Exitoso(ordenes.Select(MapearDto));
+    }
+
     public async Task<ApiResponse<OrdenDto>> CrearAsync(CrearOrdenDto dto)
     {
-        var mesa = await _uow.Mesas.ObtenerPorIdAsync(dto.MesaId);
-        if (mesa is null || !mesa.Activo)
-            return ApiResponse<OrdenDto>.Fallido("Mesa no encontrada");
+        var esLlevar = dto.TipoEntrega.Equals("llevar", StringComparison.OrdinalIgnoreCase);
 
-        var ordenActiva = await _uow.Ordenes.ObtenerActivaPorMesaAsync(dto.MesaId);
-        if (ordenActiva is not null)
-            return ApiResponse<OrdenDto>.Fallido("La mesa ya tiene una orden activa");
+        Mesa? mesa = null;
+        if (esLlevar)
+        {
+            if (dto.MesaId is not null)
+                return ApiResponse<OrdenDto>.Fallido("Un pedido para llevar no debe llevar mesa");
+        }
+        else
+        {
+            if (dto.MesaId is null)
+                return ApiResponse<OrdenDto>.Fallido("Debes indicar la mesa para un pedido en el comedor");
+
+            mesa = await _uow.Mesas.ObtenerConSecundariasAsync(dto.MesaId.Value);
+            if (mesa is null || !mesa.Activo)
+                return ApiResponse<OrdenDto>.Fallido("Mesa no encontrada");
+
+            // Si es una mesa "secundaria" (unida a otra), la orden se crea
+            // sobre la mesa "principal" del grupo — así la cuenta sale unida.
+            if (mesa.MesaPrincipalId is int principalId)
+            {
+                mesa = await _uow.Mesas.ObtenerConSecundariasAsync(principalId)
+                    ?? throw new InvalidOperationException("Mesa principal del grupo no encontrada");
+            }
+
+            var ordenActiva = await _uow.Ordenes.ObtenerActivaPorMesaAsync(mesa.MesaId);
+            if (ordenActiva is not null)
+                return ApiResponse<OrdenDto>.Fallido("La mesa ya tiene una orden activa");
+        }
 
         var detalles = new List<OrdenDetalle>();
         decimal total = 0;
@@ -74,7 +112,8 @@ public class OrdenService : IOrdenService
 
         var orden = new Orden
         {
-            MesaId = dto.MesaId,
+            MesaId = mesa?.MesaId,
+            TipoEntrega = esLlevar ? "llevar" : "comedor",
             UsuarioId = dto.UsuarioId,
             Estado = EstadoOrden.EnCocina,
             Total = total,
@@ -82,8 +121,17 @@ public class OrdenService : IOrdenService
             Detalles = detalles
         };
 
-        mesa.Estado = EstadoMesa.Ocupada;
-        await _uow.Mesas.ActualizarAsync(mesa);
+        if (mesa is not null)
+        {
+            mesa.Estado = EstadoMesa.Ocupada;
+            await _uow.Mesas.ActualizarAsync(mesa);
+            // Las mesas secundarias del grupo también se ven "ocupadas".
+            foreach (var secundaria in mesa.MesasSecundarias)
+            {
+                secundaria.Estado = EstadoMesa.Ocupada;
+                await _uow.Mesas.ActualizarAsync(secundaria);
+            }
+        }
         await _uow.Ordenes.AgregarAsync(orden);
         await _uow.GuardarCambiosAsync();
 
@@ -280,19 +328,37 @@ public class OrdenService : IOrdenService
         orden.Estado = EstadoOrden.Pagada;
         orden.FechaCierre = DateTime.UtcNow;
 
-        var mesa = await _uow.Mesas.ObtenerPorIdAsync(orden.MesaId);
-        if (mesa is not null)
-        {
-            mesa.Estado = EstadoMesa.Disponible;
-            await _uow.Mesas.ActualizarAsync(mesa);
-        }
-
+        await LiberarMesaAsync(orden);
         await _uow.Ordenes.ActualizarAsync(orden);
         await _uow.GuardarCambiosAsync();
 
-        await _hub.Clients.All.SendAsync("MesaDisponible", orden.MesaId);
+        if (orden.MesaId is int mesaIdLiberada)
+            await _hub.Clients.All.SendAsync("MesaDisponible", mesaIdLiberada);
 
         return ApiResponse<OrdenDto>.Exitoso(MapearDto(orden), "Orden cerrada exitosamente");
+    }
+
+    // Libera la mesa de la orden (y sus mesas secundarias unidas, si las
+    // tiene) al cerrar/cancelar. No hace nada si la orden es para llevar
+    // (no tiene mesa).
+    private async Task LiberarMesaAsync(Orden orden)
+    {
+        if (orden.MesaId is not int mesaId) return;
+
+        var mesa = await _uow.Mesas.ObtenerConSecundariasAsync(mesaId);
+        if (mesa is null) return;
+
+        mesa.Estado = EstadoMesa.Disponible;
+        await _uow.Mesas.ActualizarAsync(mesa);
+
+        foreach (var secundaria in mesa.MesasSecundarias)
+        {
+            // Se separan del grupo al liberarse — la próxima vez se unen de
+            // nuevo si hace falta, en vez de quedar "pegadas" para siempre.
+            secundaria.MesaPrincipalId = null;
+            secundaria.Estado = EstadoMesa.Disponible;
+            await _uow.Mesas.ActualizarAsync(secundaria);
+        }
     }
 
     public async Task<ApiResponse> CancelarAsync(int ordenId, string motivo)
@@ -313,17 +379,13 @@ public class OrdenService : IOrdenService
         orden.MotivoCancelacion = motivo;
         orden.FechaCierre = DateTime.UtcNow;
 
-        var mesa = await _uow.Mesas.ObtenerPorIdAsync(orden.MesaId);
-        if (mesa is not null)
-        {
-            mesa.Estado = EstadoMesa.Disponible;
-            await _uow.Mesas.ActualizarAsync(mesa);
-        }
-
+        var mesaIdOriginal = orden.MesaId;
+        await LiberarMesaAsync(orden);
         await _uow.Ordenes.ActualizarAsync(orden);
         await _uow.GuardarCambiosAsync();
 
-        await _hub.Clients.All.SendAsync("MesaDisponible", orden.MesaId);
+        if (mesaIdOriginal is int mesaIdLiberada)
+            await _hub.Clients.All.SendAsync("MesaDisponible", mesaIdLiberada);
 
         return ApiResponse.Exitoso("Orden cancelada exitosamente");
     }
@@ -415,10 +477,14 @@ public class OrdenService : IOrdenService
     {
         OrdenId = o.OrdenId,
         MesaId = o.MesaId,
-        NumeroMesa = o.Mesa?.Numero ?? 0,
+        NumeroMesa = o.Mesa?.Numero,
+        MesasLabel = o.Mesa is null
+            ? null
+            : string.Join("+", new[] { o.Mesa.Numero }.Concat(o.Mesa.MesasSecundarias.Select(s => s.Numero)).OrderBy(n => n)),
         UsuarioId = o.UsuarioId,
         NombreMesero = o.Usuario?.Empleado is not null ? $"{o.Usuario.Empleado.Nombres} {o.Usuario.Empleado.Apellidos}" : string.Empty,
         Estado = o.Estado,
+        TipoEntrega = o.TipoEntrega,
         Total = o.Total,
         Observaciones = o.Observaciones,
         MotivoCancelacion = o.MotivoCancelacion,

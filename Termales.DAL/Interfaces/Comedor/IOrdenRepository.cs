@@ -9,4 +9,5 @@ public interface IOrdenRepository : IGenericRepository<Orden>
     Task<Orden?> ObtenerActivaPorMesaAsync(int mesaId);
     Task<IEnumerable<Orden>> ObtenerPorEstadoAsync(EstadoOrden estado);
     Task<IEnumerable<Orden>> ObtenerPorFechaAsync(DateTime fecha);
+    Task<IEnumerable<Orden>> ObtenerLlevarActivasAsync();
 }

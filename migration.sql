@@ -1951,3 +1951,50 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260713131342_UnirMesasYPedidosLlevar') THEN
+    ALTER TABLE comedor.ordenes ALTER COLUMN mesa_id DROP NOT NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260713131342_UnirMesasYPedidosLlevar') THEN
+    ALTER TABLE comedor.ordenes ADD tipo_entrega character varying(20) NOT NULL DEFAULT 'comedor';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260713131342_UnirMesasYPedidosLlevar') THEN
+    ALTER TABLE comedor.mesas ADD mesa_principal_id integer;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260713131342_UnirMesasYPedidosLlevar') THEN
+    CREATE INDEX "IX_mesas_mesa_principal_id" ON comedor.mesas (mesa_principal_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260713131342_UnirMesasYPedidosLlevar') THEN
+    ALTER TABLE comedor.mesas ADD CONSTRAINT "FK_mesas_mesas_mesa_principal_id" FOREIGN KEY (mesa_principal_id) REFERENCES comedor.mesas (mesa_id) ON DELETE RESTRICT;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260713131342_UnirMesasYPedidosLlevar') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260713131342_UnirMesasYPedidosLlevar', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

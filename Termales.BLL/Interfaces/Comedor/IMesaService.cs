@@ -10,4 +10,6 @@ public interface IMesaService
     Task<ApiResponse<MesaDto>> CrearAsync(CrearMesaDto dto);
     Task<ApiResponse<MesaDto>> ActualizarAsync(ActualizarMesaDto dto);
     Task<ApiResponse> DesactivarAsync(int id);
+    Task<ApiResponse> UnirAsync(int mesaPrincipalId, int mesaSecundariaId);
+    Task<ApiResponse> SepararAsync(int mesaId);
 }

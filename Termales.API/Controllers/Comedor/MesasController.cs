@@ -51,4 +51,18 @@ public class MesasController : ControllerBase
         var resultado = await _service.DesactivarAsync(id);
         return resultado.Exito ? Ok(resultado) : NotFound(resultado);
     }
+
+    [HttpPost("{id:int}/unir")]
+    public async Task<IActionResult> Unir(int id, [FromBody] UnirMesaDto dto)
+    {
+        var resultado = await _service.UnirAsync(id, dto.MesaSecundariaId);
+        return resultado.Exito ? Ok(resultado) : BadRequest(resultado);
+    }
+
+    [HttpPost("{id:int}/separar")]
+    public async Task<IActionResult> Separar(int id)
+    {
+        var resultado = await _service.SepararAsync(id);
+        return resultado.Exito ? Ok(resultado) : BadRequest(resultado);
+    }
 }

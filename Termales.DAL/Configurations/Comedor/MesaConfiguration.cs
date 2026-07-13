@@ -15,6 +15,12 @@ public class MesaConfiguration : IEntityTypeConfiguration<Mesa>
         builder.Property(m => m.Capacidad).HasColumnName("capacidad").IsRequired();
         builder.Property(m => m.Estado).HasColumnName("estado").HasConversion<int>();
         builder.Property(m => m.Activo).HasColumnName("activo").HasDefaultValue(true);
+        builder.Property(m => m.MesaPrincipalId).HasColumnName("mesa_principal_id");
+
+        builder.HasOne(m => m.MesaPrincipal)
+               .WithMany(m => m.MesasSecundarias)
+               .HasForeignKey(m => m.MesaPrincipalId)
+               .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(m => m.Numero).IsUnique();
     }

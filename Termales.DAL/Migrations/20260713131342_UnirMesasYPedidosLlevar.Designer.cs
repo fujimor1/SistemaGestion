@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Termales.DAL.Context;
@@ -11,9 +12,11 @@ using Termales.DAL.Context;
 namespace Termales.DAL.Migrations
 {
     [DbContext(typeof(TermalesDbContext))]
-    partial class TermalesDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260713131342_UnirMesasYPedidosLlevar")]
+    partial class UnirMesasYPedidosLlevar
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
