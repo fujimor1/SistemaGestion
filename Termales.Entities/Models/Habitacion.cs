@@ -14,4 +14,6 @@ public class Habitacion
     public DateTime? FechaCheckIn { get; set; }
     /// <summary>Fecha/hora del último check-out registrado.</summary>
     public DateTime? FechaCheckOut { get; set; }
+
+    public ICollection<HabitacionItem> Items { get; set; } = new List<HabitacionItem>();
 }

@@ -5,6 +5,7 @@ using Termales.Common.DTOs.Compras;
 using Termales.DAL.UnitOfWork;
 using Termales.Entities.Models.Compras;
 using Termales.Entities.Models.Inventario;
+using Termales.Entities.Models.Tienda;
 
 namespace Termales.BLL.Services.Compras;
 
@@ -81,10 +82,10 @@ public class CompraService : ICompraService
 
             if (esInsumo == esProducto)
                 throw new InvalidOperationException("TipoItem debe ser INSUMO o PRODUCTO");
-            if (esInsumo && linea.InsumoId is null)
-                throw new InvalidOperationException("Falta InsumoId en una línea de tipo INSUMO");
-            if (esProducto && linea.ProductoId is null)
-                throw new InvalidOperationException("Falta ProductoId en una línea de tipo PRODUCTO");
+            if (esInsumo && linea.InsumoId is null && string.IsNullOrWhiteSpace(linea.NombreNuevo))
+                throw new InvalidOperationException("Selecciona un insumo existente o escribe el nombre de uno nuevo");
+            if (esProducto && linea.ProductoId is null && string.IsNullOrWhiteSpace(linea.NombreNuevo))
+                throw new InvalidOperationException("Selecciona un producto existente o escribe el nombre de uno nuevo");
 
             var totalLinea = linea.Cantidad * linea.PrecioUnitario;
             totalCompra += totalLinea;
@@ -92,8 +93,6 @@ public class CompraService : ICompraService
             var detalle = new DetalleCompra
             {
                 TipoItem = linea.TipoItem.ToUpperInvariant(),
-                InsumoId = linea.InsumoId,
-                ProductoId = linea.ProductoId,
                 Cantidad = linea.Cantidad,
                 PrecioUnitario = linea.PrecioUnitario,
                 Total = totalLinea,
@@ -103,16 +102,39 @@ public class CompraService : ICompraService
 
             if (esInsumo)
             {
-                var insumo = await _uow.Insumos.ObtenerPorIdAsync(linea.InsumoId!.Value)
-                    ?? throw new Exception($"Insumo {linea.InsumoId} no encontrado");
+                Insumo insumo;
+                if (linea.InsumoId is int insumoIdExistente)
+                {
+                    insumo = await _uow.Insumos.ObtenerPorIdAsync(insumoIdExistente)
+                        ?? throw new InvalidOperationException($"Insumo {insumoIdExistente} no encontrado");
 
-                insumo.StockActual += linea.Cantidad;
-                insumo.PrecioReferencia = linea.PrecioUnitario;
-                await _uow.Insumos.ActualizarAsync(insumo);
+                    insumo.StockActual += linea.Cantidad;
+                    insumo.PrecioReferencia = linea.PrecioUnitario;
+                    await _uow.Insumos.ActualizarAsync(insumo);
+                }
+                else
+                {
+                    // Insumo nuevo: se crea al vuelo con el stock de esta compra
+                    // (queda tracked como "Added", no hace falta ActualizarAsync).
+                    insumo = new Insumo
+                    {
+                        Nombre = linea.NombreNuevo!.Trim(),
+                        TipoAmbiente = string.IsNullOrWhiteSpace(linea.TipoAmbienteNuevoInsumo) ? "comedor" : linea.TipoAmbienteNuevoInsumo!,
+                        TipoArticulo = "insumo",
+                        Unidad = linea.UnidadNuevoInsumo,
+                        StockActual = linea.Cantidad,
+                        StockMinimo = 0,
+                        PrecioReferencia = linea.PrecioUnitario,
+                        Activo = true,
+                    };
+                    await _uow.Insumos.AgregarAsync(insumo);
+                }
+
+                detalle.Insumo = insumo;
 
                 await _uow.EntradasInsumo.AgregarAsync(new EntradaInsumo
                 {
-                    InsumoId = insumo.InsumoId,
+                    Insumo = insumo,
                     Cantidad = linea.Cantidad,
                     PrecioUnitario = linea.PrecioUnitario,
                     Total = totalLinea,
@@ -121,16 +143,38 @@ public class CompraService : ICompraService
             }
             else
             {
-                var producto = await _uow.Productos.ObtenerPorIdAsync(linea.ProductoId!.Value)
-                    ?? throw new Exception($"Producto {linea.ProductoId} no encontrado");
+                Producto producto;
+                if (linea.ProductoId is int productoIdExistente)
+                {
+                    producto = await _uow.Productos.ObtenerPorIdAsync(productoIdExistente)
+                        ?? throw new InvalidOperationException($"Producto {productoIdExistente} no encontrado");
 
-                producto.Stock += (int)linea.Cantidad;
-                producto.PrecioCompra = linea.PrecioUnitario;
-                await _uow.Productos.ActualizarAsync(producto);
+                    producto.Stock += (int)linea.Cantidad;
+                    producto.PrecioCompra = linea.PrecioUnitario;
+                    await _uow.Productos.ActualizarAsync(producto);
+                }
+                else
+                {
+                    // Producto nuevo: si no se indicó precio de venta, se parte del
+                    // precio de compra (se puede ajustar después desde Tienda).
+                    producto = new Producto
+                    {
+                        Nombre = linea.NombreNuevo!.Trim(),
+                        Descripcion = "----",
+                        PrecioCompra = linea.PrecioUnitario,
+                        Precio = linea.PrecioVentaNuevoProducto ?? linea.PrecioUnitario,
+                        Stock = (int)linea.Cantidad,
+                        StockMinimo = 0,
+                        Activo = true,
+                    };
+                    await _uow.Productos.AgregarAsync(producto);
+                }
+
+                detalle.Producto = producto;
 
                 await _uow.EntradasProducto.AgregarAsync(new EntradaProducto
                 {
-                    ProductoId = producto.ProductoId,
+                    Producto = producto,
                     Cantidad = (int)linea.Cantidad,
                     PrecioUnitario = linea.PrecioUnitario,
                     Total = totalLinea,

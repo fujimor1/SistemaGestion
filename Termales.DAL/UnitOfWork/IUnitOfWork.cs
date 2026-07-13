@@ -12,6 +12,7 @@ public interface IUnitOfWork : IDisposable
     IReservaRepository Reservas { get; }
     IPiscinaRepository Piscinas { get; }
     IHabitacionRepository Habitaciones { get; }
+    IHabitacionItemRepository HabitacionItems { get; }
     IServicioRepository Servicios { get; }
     IPagoRepository Pagos { get; }
     IEmpleadoRepository Empleados { get; }

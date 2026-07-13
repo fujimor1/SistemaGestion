@@ -61,4 +61,25 @@ public class HabitacionesController : ControllerBase
         var resultado = await _service.EliminarAsync(id);
         return resultado.Exito ? Ok(resultado) : NotFound(resultado);
     }
+
+    [HttpGet("{id:int}/items")]
+    public async Task<IActionResult> ObtenerItems(int id)
+    {
+        var resultado = await _service.ObtenerItemsAsync(id);
+        return Ok(resultado);
+    }
+
+    [HttpPost("{id:int}/items")]
+    public async Task<IActionResult> AgregarItem(int id, [FromBody] CrearHabitacionItemDto dto)
+    {
+        var resultado = await _service.AgregarItemAsync(id, dto);
+        return resultado.Exito ? Ok(resultado) : BadRequest(resultado);
+    }
+
+    [HttpDelete("items/{itemId:int}")]
+    public async Task<IActionResult> EliminarItem(int itemId)
+    {
+        var resultado = await _service.EliminarItemAsync(itemId);
+        return resultado.Exito ? Ok(resultado) : NotFound(resultado);
+    }
 }

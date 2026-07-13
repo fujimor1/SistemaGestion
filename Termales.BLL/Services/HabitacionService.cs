@@ -92,6 +92,48 @@ public class HabitacionService : IHabitacionService
         return ApiResponse.Exitoso("Habitación eliminada exitosamente");
     }
 
+    public async Task<ApiResponse<IEnumerable<HabitacionItemDto>>> ObtenerItemsAsync(int habitacionId)
+    {
+        var items = await _uow.HabitacionItems.ObtenerPorHabitacionAsync(habitacionId);
+        return ApiResponse<IEnumerable<HabitacionItemDto>>.Exitoso(items.Select(MapearItemDto));
+    }
+
+    public async Task<ApiResponse<HabitacionItemDto>> AgregarItemAsync(int habitacionId, CrearHabitacionItemDto dto)
+    {
+        var h = await _uow.Habitaciones.ObtenerPorIdAsync(habitacionId);
+        if (h is null)
+            return ApiResponse<HabitacionItemDto>.Fallido("Habitación no encontrada");
+
+        var item = new HabitacionItem
+        {
+            HabitacionId = habitacionId,
+            Nombre = dto.Nombre,
+            Cantidad = dto.Cantidad,
+        };
+        await _uow.HabitacionItems.AgregarAsync(item);
+        await _uow.GuardarCambiosAsync();
+        return ApiResponse<HabitacionItemDto>.Exitoso(MapearItemDto(item), "Ítem agregado");
+    }
+
+    public async Task<ApiResponse> EliminarItemAsync(int habitacionItemId)
+    {
+        var item = await _uow.HabitacionItems.ObtenerPorIdAsync(habitacionItemId);
+        if (item is null)
+            return ApiResponse.Fallido("Ítem no encontrado");
+
+        await _uow.HabitacionItems.EliminarAsync(habitacionItemId);
+        await _uow.GuardarCambiosAsync();
+        return ApiResponse.Exitoso("Ítem eliminado");
+    }
+
+    private static HabitacionItemDto MapearItemDto(HabitacionItem i) => new()
+    {
+        HabitacionItemId = i.HabitacionItemId,
+        HabitacionId = i.HabitacionId,
+        Nombre = i.Nombre,
+        Cantidad = i.Cantidad,
+    };
+
     private static HabitacionDto MapearDto(Habitacion h) => new()
     {
         HabitacionId = h.HabitacionId,

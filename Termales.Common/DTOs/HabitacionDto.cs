@@ -34,3 +34,20 @@ public class ActualizarHabitacionDto : CrearHabitacionDto
 {
     public int HabitacionId { get; set; }
 }
+
+public class HabitacionItemDto
+{
+    public int HabitacionItemId { get; set; }
+    public int HabitacionId { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public int Cantidad { get; set; }
+}
+
+public class CrearHabitacionItemDto
+{
+    [Required][StringLength(100)]
+    public string Nombre { get; set; } = string.Empty;
+
+    [Range(1, 999)]
+    public int Cantidad { get; set; } = 1;
+}

@@ -21,6 +21,7 @@ public class UnitOfWork : IUnitOfWork
     public IReservaRepository Reservas { get; }
     public IPiscinaRepository Piscinas { get; }
     public IHabitacionRepository Habitaciones { get; }
+    public IHabitacionItemRepository HabitacionItems { get; }
     public IServicioRepository Servicios { get; }
     public IPagoRepository Pagos { get; }
     public IEmpleadoRepository Empleados { get; }
@@ -49,6 +50,7 @@ public class UnitOfWork : IUnitOfWork
         Reservas = new ReservaRepository(context);
         Piscinas = new PiscinaRepository(context);
         Habitaciones = new HabitacionRepository(context);
+        HabitacionItems = new HabitacionItemRepository(context);
         Servicios = new ServicioRepository(context);
         Pagos = new PagoRepository(context);
         Empleados = new EmpleadoRepository(context);

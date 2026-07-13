@@ -11,4 +11,8 @@ public interface IHabitacionService
     Task<ApiResponse<HabitacionDto>> ActualizarAsync(ActualizarHabitacionDto dto);
     Task<ApiResponse> CambiarOcupacionAsync(int id, bool ocupado);
     Task<ApiResponse> EliminarAsync(int id);
+
+    Task<ApiResponse<IEnumerable<HabitacionItemDto>>> ObtenerItemsAsync(int habitacionId);
+    Task<ApiResponse<HabitacionItemDto>> AgregarItemAsync(int habitacionId, CrearHabitacionItemDto dto);
+    Task<ApiResponse> EliminarItemAsync(int habitacionItemId);
 }

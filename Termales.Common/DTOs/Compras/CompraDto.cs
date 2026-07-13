@@ -84,6 +84,16 @@ public class RegistrarDetalleCompraDto
     public int? InsumoId { get; set; }
     public int? ProductoId { get; set; }
 
+    // Si InsumoId/ProductoId vienen null, se crea uno nuevo con estos datos
+    // (a veces entra un insumo/producto que todavía no existe en el catálogo).
+    public string? NombreNuevo { get; set; }
+    /// <summary>Solo aplica si se crea un insumo nuevo: kg, litros, unidad, etc.</summary>
+    public string? UnidadNuevoInsumo { get; set; }
+    /// <summary>Solo aplica si se crea un insumo nuevo: comedor | banio | habitacion.</summary>
+    public string? TipoAmbienteNuevoInsumo { get; set; }
+    /// <summary>Solo aplica si se crea un producto nuevo: precio de venta en tienda.</summary>
+    public decimal? PrecioVentaNuevoProducto { get; set; }
+
     [Required]
     public decimal Cantidad { get; set; }
 

@@ -29,7 +29,11 @@ public class RecetaInsumoInputDto
     [Required]
     public int InsumoId { get; set; }
 
-    [Required, Range(0.01, double.MaxValue, ErrorMessage = "La cantidad debe ser mayor a 0")]
+    // Antes era obligatorio (mínimo 0.01) — ahora se puede dejar en 0 y
+    // completarlo después, porque no siempre se sabe el peso exacto al
+    // momento de crear el plato. Se compensa con el consumo diario que
+    // registra el cocinero manualmente (ver SalidaInsumo).
+    [Range(0, double.MaxValue, ErrorMessage = "La cantidad no puede ser negativa")]
     public decimal Cantidad { get; set; }
 }
 
