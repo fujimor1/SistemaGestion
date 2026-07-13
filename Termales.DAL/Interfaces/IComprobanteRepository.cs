@@ -8,4 +8,5 @@ public interface IComprobanteRepository : IGenericRepository<Comprobante>
     Task<IEnumerable<Comprobante>> ObtenerPorFechaAsync(DateOnly fecha, string? tipoAmbiente);
     Task<IEnumerable<Comprobante>> ObtenerAnulacionesAsync(DateOnly? desde, DateOnly? hasta);
     Task<IEnumerable<Comprobante>> ObtenerPendientesDeCobroAsync();
+    Task<Comprobante?> ObtenerConDetalleAsync(int comprobanteId);
 }

@@ -16,4 +16,5 @@ public interface IComprobanteService
     Task<ApiResponse> SolicitarAnulacionAsync(int id, string motivo, string cajero);
     Task<ApiResponse<ComprobanteResultadoDto>> EmitirNotaCreditoAsync(int comprobanteOrigenId, EmitirNotaCreditoDto dto);
     Task<IEnumerable<AnulacionListadoDto>> ObtenerAnulacionesAsync(string? desde, string? hasta);
+    Task<ApiResponse<ComprobanteDetalleCompletoDto>> ObtenerDetalleAsync(int comprobanteId);
 }

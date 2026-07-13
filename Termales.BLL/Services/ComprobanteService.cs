@@ -577,6 +577,41 @@ public class ComprobanteService : IComprobanteService
         });
     }
 
+    // ── Ver/descargar un comprobante ya emitido ───────────────────────
+    public async Task<ApiResponse<ComprobanteDetalleCompletoDto>> ObtenerDetalleAsync(int comprobanteId)
+    {
+        var c = await _uow.Comprobantes.ObtenerConDetalleAsync(comprobanteId);
+        if (c is null)
+            return ApiResponse<ComprobanteDetalleCompletoDto>.Fallido("Comprobante no encontrado");
+
+        return ApiResponse<ComprobanteDetalleCompletoDto>.Exitoso(new ComprobanteDetalleCompletoDto
+        {
+            ComprobanteId      = c.ComprobanteId,
+            TipoComprobante    = c.TipoComprobante,
+            Serie              = c.Serie,
+            Numero             = c.Numero,
+            TipoAmbiente       = c.TipoAmbiente,
+            ClienteDni         = c.ClienteDni,
+            ClienteRuc         = c.ClienteRuc,
+            ClienteNombre      = c.Cliente is not null ? $"{c.Cliente.Nombres} {c.Cliente.Apellidos}" : c.ClienteNombre,
+            ClienteRazonSocial = c.ClienteRazonSocial,
+            Cajero             = c.Cajero,
+            TotalGravada       = c.TotalGravada,
+            Impuesto           = c.Impuesto,
+            Total              = c.Total,
+            Estado             = c.Estado,
+            EnlacePdf          = string.IsNullOrWhiteSpace(c.EnlacePdf) ? null : c.EnlacePdf,
+            FechaEmision       = c.FechaEmision,
+            Items = c.Detalles.Select(d => new ItemReciboDto
+            {
+                Descripcion    = d.Descripcion,
+                Cantidad       = d.Cantidad,
+                PrecioUnitario = d.PrecioUnitario,
+                Total          = d.Subtotal,
+            }).ToList(),
+        });
+    }
+
     // ── Nota de Crédito ───────────────────────────────────────────────
     public async Task<ApiResponse<ComprobanteResultadoDto>> EmitirNotaCreditoAsync(
         int comprobanteOrigenId, EmitirNotaCreditoDto dto)

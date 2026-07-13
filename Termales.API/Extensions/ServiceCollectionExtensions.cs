@@ -79,6 +79,7 @@ public static class ServiceCollectionExtensions
         // Comprobantes electrónicos (Nubefact)
         services.AddHttpContextAccessor();
         services.Configure<NubefactSettings>(config.GetSection("Nubefact"));
+        services.Configure<EmpresaSettings>(config.GetSection("Empresa"));
         services.AddHttpClient("Nubefact");
         services.AddScoped<ISolicitudAnulacionService, SolicitudAnulacionService>();
         services.AddScoped<IReciboPrinterService, ReciboPrinterService>();

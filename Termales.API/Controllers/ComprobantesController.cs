@@ -99,6 +99,13 @@ public class ComprobantesController : ControllerBase
         return Ok(resultado);
     }
 
+    [HttpGet("{id:int}/detalle")]
+    public async Task<IActionResult> ObtenerDetalle(int id)
+    {
+        var resultado = await _service.ObtenerDetalleAsync(id);
+        return resultado.Exito ? Ok(resultado) : NotFound(resultado);
+    }
+
     [HttpPatch("{id:int}/cobrar")]
     public async Task<IActionResult> MarcarCobrado(int id, [FromBody] MarcarCobradoDto dto)
     {

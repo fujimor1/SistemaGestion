@@ -13,14 +13,16 @@ namespace Termales.BLL.Services;
 public class ReciboPrinterService : IReciboPrinterService
 {
     private readonly ImpresoraComandaSettings _cfg;
+    private readonly EmpresaSettings _empresa;
     private readonly IHubContext<ComandaHub> _hub;
 
     private const byte ESC = 0x1B;
     private const byte GS  = 0x1D;
 
-    public ReciboPrinterService(IOptions<ImpresoraComandaSettings> cfg, IHubContext<ComandaHub> hub)
+    public ReciboPrinterService(IOptions<ImpresoraComandaSettings> cfg, IOptions<EmpresaSettings> empresa, IHubContext<ComandaHub> hub)
     {
         _cfg = cfg.Value;
+        _empresa = empresa.Value;
         _hub = hub;
     }
 
@@ -117,22 +119,27 @@ public class ReciboPrinterService : IReciboPrinterService
 
         var cuerpo = new StringBuilder();
         cuerpo.AppendLine(linea);
-        cuerpo.AppendLine($"{tipoLabel} {resultado.NumeroFormateado}");
-        cuerpo.AppendLine($"Cliente: {clienteLabel}");
-        cuerpo.AppendLine($"Cajero: {resultado.Cajero ?? "-"}");
-        cuerpo.AppendLine($"{DateTime.Now:dd/MM/yyyy HH:mm}");
+        cuerpo.AppendLine(CentrarTexto(tipoLabel, ancho));
+        cuerpo.AppendLine(CentrarTexto(resultado.NumeroFormateado, ancho));
         cuerpo.AppendLine(linea);
+        cuerpo.AppendLine($"Fecha : {DateTime.Now:dd/MM/yyyy HH:mm}");
+        cuerpo.AppendLine($"Cliente: {clienteLabel}");
+        cuerpo.AppendLine($"Cajero : {resultado.Cajero ?? "-"}");
+        cuerpo.AppendLine(linea);
+        cuerpo.AppendLine(FormatearCabeceraItems(ancho));
+        cuerpo.AppendLine(new string('-', ancho));
 
         foreach (var i in items)
-            cuerpo.AppendLine($"x{i.Cantidad}  {i.Descripcion}  S/ {i.Total:F2}");
+            cuerpo.AppendLine(FormatearLineaItem(i.Cantidad, i.Descripcion, i.Total, ancho));
 
         cuerpo.AppendLine(linea);
-        cuerpo.AppendLine($"Subtotal: S/ {resultado.TotalGravada:F2}");
-        cuerpo.AppendLine($"IGV: S/ {resultado.Impuesto:F2}");
-        cuerpo.AppendLine($"TOTAL: S/ {resultado.Total:F2}");
+        cuerpo.AppendLine(FormatearLineaMonto("Subtotal s/IGV", resultado.TotalGravada, ancho));
+        cuerpo.AppendLine(FormatearLineaMonto("IGV (18%)", resultado.Impuesto, ancho));
+        cuerpo.AppendLine(FormatearLineaMonto("TOTAL", resultado.Total, ancho));
         cuerpo.AppendLine(linea);
         cuerpo.AppendLine();
-        cuerpo.AppendLine("Gracias por su visita");
+        cuerpo.AppendLine(CentrarTexto("¡Gracias por su visita!", ancho));
+        cuerpo.AppendLine(CentrarTexto("Le esperamos pronto", ancho));
         cuerpo.AppendLine();
         cuerpo.AppendLine();
 
@@ -146,14 +153,44 @@ public class ReciboPrinterService : IReciboPrinterService
         ms.WriteByte(ESC); ms.WriteByte(0x40);                       // ESC @  — reset/inicializar
         ms.WriteByte(ESC); ms.WriteByte(0x61); ms.WriteByte(0x01);   // ESC a 1 — centrar
         ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x01);   // ESC E 1 — negrita on
-        ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(CentrarTexto("BAÑOS TERMALES DE COLLPA", ancho)) + "\n"));
+        ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(CentrarTexto(_empresa.RazonSocial, ancho)) + "\n"));
         ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x00);   // negrita off
+        if (!string.IsNullOrWhiteSpace(_empresa.Ruc))
+            ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(CentrarTexto($"RUC {_empresa.Ruc}", ancho)) + "\n"));
+        if (!string.IsNullOrWhiteSpace(_empresa.Direccion))
+            ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(CentrarTexto(_empresa.Direccion, ancho)) + "\n"));
         ms.WriteByte(ESC); ms.WriteByte(0x61); ms.WriteByte(0x00);   // alinear izquierda
         ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(cuerpo.ToString())));
 
         ms.WriteByte(GS); ms.WriteByte(0x56); ms.WriteByte(0x01);    // GS V 1 — corte parcial
 
         return ms.ToArray();
+    }
+
+    // Columnas: cantidad (4) + descripción (resto) + total alineado a la derecha
+    // (ancho fijo, ~11 caracteres para "S/ 9999.99").
+    private const int ColCantidad = 4;
+    private const int ColTotal    = 11;
+
+    private static string FormatearCabeceraItems(int ancho)
+    {
+        var anchoDesc = Math.Max(ancho - ColCantidad - ColTotal, 4);
+        return "CANT".PadRight(ColCantidad) + "DESCRIPCION".PadRight(anchoDesc) + "TOTAL".PadLeft(ColTotal);
+    }
+
+    private static string FormatearLineaItem(decimal cantidad, string descripcion, decimal total, int ancho)
+    {
+        var anchoDesc = Math.Max(ancho - ColCantidad - ColTotal, 4);
+        var desc = descripcion.Length > anchoDesc ? descripcion[..(anchoDesc - 1)] + "." : descripcion;
+        var totalTxt = $"S/{total:F2}";
+        var cantTxt = cantidad == Math.Truncate(cantidad) ? cantidad.ToString("0") : cantidad.ToString("0.##");
+        return cantTxt.PadRight(ColCantidad) + desc.PadRight(anchoDesc) + totalTxt.PadLeft(ColTotal);
+    }
+
+    private static string FormatearLineaMonto(string label, decimal valor, int ancho)
+    {
+        var totalTxt = $"S/ {valor:F2}";
+        return label.PadRight(ancho - totalTxt.Length) + totalTxt;
     }
 
     // Ticket corto de referencia, sin abrir el cajón (ya se abrió con la

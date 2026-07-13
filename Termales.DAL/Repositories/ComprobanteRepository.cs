@@ -55,4 +55,10 @@ public class ComprobanteRepository : GenericRepository<Comprobante>, IComprobant
             .Where(c => !c.Cobrado && c.Estado != "ANULADO")
             .OrderBy(c => c.FechaEmision)
             .ToListAsync();
+
+    public async Task<Comprobante?> ObtenerConDetalleAsync(int comprobanteId) =>
+        await _dbSet
+            .Include(c => c.Detalles)
+            .Include(c => c.Cliente)
+            .FirstOrDefaultAsync(c => c.ComprobanteId == comprobanteId);
 }
