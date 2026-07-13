@@ -133,8 +133,13 @@ public class ReciboPrinterService : IReciboPrinterService
             cuerpo.AppendLine(FormatearLineaItem(i.Cantidad, i.Descripcion, i.Total, ancho));
 
         cuerpo.AppendLine(linea);
-        cuerpo.AppendLine(FormatearLineaMonto("Subtotal s/IGV", resultado.TotalGravada, ancho));
-        cuerpo.AppendLine(FormatearLineaMonto("IGV (18%)", resultado.Impuesto, ancho));
+        // La Nota de Venta no es un documento tributario — no se desglosa
+        // IGV, solo el total. Boleta y Factura sí lo requieren.
+        if (resultado.TipoComprobante != "NV")
+        {
+            cuerpo.AppendLine(FormatearLineaMonto("Subtotal s/IGV", resultado.TotalGravada, ancho));
+            cuerpo.AppendLine(FormatearLineaMonto("IGV (18%)", resultado.Impuesto, ancho));
+        }
         cuerpo.AppendLine(FormatearLineaMonto("TOTAL", resultado.Total, ancho));
         cuerpo.AppendLine(linea);
         cuerpo.AppendLine();
