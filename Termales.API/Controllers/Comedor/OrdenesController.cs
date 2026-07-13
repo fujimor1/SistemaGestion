@@ -93,9 +93,16 @@ public class OrdenesController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Cancelar(int id)
+    public async Task<IActionResult> Cancelar(int id, [FromBody] CancelarOrdenDto dto)
     {
-        var resultado = await _service.CancelarAsync(id);
+        var resultado = await _service.CancelarAsync(id, dto.Motivo);
+        return resultado.Exito ? Ok(resultado) : BadRequest(resultado);
+    }
+
+    [HttpDelete("detalle/{detalleId:int}")]
+    public async Task<IActionResult> EliminarDetalle(int detalleId)
+    {
+        var resultado = await _service.EliminarDetalleAsync(detalleId);
         return resultado.Exito ? Ok(resultado) : BadRequest(resultado);
     }
 }

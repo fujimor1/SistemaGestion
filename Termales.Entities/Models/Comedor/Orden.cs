@@ -11,6 +11,7 @@ public class Orden
     public EstadoOrden Estado { get; set; } = EstadoOrden.Abierta;
     public decimal Total { get; set; }
     public string? Observaciones { get; set; }
+    public string? MotivoCancelacion { get; set; }
     public DateTime FechaApertura { get; set; } = DateTime.UtcNow;
     public DateTime? FechaCierre { get; set; }
 

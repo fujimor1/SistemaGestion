@@ -28,3 +28,5 @@ publish_output/
 publish_output_new/
 publish_linux/
 *.tar.gz
+puente_win/
+*.zip

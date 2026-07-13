@@ -1873,3 +1873,22 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260713060031_AgregarMotivoCancelacionOrden') THEN
+    ALTER TABLE comedor.ordenes ADD motivo_cancelacion character varying(300);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260713060031_AgregarMotivoCancelacionOrden') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260713060031_AgregarMotivoCancelacionOrden', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

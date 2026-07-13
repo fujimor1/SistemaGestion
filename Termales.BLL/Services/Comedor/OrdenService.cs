@@ -295,7 +295,7 @@ public class OrdenService : IOrdenService
         return ApiResponse<OrdenDto>.Exitoso(MapearDto(orden), "Orden cerrada exitosamente");
     }
 
-    public async Task<ApiResponse> CancelarAsync(int ordenId)
+    public async Task<ApiResponse> CancelarAsync(int ordenId, string motivo)
     {
         var orden = await _uow.Ordenes.ObtenerConDetallesAsync(ordenId);
         if (orden is null)
@@ -310,6 +310,7 @@ public class OrdenService : IOrdenService
         await DevolverRecetaAsync(orden);
 
         orden.Estado = EstadoOrden.Cancelada;
+        orden.MotivoCancelacion = motivo;
         orden.FechaCierre = DateTime.UtcNow;
 
         var mesa = await _uow.Mesas.ObtenerPorIdAsync(orden.MesaId);
@@ -325,6 +326,41 @@ public class OrdenService : IOrdenService
         await _hub.Clients.All.SendAsync("MesaDisponible", orden.MesaId);
 
         return ApiResponse.Exitoso("Orden cancelada exitosamente");
+    }
+
+    // Saca un solo plato/producto de una orden ya enviada (el cliente cambió
+    // de opinión, pidió otra cosa, etc.), sin cancelar toda la orden. Devuelve
+    // el stock/insumo que se había descontado, igual que una cancelación
+    // total, pero solo para esta línea.
+    public async Task<ApiResponse<OrdenDto>> EliminarDetalleAsync(int detalleId)
+    {
+        var ordenesConDetalle = await _uow.Ordenes.BuscarAsync(o => o.Detalles.Any(d => d.OrdenDetalleId == detalleId));
+        var ordenBase = ordenesConDetalle.FirstOrDefault();
+        if (ordenBase is null)
+            return ApiResponse<OrdenDto>.Fallido("Detalle no encontrado");
+
+        var orden = await _uow.Ordenes.ObtenerConDetallesAsync(ordenBase.OrdenId);
+        var detalle = orden!.Detalles.FirstOrDefault(d => d.OrdenDetalleId == detalleId);
+        if (detalle is null)
+            return ApiResponse<OrdenDto>.Fallido("Detalle no encontrado");
+
+        if (detalle.Estado == EstadoOrdenDetalle.Cancelado)
+            return ApiResponse<OrdenDto>.Fallido("Este ítem ya fue eliminado");
+        if (detalle.ComprobanteId is not null)
+            return ApiResponse<OrdenDto>.Fallido("No se puede eliminar un ítem que ya fue cobrado");
+
+        await DevolverStockDetalleAsync(detalle);
+
+        orden.Total -= detalle.PrecioUnitario * detalle.Cantidad;
+        detalle.Estado = EstadoOrdenDetalle.Cancelado;
+
+        await _uow.Ordenes.ActualizarAsync(orden);
+        await _uow.GuardarCambiosAsync();
+
+        var ordenDto = MapearDto(orden);
+        await _hub.Clients.Group($"mesero-{orden.UsuarioId}").SendAsync("ItemActualizado", MapearDetalleDto(detalle));
+
+        return ApiResponse<OrdenDto>.Exitoso(ordenDto, "Ítem eliminado de la orden");
     }
 
     // Descuenta el stock de cada insumo de la receta de `itemMenu`, según la
@@ -346,27 +382,32 @@ public class OrdenService : IOrdenService
     private async Task DevolverRecetaAsync(Orden orden)
     {
         foreach (var detalle in orden.Detalles)
+            await DevolverStockDetalleAsync(detalle);
+    }
+
+    // Misma reversa que DevolverRecetaAsync pero para un solo detalle —
+    // usada tanto al cancelar la orden completa como al sacar un ítem suelto.
+    private async Task DevolverStockDetalleAsync(OrdenDetalle detalle)
+    {
+        if (detalle.ItemMenuId is int itemMenuId)
         {
-            if (detalle.ItemMenuId is int itemMenuId)
-            {
-                var itemMenu = await _uow.ItemsMenu.ObtenerConRecetaAsync(itemMenuId);
-                if (itemMenu is null) continue;
+            var itemMenu = await _uow.ItemsMenu.ObtenerConRecetaAsync(itemMenuId);
+            if (itemMenu is null) return;
 
-                foreach (var receta in itemMenu.Receta)
-                {
-                    var cantidad = ConversionUnidades.RecetaAStockInsumo(receta.Cantidad, receta.Insumo.Unidad) * detalle.Cantidad;
-                    receta.Insumo.StockActual += cantidad;
-                    await _uow.Insumos.ActualizarAsync(receta.Insumo);
-                }
-            }
-            else if (detalle.ProductoId is int productoId)
+            foreach (var receta in itemMenu.Receta)
             {
-                var producto = await _uow.Productos.ObtenerPorIdAsync(productoId);
-                if (producto is null) continue;
-
-                producto.Stock += detalle.Cantidad;
-                await _uow.Productos.ActualizarAsync(producto);
+                var cantidad = ConversionUnidades.RecetaAStockInsumo(receta.Cantidad, receta.Insumo.Unidad) * detalle.Cantidad;
+                receta.Insumo.StockActual += cantidad;
+                await _uow.Insumos.ActualizarAsync(receta.Insumo);
             }
+        }
+        else if (detalle.ProductoId is int productoId)
+        {
+            var producto = await _uow.Productos.ObtenerPorIdAsync(productoId);
+            if (producto is null) return;
+
+            producto.Stock += detalle.Cantidad;
+            await _uow.Productos.ActualizarAsync(producto);
         }
     }
 
@@ -380,6 +421,7 @@ public class OrdenService : IOrdenService
         Estado = o.Estado,
         Total = o.Total,
         Observaciones = o.Observaciones,
+        MotivoCancelacion = o.MotivoCancelacion,
         FechaApertura = o.FechaApertura,
         FechaCierre = o.FechaCierre,
         Detalles = o.Detalles.Select(MapearDetalleDto).ToList()

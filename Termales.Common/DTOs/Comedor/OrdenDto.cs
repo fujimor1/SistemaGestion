@@ -14,6 +14,7 @@ public class OrdenDto
     public string EstadoDescripcion => Estado.ToString();
     public decimal Total { get; set; }
     public string? Observaciones { get; set; }
+    public string? MotivoCancelacion { get; set; }
     public DateTime FechaApertura { get; set; }
     public DateTime? FechaCierre { get; set; }
     public List<OrdenDetalleDto> Detalles { get; set; } = new();
@@ -74,4 +75,10 @@ public class ActualizarEstadoDetalleDto
 {
     [Required]
     public EstadoOrdenDetalle Estado { get; set; }
+}
+
+public class CancelarOrdenDto
+{
+    [Required, MinLength(5, ErrorMessage = "Describe el motivo con más detalle")]
+    public string Motivo { get; set; } = string.Empty;
 }
