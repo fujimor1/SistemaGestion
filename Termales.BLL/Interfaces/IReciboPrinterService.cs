@@ -11,4 +11,12 @@ public interface IReciboPrinterService
     /// comprobante ya se emitió y no debe fallar por esto.
     /// </summary>
     Task ImprimirAsync(ComprobanteResultadoDto resultado, IEnumerable<ItemReciboDto> items, string clienteLabel);
+
+    /// <summary>
+    /// Imprime un ticket simple de referencia (sin abrir el cajón), usado
+    /// como comprobante extra de acceso cuando una venta cubre más de un
+    /// área/servicio (ej. combo de baños) y conviene un ticket aparte para
+    /// controlar el ingreso a cada una. Nunca lanza, igual que ImprimirAsync.
+    /// </summary>
+    Task ImprimirTicketControlAsync(string titulo, string detalle);
 }

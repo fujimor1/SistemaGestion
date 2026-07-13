@@ -154,7 +154,20 @@ public class ComprobanteService : IComprobanteService
 
         // Sin piscinaId ni control de ocupación: es un boleto plano, no una
         // asignación de un baño/piscina físico específico.
-        return await Emitir(dto, monto, items, "banio", 0);
+        var resultado = await Emitir(dto, monto, items, "banio", 0);
+
+        // Cuando la venta cubre un combo (más de un área), la boleta trae un
+        // solo ítem — se imprime un ticket aparte de referencia para poder
+        // controlar el ingreso a cada área por separado.
+        if (resultado.Exito && paqueteCoincidente is not null)
+        {
+            var nombresAreas = string.Join(" + ", tipos.Select(t => t.Nombre)).ToUpperInvariant();
+            await _reciboPrinter.ImprimirTicketControlAsync(
+                $"ACCESO {nombresAreas}",
+                $"{dto.CantidadPersonas} persona(s) — {resultado.Data!.NumeroFormateado}");
+        }
+
+        return resultado;
     }
 
     // ── Habitación ────────────────────────────────────────────────────

@@ -84,6 +84,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IReciboPrinterService, ReciboPrinterService>();
         services.AddScoped<IComprobanteService, ComprobanteService>();
 
+        // Consulta de DNI/RUC (Decolecta) para autocompletar nombre/razón social
+        services.Configure<ConsultaDocumentoSettings>(config.GetSection("ConsultaDocumento"));
+        services.AddHttpClient("Decolecta");
+        services.AddScoped<IConsultaDocumentoService, ConsultaDocumentoService>();
+
         return services;
     }
 

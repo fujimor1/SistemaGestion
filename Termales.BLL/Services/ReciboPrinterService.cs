@@ -54,6 +54,33 @@ public class ReciboPrinterService : IReciboPrinterService
         }
     }
 
+    public async Task ImprimirTicketControlAsync(string titulo, string detalle)
+    {
+        if (!_cfg.Activa) return;
+
+        try
+        {
+            var bytes = ConstruirTicketControl(titulo, detalle);
+
+            if (string.Equals(_cfg.Modo, "bridge", StringComparison.OrdinalIgnoreCase))
+                await ImprimirBridgeAsync(bytes);
+            else if (string.Equals(_cfg.Modo, "usb", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!OperatingSystem.IsWindows())
+                    throw new PlatformNotSupportedException("El modo de impresión \"usb\" solo está disponible cuando el API corre en Windows");
+                await ImprimirUsbAsync(bytes);
+            }
+            else
+                await ImprimirRedAsync(bytes);
+        }
+        catch (Exception ex)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"[ReciboPrinter] No se pudo imprimir el ticket de control \"{titulo}\": {ex.Message}");
+            Console.ResetColor();
+        }
+    }
+
     // Igual que ComandaPrinterService: la API (en la nube) no tiene acceso
     // directo a la impresora física de caja; transmite el ticket por
     // SignalR al puente local, que la tiene conectada (USB/red) y además
@@ -120,6 +147,36 @@ public class ReciboPrinterService : IReciboPrinterService
         ms.WriteByte(ESC); ms.WriteByte(0x61); ms.WriteByte(0x01);   // ESC a 1 — centrar
         ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x01);   // ESC E 1 — negrita on
         ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(CentrarTexto("BAÑOS TERMALES DE COLLPA", ancho)) + "\n"));
+        ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x00);   // negrita off
+        ms.WriteByte(ESC); ms.WriteByte(0x61); ms.WriteByte(0x00);   // alinear izquierda
+        ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(cuerpo.ToString())));
+
+        ms.WriteByte(GS); ms.WriteByte(0x56); ms.WriteByte(0x01);    // GS V 1 — corte parcial
+
+        return ms.ToArray();
+    }
+
+    // Ticket corto de referencia, sin abrir el cajón (ya se abrió con la
+    // boleta principal) — solo para que el cliente lo muestre al ingresar
+    // a cada área cubierta por la venta.
+    private byte[] ConstruirTicketControl(string titulo, string detalle)
+    {
+        var ancho = _cfg.AnchoTicket;
+        var linea = new string('-', ancho);
+
+        var cuerpo = new StringBuilder();
+        cuerpo.AppendLine(linea);
+        cuerpo.AppendLine(detalle);
+        cuerpo.AppendLine($"{DateTime.Now:dd/MM/yyyy HH:mm}");
+        cuerpo.AppendLine(linea);
+        cuerpo.AppendLine();
+        cuerpo.AppendLine();
+
+        using var ms = new MemoryStream();
+        ms.WriteByte(ESC); ms.WriteByte(0x40);                       // ESC @  — reset/inicializar
+        ms.WriteByte(ESC); ms.WriteByte(0x61); ms.WriteByte(0x01);   // ESC a 1 — centrar
+        ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x01);   // ESC E 1 — negrita on
+        ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(CentrarTexto(titulo, ancho)) + "\n"));
         ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x00);   // negrita off
         ms.WriteByte(ESC); ms.WriteByte(0x61); ms.WriteByte(0x00);   // alinear izquierda
         ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(cuerpo.ToString())));
