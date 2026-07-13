@@ -18,8 +18,9 @@ public static class Modulos
     /// <summary>Tienda, Caja, Inventario, y catálogo de Comedor (mesas/categorías/menú).</summary>
     public const string Operaciones = "Administrador,Supervisor";
 
-    /// <summary>Toma y gestión de órdenes del comedor (uso principal: app móvil del mozo).</summary>
-    public const string ComedorOperacion = "Mozo,Supervisor";
+    /// <summary>Toma y gestión de órdenes del comedor (mozo desde la app móvil, y Administrador
+    /// desde caja para clientes que piden para llevar directamente en el mostrador).</summary>
+    public const string ComedorOperacion = "Administrador,Mozo,Supervisor";
 
     /// <summary>Lectura de órdenes: además del mozo, Caja (Administrador/Supervisor) necesita
     /// verlas para cobrarlas en Facturación, aunque no las cree ni las gestione.</summary>
