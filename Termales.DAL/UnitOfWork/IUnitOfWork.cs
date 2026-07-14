@@ -25,6 +25,8 @@ public interface IUnitOfWork : IDisposable
     IOrdenRepository Ordenes { get; }
     IComprobanteRepository Comprobantes { get; }
     ISolicitudAnulacionRepository SolicitudesAnulacion { get; }
+    IComprobanteSunatRepository ComprobantesSunat { get; }
+    IComprobanteSerieRepository ComprobanteSeries { get; }
     IProductoRepository Productos { get; }
     IInsumoRepository Insumos { get; }
     IEntradaInsumoRepository EntradasInsumo { get; }

@@ -121,6 +121,27 @@ public class ComprobantesController : ControllerBase
         return resultado.Exito ? Ok(resultado) : BadRequest(resultado);
     }
 
+    [HttpGet("pendientes-sunat")]
+    public async Task<IActionResult> ObtenerPendientesSunat()
+    {
+        var resultado = await _service.ObtenerPendientesSunatAsync();
+        return Ok(resultado);
+    }
+
+    [HttpPost("{id:int}/reenviar-sunat")]
+    public async Task<IActionResult> ReenviarSunat(int id)
+    {
+        try
+        {
+            var resultado = await _service.ReenviarSunatAsync(id);
+            return resultado.Exito ? Ok(resultado) : BadRequest(resultado);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { mensaje = $"Error interno: {ex.Message}" });
+        }
+    }
+
     [HttpPost("{id:int}/nota-credito")]
     public async Task<IActionResult> EmitirNotaCredito(int id, [FromBody] EmitirNotaCreditoDto dto)
     {

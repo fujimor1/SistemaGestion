@@ -55,6 +55,8 @@ public class TermalesDbContext : DbContext
     public DbSet<Comprobante> Comprobantes => Set<Comprobante>();
     public DbSet<ComprobanteDetalle> ComprobanteDetalles => Set<ComprobanteDetalle>();
     public DbSet<SolicitudAnulacion> SolicitudesAnulacion => Set<SolicitudAnulacion>();
+    public DbSet<ComprobanteSunat> ComprobantesSunat => Set<ComprobanteSunat>();
+    public DbSet<ComprobanteSerie> ComprobanteSeries => Set<ComprobanteSerie>();
 
     // Módulo de caja
     public DbSet<AperturaCaja> AperturasCaja => Set<AperturaCaja>();

@@ -4,7 +4,9 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Termales.BLL.Interfaces;
+using Termales.BLL.Interfaces.Sunat;
 using Termales.Common.DTOs.Comprobante;
+using Termales.Common.DTOs.Sunat;
 
 using Termales.Common.Settings;
 using Termales.Common.Wrappers;
@@ -23,6 +25,8 @@ public class ComprobanteService : IComprobanteService
     private readonly ISolicitudAnulacionService _solicitudes;
     private readonly IReciboPrinterService _reciboPrinter;
     private readonly ICajaService _cajaService;
+    private readonly IFacturaElectronicaService _facturaElectronica;
+    private readonly SunatSettings _sunatCfg;
 
     public ComprobanteService(
         IUnitOfWork uow,
@@ -31,7 +35,9 @@ public class ComprobanteService : IComprobanteService
         IHttpContextAccessor accessor,
         ISolicitudAnulacionService solicitudes,
         IReciboPrinterService reciboPrinter,
-        ICajaService cajaService)
+        ICajaService cajaService,
+        IFacturaElectronicaService facturaElectronica,
+        IOptions<SunatSettings> sunatCfg)
     {
         _uow          = uow;
         _nubefactHttp = httpFactory.CreateClient("Nubefact");
@@ -40,6 +46,8 @@ public class ComprobanteService : IComprobanteService
         _solicitudes  = solicitudes;
         _reciboPrinter = reciboPrinter;
         _cajaService  = cajaService;
+        _facturaElectronica = facturaElectronica;
+        _sunatCfg     = sunatCfg.Value;
     }
 
     private string ObtenerCajero() =>
@@ -276,7 +284,9 @@ public class ComprobanteService : IComprobanteService
         {
             "NV" => EmitirNotaVenta(dto, total, items, tipoAmbiente, referenciaId),
             "BI" => EmitirConNubefact(dto, total, items, tipoAmbiente, referenciaId, tipoDoc: 2, serie: _cfg.SerieBoleta),
-            "FI" => EmitirConNubefact(dto, total, items, tipoAmbiente, referenciaId, tipoDoc: 1, serie: _cfg.SerieFactura),
+            "FI" => _sunatCfg.Habilitado
+                ? EmitirFacturaDirectaSunat(dto, total, items, tipoAmbiente, referenciaId)
+                : EmitirConNubefact(dto, total, items, tipoAmbiente, referenciaId, tipoDoc: 1, serie: _cfg.SerieFactura),
             _    => Task.FromResult(ApiResponse<ComprobanteResultadoDto>.Fallido("Tipo de comprobante no válido"))
         });
 
@@ -305,7 +315,7 @@ public class ComprobanteService : IComprobanteService
         GenerarComprobanteDto dto, decimal total,
         List<ItemComprobante> items, string tipoAmbiente, int referenciaId)
     {
-        var numero       = await _uow.Comprobantes.ObtenerUltimoNumeroAsync(_cfg.SerieNV) + 1;
+        var numero       = await _uow.ComprobanteSeries.SiguienteNumeroAsync(_cfg.SerieNV, "NV");
         var gravada      = Math.Round(total / 1.18m, 2);
         var impuesto     = Math.Round(total - gravada, 2);
         var cajero       = ObtenerCajero();
@@ -360,7 +370,7 @@ public class ComprobanteService : IComprobanteService
     {
         var totalGravada = Math.Round(total / 1.18m, 2);
         var totalIgv     = Math.Round(total - totalGravada, 2);
-        var numero       = await _uow.Comprobantes.ObtenerUltimoNumeroAsync(serie) + 1;
+        var numero       = await _uow.ComprobanteSeries.SiguienteNumeroAsync(serie, tipoDoc == 1 ? "FI" : "BI");
 
         // Factura: requiere RUC
         if (tipoDoc == 1 && string.IsNullOrWhiteSpace(dto.ClienteRuc))
@@ -485,6 +495,108 @@ public class ComprobanteService : IComprobanteService
             EnlacePdf        = enlacePdf,
             ModoSimulacion   = _cfg.ModoSimulacion,
         }, _cfg.ModoSimulacion ? $"{(tipoDoc == 1 ? "Factura" : "Boleta")} simulada" : "Comprobante enviado a SUNAT");
+    }
+
+    // ── Factura directa a SUNAT (sin Nubefact) ───────────────────────
+    private async Task<ApiResponse<ComprobanteResultadoDto>> EmitirFacturaDirectaSunat(
+        GenerarComprobanteDto dto, decimal total,
+        List<ItemComprobante> items, string tipoAmbiente, int referenciaId)
+    {
+        if (string.IsNullOrWhiteSpace(dto.ClienteRuc))
+            return ApiResponse<ComprobanteResultadoDto>.Fallido("Para factura se requiere el RUC del cliente");
+
+        var totalGravada = Math.Round(total / 1.18m, 2);
+        var totalIgv     = Math.Round(total - totalGravada, 2);
+        var serie        = _sunatCfg.SerieFactura;
+        var numero       = await _uow.ComprobanteSeries.SiguienteNumeroAsync(serie, "FI");
+        var cajero       = ObtenerCajero();
+
+        var comprobante = new Comprobante
+        {
+            Serie              = serie,
+            Numero             = numero,
+            TipoComprobante    = "FI",
+            TipoAmbiente       = tipoAmbiente,
+            ReferenciaId       = referenciaId,
+            ClienteRuc         = dto.ClienteRuc,
+            ClienteRazonSocial = dto.ClienteRazonSocial,
+            Cajero             = cajero,
+            TotalGravada       = totalGravada,
+            Impuesto           = totalIgv,
+            Total              = total,
+            Estado             = "PENDIENTE DE ENVÍO A SUNAT",
+            EnlacePdf          = "",
+            MetodoPago         = dto.MetodoPago,
+            Cobrado            = dto.MetodoPago != MetodoPago.Fiado,
+            ClienteId          = dto.ClienteId,
+            Detalles           = MapearDetalles(items),
+        };
+        await _uow.Comprobantes.AgregarAsync(comprobante);
+        await _uow.GuardarCambiosAsync(); // necesario para tener ComprobanteId antes de llamar a SUNAT
+
+        // La venta ya quedó registrada localmente con su correlativo reservado — un fallo de SUNAT
+        // a partir de aquí (red, timeout, rechazo) no bloquea el ticket ni la venta, solo queda
+        // reflejado en el Estado para revisar/reintentar después (ver reenviar-sunat).
+        var resultadoSunat = await _facturaElectronica.EmitirAsync(comprobante);
+
+        comprobante.Estado = resultadoSunat.Exito
+            ? (resultadoSunat.Data!.Aceptado ? "ENVIADO A SUNAT" : "RECHAZADO POR SUNAT")
+            : "PENDIENTE DE ENVÍO A SUNAT";
+        await _uow.Comprobantes.ActualizarAsync(comprobante);
+        await _uow.GuardarCambiosAsync();
+
+        return ApiResponse<ComprobanteResultadoDto>.Exitoso(new ComprobanteResultadoDto
+        {
+            ComprobanteId    = comprobante.ComprobanteId,
+            TipoComprobante  = "FI",
+            Ambiente         = tipoAmbiente,
+            Serie            = serie,
+            Numero           = numero,
+            NumeroFormateado = $"{serie}-{numero:D5}",
+            Cajero           = cajero,
+            TotalGravada     = totalGravada,
+            Impuesto         = totalIgv,
+            Total            = total,
+            Estado           = comprobante.Estado,
+            EnlacePdf        = "",
+            ModoSimulacion   = false,
+        }, resultadoSunat.Exito ? resultadoSunat.Mensaje : $"Venta registrada; pendiente de envío a SUNAT ({resultadoSunat.Mensaje})");
+    }
+
+    // ── Reintento manual y visibilidad de pendientes SUNAT ────────────
+    public async Task<ApiResponse<ResultadoEmisionSunatDto>> ReenviarSunatAsync(int comprobanteId)
+    {
+        var comprobante = await _uow.Comprobantes.ObtenerConDetalleAsync(comprobanteId);
+        if (comprobante is null)
+            return ApiResponse<ResultadoEmisionSunatDto>.Fallido("Comprobante no encontrado");
+        if (comprobante.TipoComprobante != "FI")
+            return ApiResponse<ResultadoEmisionSunatDto>.Fallido("El reenvío solo aplica a Facturas emitidas directamente a SUNAT");
+
+        var resultado = await _facturaElectronica.EmitirAsync(comprobante);
+
+        comprobante.Estado = resultado.Exito
+            ? (resultado.Data!.Aceptado ? "ENVIADO A SUNAT" : "RECHAZADO POR SUNAT")
+            : "PENDIENTE DE ENVÍO A SUNAT";
+        await _uow.Comprobantes.ActualizarAsync(comprobante);
+        await _uow.GuardarCambiosAsync();
+
+        return resultado;
+    }
+
+    public async Task<IEnumerable<ComprobanteSunatPendienteDto>> ObtenerPendientesSunatAsync()
+    {
+        var pendientes = await _uow.ComprobantesSunat.ObtenerPendientesAsync();
+        return pendientes.Select(p => new ComprobanteSunatPendienteDto
+        {
+            ComprobanteId    = p.ComprobanteId,
+            Serie            = p.Comprobante.Serie,
+            Numero           = p.Comprobante.Numero,
+            Total            = p.Comprobante.Total,
+            Estado           = p.Estado.ToString(),
+            IntentosEnvio    = p.IntentosEnvio,
+            FechaLimiteEnvio = p.FechaLimiteEnvio,
+            UltimoError      = p.CdrDescripcion,
+        });
     }
 
     // ── Listado y anulación ───────────────────────────────────────────
@@ -650,7 +762,7 @@ public class ComprobanteService : IComprobanteService
 
         var gravadaNc = Math.Round(montoNc / 1.18m, 2);
         var igvNc     = Math.Round(montoNc - gravadaNc, 2);
-        var numero    = await _uow.Comprobantes.ObtenerUltimoNumeroAsync(serieNc) + 1;
+        var numero    = await _uow.ComprobanteSeries.SiguienteNumeroAsync(serieNc, "NC");
         var cajero    = ObtenerCajero();
 
         string enlacePdf;

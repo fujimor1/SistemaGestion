@@ -1,4 +1,5 @@
 using Termales.Common.DTOs.Comprobante;
+using Termales.Common.DTOs.Sunat;
 using Termales.Common.Wrappers;
 using Termales.Entities.Enums;
 
@@ -17,4 +18,6 @@ public interface IComprobanteService
     Task<ApiResponse<ComprobanteResultadoDto>> EmitirNotaCreditoAsync(int comprobanteOrigenId, EmitirNotaCreditoDto dto);
     Task<IEnumerable<AnulacionListadoDto>> ObtenerAnulacionesAsync(string? desde, string? hasta);
     Task<ApiResponse<ComprobanteDetalleCompletoDto>> ObtenerDetalleAsync(int comprobanteId);
+    Task<ApiResponse<ResultadoEmisionSunatDto>> ReenviarSunatAsync(int comprobanteId);
+    Task<IEnumerable<ComprobanteSunatPendienteDto>> ObtenerPendientesSunatAsync();
 }

@@ -34,6 +34,8 @@ public class UnitOfWork : IUnitOfWork
     public IOrdenRepository Ordenes { get; }
     public IComprobanteRepository Comprobantes { get; }
     public ISolicitudAnulacionRepository SolicitudesAnulacion { get; }
+    public IComprobanteSunatRepository ComprobantesSunat { get; }
+    public IComprobanteSerieRepository ComprobanteSeries { get; }
     public IProductoRepository Productos { get; }
     public IInsumoRepository Insumos { get; }
     public IEntradaInsumoRepository EntradasInsumo { get; }
@@ -63,6 +65,8 @@ public class UnitOfWork : IUnitOfWork
         Ordenes = new OrdenRepository(context);
         Comprobantes = new ComprobanteRepository(context);
         SolicitudesAnulacion = new SolicitudAnulacionRepository(context);
+        ComprobantesSunat = new ComprobanteSunatRepository(context);
+        ComprobanteSeries = new ComprobanteSerieRepository(context);
         Productos = new ProductoRepository(context);
         Insumos = new InsumoRepository(context);
         EntradasInsumo = new EntradaInsumoRepository(context);

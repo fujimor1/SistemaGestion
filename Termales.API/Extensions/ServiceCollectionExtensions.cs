@@ -7,11 +7,19 @@ using Termales.BLL.Interfaces;
 using Termales.BLL.Interfaces.Comedor;
 using Termales.BLL.Interfaces.Compras;
 using Termales.BLL.Interfaces.Inventario;
+using Termales.BLL.Interfaces.Sunat;
 using Termales.BLL.Interfaces.Tienda;
 using Termales.BLL.Services;
 using Termales.BLL.Services.Comedor;
 using Termales.BLL.Services.Compras;
 using Termales.BLL.Services.Inventario;
+using Termales.BLL.Services.Sunat;
+using Termales.BLL.Services.Sunat.Cdr;
+using Termales.BLL.Services.Sunat.Empaquetado;
+using Termales.BLL.Services.Sunat.Firma;
+using Termales.BLL.Services.Sunat.Pdf;
+using Termales.BLL.Services.Sunat.Soap;
+using Termales.BLL.Services.Sunat.Xml;
 using Termales.BLL.Services.Tienda;
 
 using Termales.Common.Settings;
@@ -84,6 +92,17 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISolicitudAnulacionService, SolicitudAnulacionService>();
         services.AddScoped<IReciboPrinterService, ReciboPrinterService>();
         services.AddScoped<IComprobanteService, ComprobanteService>();
+
+        // Facturación electrónica directa con SUNAT (solo Factura por ahora — Boleta/NC siguen en Nubefact)
+        services.Configure<SunatSettings>(config.GetSection("Sunat"));
+        services.AddHttpClient<ISunatBillServiceClient, SunatBillServiceClient>(c => c.Timeout = TimeSpan.FromSeconds(60));
+        services.AddScoped<IFacturaXmlBuilder, FacturaXmlBuilder>();
+        services.AddScoped<IXmlDsigSigner, XmlDsigSigner>();
+        services.AddScoped<IComprobanteZipBuilder, ComprobanteZipBuilder>();
+        services.AddScoped<ICdrParser, CdrParser>();
+        services.AddScoped<IQrContentBuilder, QrContentBuilder>();
+        services.AddScoped<IRepresentacionImpresaBuilder, RepresentacionImpresaBuilder>();
+        services.AddScoped<IFacturaElectronicaService, FacturaElectronicaService>();
 
         // Consulta de DNI/RUC (Decolecta) para autocompletar nombre/razón social
         services.Configure<ConsultaDocumentoSettings>(config.GetSection("ConsultaDocumento"));
