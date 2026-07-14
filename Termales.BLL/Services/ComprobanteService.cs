@@ -283,9 +283,11 @@ public class ComprobanteService : IComprobanteService
         var resultado = await (dto.TipoComprobante switch
         {
             "NV" => EmitirNotaVenta(dto, total, items, tipoAmbiente, referenciaId),
-            "BI" => EmitirConNubefact(dto, total, items, tipoAmbiente, referenciaId, tipoDoc: 2, serie: _cfg.SerieBoleta),
+            "BI" => _sunatCfg.Habilitado
+                ? EmitirDirectoSunat(dto, total, items, tipoAmbiente, referenciaId, "BI", _sunatCfg.SerieBoleta)
+                : EmitirConNubefact(dto, total, items, tipoAmbiente, referenciaId, tipoDoc: 2, serie: _cfg.SerieBoleta),
             "FI" => _sunatCfg.Habilitado
-                ? EmitirFacturaDirectaSunat(dto, total, items, tipoAmbiente, referenciaId)
+                ? EmitirDirectoSunat(dto, total, items, tipoAmbiente, referenciaId, "FI", _sunatCfg.SerieFactura)
                 : EmitirConNubefact(dto, total, items, tipoAmbiente, referenciaId, tipoDoc: 1, serie: _cfg.SerieFactura),
             _    => Task.FromResult(ApiResponse<ComprobanteResultadoDto>.Fallido("Tipo de comprobante no válido"))
         });
@@ -497,29 +499,32 @@ public class ComprobanteService : IComprobanteService
         }, _cfg.ModoSimulacion ? $"{(tipoDoc == 1 ? "Factura" : "Boleta")} simulada" : "Comprobante enviado a SUNAT");
     }
 
-    // ── Factura directa a SUNAT (sin Nubefact) ───────────────────────
-    private async Task<ApiResponse<ComprobanteResultadoDto>> EmitirFacturaDirectaSunat(
+    // ── Factura/Boleta directa a SUNAT (sin Nubefact) ─────────────────
+    private async Task<ApiResponse<ComprobanteResultadoDto>> EmitirDirectoSunat(
         GenerarComprobanteDto dto, decimal total,
-        List<ItemComprobante> items, string tipoAmbiente, int referenciaId)
+        List<ItemComprobante> items, string tipoAmbiente, int referenciaId,
+        string tipoComprobante, string serie)
     {
-        if (string.IsNullOrWhiteSpace(dto.ClienteRuc))
+        var esFactura = tipoComprobante == "FI";
+        if (esFactura && string.IsNullOrWhiteSpace(dto.ClienteRuc))
             return ApiResponse<ComprobanteResultadoDto>.Fallido("Para factura se requiere el RUC del cliente");
 
         var totalGravada = Math.Round(total / 1.18m, 2);
         var totalIgv     = Math.Round(total - totalGravada, 2);
-        var serie        = _sunatCfg.SerieFactura;
-        var numero       = await _uow.ComprobanteSeries.SiguienteNumeroAsync(serie, "FI");
+        var numero       = await _uow.ComprobanteSeries.SiguienteNumeroAsync(serie, tipoComprobante);
         var cajero       = ObtenerCajero();
 
         var comprobante = new Comprobante
         {
             Serie              = serie,
             Numero             = numero,
-            TipoComprobante    = "FI",
+            TipoComprobante    = tipoComprobante,
             TipoAmbiente       = tipoAmbiente,
             ReferenciaId       = referenciaId,
-            ClienteRuc         = dto.ClienteRuc,
-            ClienteRazonSocial = dto.ClienteRazonSocial,
+            ClienteDni         = esFactura ? null : dto.ClienteDni,
+            ClienteRuc         = esFactura ? dto.ClienteRuc : null,
+            ClienteNombre      = esFactura ? null : (dto.ClienteNombre ?? "CLIENTES VARIOS"),
+            ClienteRazonSocial = esFactura ? dto.ClienteRazonSocial : null,
             Cajero             = cajero,
             TotalGravada       = totalGravada,
             Impuesto           = totalIgv,
@@ -548,7 +553,7 @@ public class ComprobanteService : IComprobanteService
         return ApiResponse<ComprobanteResultadoDto>.Exitoso(new ComprobanteResultadoDto
         {
             ComprobanteId    = comprobante.ComprobanteId,
-            TipoComprobante  = "FI",
+            TipoComprobante  = tipoComprobante,
             Ambiente         = tipoAmbiente,
             Serie            = serie,
             Numero           = numero,
@@ -569,8 +574,8 @@ public class ComprobanteService : IComprobanteService
         var comprobante = await _uow.Comprobantes.ObtenerConDetalleAsync(comprobanteId);
         if (comprobante is null)
             return ApiResponse<ResultadoEmisionSunatDto>.Fallido("Comprobante no encontrado");
-        if (comprobante.TipoComprobante != "FI")
-            return ApiResponse<ResultadoEmisionSunatDto>.Fallido("El reenvío solo aplica a Facturas emitidas directamente a SUNAT");
+        if (comprobante.TipoComprobante is not ("FI" or "BI"))
+            return ApiResponse<ResultadoEmisionSunatDto>.Fallido("El reenvío solo aplica a Facturas o Boletas emitidas directamente a SUNAT");
 
         var resultado = await _facturaElectronica.EmitirAsync(comprobante);
 

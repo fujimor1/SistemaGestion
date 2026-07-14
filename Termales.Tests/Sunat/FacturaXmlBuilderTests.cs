@@ -1,15 +1,34 @@
 using System.Xml.Schema;
 using Termales.BLL.Services.Sunat.Xml;
+using Termales.Entities.Models;
 
 namespace Termales.Tests.Sunat;
 
 public class FacturaXmlBuilderTests
 {
     [Fact]
-    public void Construir_GeneraXmlValidoContraElXsdOficialDeSunat()
+    public void Construir_Factura_GeneraXmlValidoContraElXsdOficialDeSunat()
     {
         var xml = new FacturaXmlBuilder().Construir(FacturaMuestras.Comprobante(), FacturaMuestras.Empresa());
+        AssertValidaContraXsd(xml);
+    }
 
+    [Fact]
+    public void Construir_BoletaConDni_GeneraXmlValidoContraElXsdOficialDeSunat()
+    {
+        var xml = new FacturaXmlBuilder().Construir(FacturaMuestras.ComprobanteBoleta("12345678"), FacturaMuestras.Empresa());
+        AssertValidaContraXsd(xml);
+    }
+
+    [Fact]
+    public void Construir_BoletaSinDocumento_GeneraXmlValidoContraElXsdOficialDeSunat()
+    {
+        var xml = new FacturaXmlBuilder().Construir(FacturaMuestras.ComprobanteBoleta(null), FacturaMuestras.Empresa());
+        AssertValidaContraXsd(xml);
+    }
+
+    private static void AssertValidaContraXsd(System.Xml.Linq.XDocument xml)
+    {
         var schemas = new XmlSchemaSet();
         var commonDir = Path.Combine(AppContext.BaseDirectory, "Schemas", "common");
         schemas.Add(null, Path.Combine(commonDir, "CCTS_CCT_SchemaModule-2.1.xsd"));

@@ -7,10 +7,9 @@ using Termales.Entities.Models;
 namespace Termales.BLL.Services.Sunat.Xml;
 
 /// <summary>
-/// Genera el XML UBL 2.1 de una Factura Electrónica sin firmar, siguiendo el Anexo N.° 9-A
-/// (RS 097-2012/SUNAT y modificatorias) para una venta interna simple, gravada con IGV 18%,
-/// en soles, con un solo adquirente identificado por RUC. No cubre exportación, detracciones,
-/// operaciones gratuitas, anticipos ni otros regímenes especiales.
+/// Genera el XML UBL 2.1 (sin firmar) de una Factura o Boleta Electrónica, siguiendo el Anexo N.° 9-A
+/// (RS 097-2012/SUNAT y modificatorias) para una venta interna simple, gravada con IGV 18%, en soles.
+/// No cubre exportación, detracciones, operaciones gratuitas, anticipos ni otros regímenes especiales.
 /// </summary>
 public class FacturaXmlBuilder : IFacturaXmlBuilder
 {
@@ -24,10 +23,14 @@ public class FacturaXmlBuilder : IFacturaXmlBuilder
     private const string TipoOperacionVentaInterna = "0101"; // catálogo 51
     private const string TipoAfectacionGravado = "10";        // catálogo 07
     private const string TipoDocumentoFactura = "01";         // catálogo 01
+    private const string TipoDocumentoBoleta = "03";          // catálogo 01
     private const string TipoDocIdentidadRuc = "6";           // catálogo 06
+    private const string TipoDocIdentidadDni = "1";           // catálogo 06
 
     public XDocument Construir(Comprobante comprobante, EmpresaSettings empresa)
     {
+        var esFactura = comprobante.TipoComprobante == "FI";
+        var tipoDocumento = esFactura ? TipoDocumentoFactura : TipoDocumentoBoleta;
         var moneda = string.IsNullOrWhiteSpace(comprobante.Moneda) ? "PEN" : comprobante.Moneda;
         var fechaLocal = comprobante.FechaEmision.ToUniversalTime().AddHours(-5); // Perú: UTC-5, sin horario de verano
 
@@ -60,7 +63,7 @@ public class FacturaXmlBuilder : IFacturaXmlBuilder
                 new XAttribute("listName", "Tipo de Documento"),
                 new XAttribute("listURI", CatalogosBase + "01"),
                 new XAttribute("listID", TipoOperacionVentaInterna), // catálogo 51: tipo de operación
-                TipoDocumentoFactura),
+                tipoDocumento),
             new XElement(Cbc + "DocumentCurrencyCode",
                 new XAttribute("listID", "ISO 4217 Alpha"),
                 new XAttribute("listName", "Currency"),
@@ -121,19 +124,42 @@ public class FacturaXmlBuilder : IFacturaXmlBuilder
 
     private XElement ConstruirAdquirente(Comprobante comprobante)
     {
-        // Factura siempre exige RUC del adquirente (ya validado en ComprobanteService antes de llegar aquí).
-        var ruc = comprobante.ClienteRuc ?? "";
-        var razonSocial = comprobante.ClienteRazonSocial ?? comprobante.ClienteNombre ?? "";
+        string schemeId;
+        string numeroDocumento;
+        string razonSocial;
+
+        if (comprobante.TipoComprobante == "FI")
+        {
+            // Factura siempre exige RUC del adquirente (ya validado en ComprobanteService antes de llegar aquí).
+            schemeId = TipoDocIdentidadRuc;
+            numeroDocumento = comprobante.ClienteRuc ?? "";
+            razonSocial = comprobante.ClienteRazonSocial ?? comprobante.ClienteNombre ?? "";
+        }
+        else if (!string.IsNullOrWhiteSpace(comprobante.ClienteDni))
+        {
+            schemeId = TipoDocIdentidadDni;
+            numeroDocumento = comprobante.ClienteDni;
+            razonSocial = comprobante.ClienteNombre ?? "CLIENTES VARIOS";
+        }
+        else
+        {
+            // Boleta sin documento del cliente ("cliente varios") — convención práctica común
+            // (DNI "00000000") a falta de un código SUNAT específico para "sin documento" en
+            // ventas anónimas; pendiente de confirmar/ajustar contra la respuesta real de Beta.
+            schemeId = TipoDocIdentidadDni;
+            numeroDocumento = "00000000";
+            razonSocial = comprobante.ClienteNombre ?? "CLIENTES VARIOS";
+        }
 
         return new XElement(Cac + "AccountingCustomerParty",
             new XElement(Cac + "Party",
                 new XElement(Cac + "PartyIdentification",
                     new XElement(Cbc + "ID",
-                        new XAttribute("schemeID", TipoDocIdentidadRuc),
+                        new XAttribute("schemeID", schemeId),
                         new XAttribute("schemeName", "Documento de Identidad"),
                         new XAttribute("schemeAgencyName", "PE:SUNAT"),
                         new XAttribute("schemeURI", CatalogosBase + "06"),
-                        ruc)),
+                        numeroDocumento)),
                 new XElement(Cac + "PartyLegalEntity",
                     new XElement(Cbc + "RegistrationName", razonSocial))));
     }

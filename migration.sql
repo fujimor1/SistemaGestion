@@ -1998,3 +1998,62 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260714194747_AgregarComprobanteSunatYSeries') THEN
+    CREATE TABLE public.comprobante_series (
+        serie character varying(10) NOT NULL,
+        tipo_comprobante character varying(5) NOT NULL,
+        ultimo_numero integer NOT NULL,
+        CONSTRAINT "PK_comprobante_series" PRIMARY KEY (serie)
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260714194747_AgregarComprobanteSunatYSeries') THEN
+    CREATE TABLE public.comprobantes_sunat (
+        comprobante_id integer NOT NULL,
+        xml_firmado text NOT NULL,
+        hash_digest_value character varying(100),
+        cdr_xml text,
+        cdr_codigo_respuesta integer,
+        cdr_descripcion character varying(500),
+        observaciones_sunat text,
+        estado integer NOT NULL DEFAULT 0,
+        intentos_envio integer NOT NULL DEFAULT 0,
+        fecha_limite_envio timestamp without time zone NOT NULL,
+        fecha_envio_sunat timestamp without time zone,
+        ticket_resumen character varying(50),
+        CONSTRAINT "PK_comprobantes_sunat" PRIMARY KEY (comprobante_id),
+        CONSTRAINT "FK_comprobantes_sunat_comprobantes_comprobante_id" FOREIGN KEY (comprobante_id) REFERENCES public.comprobantes (comprobante_id) ON DELETE CASCADE
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260714194747_AgregarComprobanteSunatYSeries') THEN
+
+                    INSERT INTO public.comprobante_series (serie, tipo_comprobante, ultimo_numero)
+                    SELECT serie, "TipoComprobante", MAX(numero)
+                    FROM public.comprobantes
+                    GROUP BY serie, "TipoComprobante"
+                    ON CONFLICT (serie) DO NOTHING;
+                
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260714194747_AgregarComprobanteSunatYSeries') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260714194747_AgregarComprobanteSunatYSeries', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

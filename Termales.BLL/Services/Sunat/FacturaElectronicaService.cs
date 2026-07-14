@@ -9,10 +9,11 @@ using Termales.Entities.Models;
 
 namespace Termales.BLL.Services.Sunat;
 
-/// <summary>Orquesta XML → firma → PDF → ZIP → envío → CDR → persistencia, para Factura directa a SUNAT.</summary>
+/// <summary>Orquesta XML → firma → PDF → ZIP → envío → CDR → persistencia, para Factura/Boleta directa a SUNAT.</summary>
 public class FacturaElectronicaService : IFacturaElectronicaService
 {
     private const string TipoDocFactura = "01"; // catálogo 01
+    private const string TipoDocBoleta = "03";  // catálogo 01
 
     private readonly IUnitOfWork _uow;
     private readonly IFacturaXmlBuilder _xmlBuilder;
@@ -48,10 +49,11 @@ public class FacturaElectronicaService : IFacturaElectronicaService
 
     public async Task<ApiResponse<ResultadoEmisionSunatDto>> EmitirAsync(Comprobante comprobante)
     {
+        var tipoDoc = comprobante.TipoComprobante == "FI" ? TipoDocFactura : TipoDocBoleta;
         var xmlSinFirmar = _xmlBuilder.Construir(comprobante, _empresaCfg);
         var firma = _signer.Firmar(xmlSinFirmar);
         var pdf = _representacionImpresaBuilder.Generar(comprobante, _empresaCfg, firma.DigestValueBase64);
-        var zip = _zipBuilder.Construir(_sunatCfg.Ruc, TipoDocFactura, comprobante.Serie, comprobante.Numero, firma.XmlFirmado);
+        var zip = _zipBuilder.Construir(_sunatCfg.Ruc, tipoDoc, comprobante.Serie, comprobante.Numero, firma.XmlFirmado);
 
         var comprobanteSunat = await _uow.ComprobantesSunat.ObtenerPorComprobanteIdAsync(comprobante.ComprobanteId);
         var esNuevo = comprobanteSunat is null;

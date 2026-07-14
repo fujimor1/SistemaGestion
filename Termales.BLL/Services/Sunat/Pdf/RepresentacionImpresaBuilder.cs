@@ -27,10 +27,12 @@ public class RepresentacionImpresaBuilder : IRepresentacionImpresaBuilder
 
     public byte[] Generar(Comprobante comprobante, EmpresaSettings empresa, string digestValueBase64)
     {
+        var esFactura = comprobante.TipoComprobante == "FI";
         var qrContenido = _qrContentBuilder.Construir(comprobante, empresa, digestValueBase64);
         var qrPng = GenerarQrPng(qrContenido);
         var fechaLocal = comprobante.FechaEmision.ToUniversalTime().AddHours(-5);
-        var clienteNombre = comprobante.ClienteRazonSocial ?? comprobante.ClienteNombre ?? "";
+        var clienteNombre = comprobante.ClienteRazonSocial ?? comprobante.ClienteNombre ?? "CLIENTES VARIOS";
+        var clienteDocLabel = esFactura ? $"RUC: {comprobante.ClienteRuc}" : $"DNI: {comprobante.ClienteDni ?? "-"}";
 
         var documento = Document.Create(container =>
         {
@@ -46,12 +48,12 @@ public class RepresentacionImpresaBuilder : IRepresentacionImpresaBuilder
                     col.Item().Text($"RUC: {empresa.Ruc}");
                     col.Item().Text(empresa.Direccion);
 
-                    col.Item().PaddingTop(6).Text("FACTURA ELECTRÓNICA").Bold();
+                    col.Item().PaddingTop(6).Text(esFactura ? "FACTURA ELECTRÓNICA" : "BOLETA DE VENTA ELECTRÓNICA").Bold();
                     col.Item().Text($"{comprobante.Serie}-{comprobante.Numero}").Bold().FontSize(11);
                     col.Item().Text($"Fecha de emisión: {fechaLocal:yyyy-MM-dd}");
 
                     col.Item().PaddingTop(8).Text("Cliente").Bold();
-                    col.Item().Text($"RUC: {comprobante.ClienteRuc}");
+                    col.Item().Text(clienteDocLabel);
                     col.Item().Text(clienteNombre);
 
                     col.Item().PaddingTop(8).Table(table =>

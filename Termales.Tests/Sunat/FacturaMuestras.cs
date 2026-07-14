@@ -30,6 +30,31 @@ internal static class FacturaMuestras
         return comprobante;
     }
 
+    public static Comprobante ComprobanteBoleta(string? clienteDni = "12345678")
+    {
+        var comprobante = new Comprobante
+        {
+            Serie = "B001",
+            Numero = 1,
+            TipoComprobante = "BI",
+            ClienteDni = clienteDni,
+            ClienteNombre = clienteDni is null ? null : "Cliente de Prueba",
+            Moneda = "PEN",
+            TotalGravada = 84.75m,
+            Impuesto = 15.25m,
+            Total = 100.00m,
+            FechaEmision = new DateTime(2026, 7, 14, 15, 0, 0, DateTimeKind.Utc),
+        };
+        comprobante.Detalles.Add(new ComprobanteDetalle
+        {
+            Descripcion = "Servicio de spa - paquete termal",
+            Cantidad = 1,
+            PrecioUnitario = 100.00m,
+            Subtotal = 100.00m,
+        });
+        return comprobante;
+    }
+
     public static EmpresaSettings Empresa() => new()
     {
         RazonSocial = "EMP. COMUNAL BAÑOS TERMOMEDICINALES DE COLLPA",
