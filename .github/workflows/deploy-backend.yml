@@ -1,0 +1,85 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Termales.API/**'
+      - 'Termales.BLL/**'
+      - 'Termales.DAL/**'
+      - 'Termales.Entities/**'
+      - 'Termales.Common/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish linux-x64 (framework-dependent)
+        run: |
+          dotnet publish Termales.API/Termales.API.csproj \
+            -c Release -r linux-x64 --self-contained false \
+            -o publish_linux
+
+      - name: Empaquetar publish
+        run: tar -czf publish_linux.tar.gz -C publish_linux .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: publish_linux
+          path: publish_linux.tar.gz
+          retention-days: 3
+
+  deploy:
+    needs: publish
+    runs-on: ubuntu-latest
+    # Solo se ejecuta si se dispara manualmente desde Actions > Run workflow.
+    # El push a main solo corre el job "publish" (compila y deja el artefacto listo).
+    if: github.event_name == 'workflow_dispatch'
+    environment: production
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: publish_linux
+
+      - name: Subir paquete al servidor
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: 'publish_linux.tar.gz'
+          target: '/tmp/'
+
+      - name: Reemplazar release y reiniciar servicio
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            set -e
+            cp -r /var/www/collpa-api /var/www/collpa-api.bak.$(date +%Y%m%d%H%M)
+            cp /var/www/collpa-api/appsettings.json /tmp/appsettings.prod.json.bak
+
+            rm -rf /tmp/collpa-api-new
+            mkdir -p /tmp/collpa-api-new
+            tar -xzf /tmp/publish_linux.tar.gz -C /tmp/collpa-api-new
+            cp /tmp/appsettings.prod.json.bak /tmp/collpa-api-new/appsettings.json
+
+            rm -rf /var/www/collpa-api/*
+            cp -r /tmp/collpa-api-new/* /var/www/collpa-api/
+            chown -R www-data:www-data /var/www/collpa-api
+            chmod +x /var/www/collpa-api/Termales.API
+
+            systemctl restart collpa-api
+            systemctl status collpa-api --no-pager
