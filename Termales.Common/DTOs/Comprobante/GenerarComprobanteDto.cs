@@ -22,6 +22,10 @@ public class GenerarComprobanteDto
 
     /// <summary>Cliente registrado a vincular con la deuda, solo relevante si MetodoPago == Fiado.</summary>
     public int? ClienteId { get; set; }
+
+    /// <summary>Solo si MetodoPago == Mixto: cuánto de ese pago fue en efectivo (el resto, hasta el
+    /// total, se asume Yape/Plin).</summary>
+    public decimal? MontoEfectivoMixto { get; set; }
 }
 
 public class GenerarComprobanteComedorDto : GenerarComprobanteDto
@@ -30,9 +34,17 @@ public class GenerarComprobanteComedorDto : GenerarComprobanteDto
     public List<int> OrdenDetalleIds { get; set; } = new();
 }
 
+public class ItemBanioDto
+{
+    /// <summary>Exactamente uno de los dos: un servicio individual (Poza, Piscina) o un combo/paquete.</summary>
+    public int? TipoServicioId { get; set; }
+    public int? PaqueteBanioId { get; set; }
+    public int Cantidad { get; set; } = 1;
+}
+
 public class GenerarComprobanteBanioDto : GenerarComprobanteDto
 {
-    /// <summary>Servicios elegidos (ej. Poza, Piscina) — el precio sale de la lista de precios, no se teclea.</summary>
-    public List<int> TipoServicioIds { get; set; } = new();
-    public int CantidadPersonas { get; set; } = 1;
+    /// <summary>Carrito de la venta: cada línea es un servicio individual o un combo, con su propia
+    /// cantidad de personas — permite mezclar, ej. 1 persona en Poza y 1 en Piscina en la misma venta.</summary>
+    public List<ItemBanioDto> Items { get; set; } = new();
 }

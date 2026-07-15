@@ -135,63 +135,91 @@ public class ComprobanteService : IComprobanteService
         return resultado;
     }
 
-    // ── Baño termal: boleto de precio fijo/combo, sin control de ocupación ──
+    // ── Baño termal: carrito de servicios/combos, sin control de ocupación ──
     public async Task<ApiResponse<ComprobanteResultadoDto>> GenerarComprobanteBanio(GenerarComprobanteBanioDto dto)
     {
-        if (dto.TipoServicioIds is null || dto.TipoServicioIds.Count == 0)
-            return ApiResponse<ComprobanteResultadoDto>.Fallido("Debe seleccionar al menos un servicio");
-        if (dto.CantidadPersonas <= 0)
-            return ApiResponse<ComprobanteResultadoDto>.Fallido("La cantidad de personas debe ser mayor a 0");
+        if (dto.Items is null || dto.Items.Count == 0)
+            return ApiResponse<ComprobanteResultadoDto>.Fallido("Debe agregar al menos un servicio");
+        if (dto.Items.Any(i => i.Cantidad <= 0))
+            return ApiResponse<ComprobanteResultadoDto>.Fallido("La cantidad debe ser mayor a 0");
+        if (dto.Items.Any(i => (i.TipoServicioId is null) == (i.PaqueteBanioId is null)))
+            return ApiResponse<ComprobanteResultadoDto>.Fallido("Cada línea debe indicar un servicio o un combo, no ambos ni ninguno");
 
-        var idsUnicos = dto.TipoServicioIds.Distinct().OrderBy(x => x).ToList();
-        var tipos = (await _uow.TiposServicio.BuscarAsync(t => idsUnicos.Contains(t.TipoServicioId) && t.Activo)).ToList();
-        if (tipos.Count != idsUnicos.Count)
+        var tipoIds = dto.Items.Where(i => i.TipoServicioId is not null).Select(i => i.TipoServicioId!.Value).Distinct().ToList();
+        var paqueteIds = dto.Items.Where(i => i.PaqueteBanioId is not null).Select(i => i.PaqueteBanioId!.Value).Distinct().ToList();
+
+        var tipos = tipoIds.Count == 0
+            ? new List<TipoServicio>()
+            : (await _uow.TiposServicio.BuscarAsync(t => tipoIds.Contains(t.TipoServicioId) && t.Activo)).ToList();
+        if (tipos.Count != tipoIds.Count)
             return ApiResponse<ComprobanteResultadoDto>.Fallido("Alguno de los servicios seleccionados no existe o está inactivo");
 
-        var paquetes = await _uow.PaquetesBanio.ObtenerActivosConTiposAsync();
-        var paqueteCoincidente = paquetes.FirstOrDefault(p =>
-            p.Tipos.Select(t => t.TipoServicioId).OrderBy(x => x).SequenceEqual(idsUnicos));
+        var paquetesActivos = (await _uow.PaquetesBanio.ObtenerActivosConTiposAsync()).ToList();
+        var paquetes = paquetesActivos.Where(p => paqueteIds.Contains(p.PaqueteBanioId)).ToList();
+        if (paquetes.Count != paqueteIds.Count)
+            return ApiResponse<ComprobanteResultadoDto>.Fallido("Alguno de los combos seleccionados no existe o está inactivo");
 
-        decimal precioUnitario;
-        string descripcion;
-        if (paqueteCoincidente is not null)
+        var tiposPorId = tipos.ToDictionary(t => t.TipoServicioId);
+        var paquetesPorId = paquetes.ToDictionary(p => p.PaqueteBanioId);
+
+        var items = new List<ItemComprobante>();
+        var ticketsControl = new List<(string NombresAreas, int Cantidad)>();
+        decimal monto = 0;
+
+        foreach (var itemDto in dto.Items)
         {
-            precioUnitario = paqueteCoincidente.Precio;
-            descripcion    = paqueteCoincidente.Nombre;
+            decimal precioUnitario;
+            string descripcion;
+            bool esCombo = itemDto.PaqueteBanioId is not null;
+
+            if (esCombo)
+            {
+                var paquete = paquetesPorId[itemDto.PaqueteBanioId!.Value];
+                precioUnitario = paquete.Precio;
+                descripcion    = paquete.Nombre;
+                ticketsControl.Add((string.Join(" + ", paquete.Tipos.Select(t => t.TipoServicio!.Nombre)).ToUpperInvariant(), itemDto.Cantidad));
+            }
+            else
+            {
+                var tipo = tiposPorId[itemDto.TipoServicioId!.Value];
+                precioUnitario = tipo.PrecioPorPersona;
+                descripcion    = tipo.Nombre;
+            }
+
+            var subtotalLinea = Math.Round(precioUnitario * itemDto.Cantidad, 2);
+            var valorUnit     = Math.Round(precioUnitario / 1.18m, 2);
+            var subtotalValor = Math.Round(valorUnit * itemDto.Cantidad, 2);
+
+            items.Add(new ItemComprobante
+            {
+                Descripcion    = $"{descripcion} ({itemDto.Cantidad} pers.)",
+                Cantidad       = itemDto.Cantidad,
+                ValorUnitario  = valorUnit,
+                PrecioUnitario = precioUnitario,
+                Subtotal       = subtotalValor,
+                Igv            = Math.Round(subtotalLinea - subtotalValor, 2),
+                Total          = subtotalLinea,
+            });
+
+            monto += subtotalLinea;
         }
-        else
-        {
-            precioUnitario = tipos.Sum(t => t.PrecioPorPersona);
-            descripcion    = string.Join(" + ", tipos.Select(t => t.Nombre));
-        }
-
-        var monto     = Math.Round(precioUnitario * dto.CantidadPersonas, 2);
-        var valorUnit = Math.Round(monto / 1.18m, 2);
-
-        var items = new List<ItemComprobante> { new()
-        {
-            Descripcion    = $"{descripcion} ({dto.CantidadPersonas} pers.)",
-            Cantidad       = 1,
-            ValorUnitario  = valorUnit,
-            PrecioUnitario = monto,
-            Subtotal       = valorUnit,
-            Igv            = Math.Round(monto - valorUnit, 2),
-            Total          = monto,
-        }};
+        monto = Math.Round(monto, 2);
 
         // Sin piscinaId ni control de ocupación: es un boleto plano, no una
         // asignación de un baño/piscina físico específico.
         var resultado = await Emitir(dto, monto, items, "banio", 0);
 
         // Cuando la venta cubre un combo (más de un área), la boleta trae un
-        // solo ítem — se imprime un ticket aparte de referencia para poder
-        // controlar el ingreso a cada área por separado.
-        if (resultado.Exito && paqueteCoincidente is not null)
+        // solo ítem por combo — se imprime un ticket aparte de referencia para
+        // poder controlar el ingreso a cada área por separado.
+        if (resultado.Exito)
         {
-            var nombresAreas = string.Join(" + ", tipos.Select(t => t.Nombre)).ToUpperInvariant();
-            await _reciboPrinter.ImprimirTicketControlAsync(
-                $"ACCESO {nombresAreas}",
-                $"{dto.CantidadPersonas} persona(s) — {resultado.Data!.NumeroFormateado}");
+            foreach (var (nombresAreas, cantidad) in ticketsControl)
+            {
+                await _reciboPrinter.ImprimirTicketControlAsync(
+                    $"ACCESO {nombresAreas}",
+                    $"{cantidad} persona(s) — {resultado.Data!.NumeroFormateado}");
+            }
         }
 
         return resultado;
@@ -283,6 +311,12 @@ public class ComprobanteService : IComprobanteService
         if (!await _cajaService.HayCajaAbiertaAsync())
             return ApiResponse<ComprobanteResultadoDto>.Fallido("Debes abrir la caja antes de registrar una venta");
 
+        if (dto.MetodoPago == MetodoPago.Mixto)
+        {
+            if (dto.MontoEfectivoMixto is null || dto.MontoEfectivoMixto < 0 || dto.MontoEfectivoMixto > total)
+                return ApiResponse<ComprobanteResultadoDto>.Fallido("El monto en efectivo del pago mixto debe estar entre 0 y el total");
+        }
+
         var resultado = await (dto.TipoComprobante switch
         {
             "NV" => EmitirNotaVenta(dto, total, items, tipoAmbiente, referenciaId),
@@ -342,6 +376,7 @@ public class ComprobanteService : IComprobanteService
             Estado            = "EMITIDO",
             EnlacePdf         = string.Empty,
             MetodoPago        = dto.MetodoPago,
+            MontoEfectivoMixto = dto.MetodoPago == MetodoPago.Mixto ? dto.MontoEfectivoMixto : null,
             Cobrado           = dto.MetodoPago != MetodoPago.Fiado,
             ClienteId         = dto.ClienteId,
             Detalles          = MapearDetalles(items),
@@ -477,6 +512,7 @@ public class ComprobanteService : IComprobanteService
             Estado             = estado,
             EnlacePdf          = enlacePdf,
             MetodoPago         = dto.MetodoPago,
+            MontoEfectivoMixto = dto.MetodoPago == MetodoPago.Mixto ? dto.MontoEfectivoMixto : null,
             Cobrado            = dto.MetodoPago != MetodoPago.Fiado,
             ClienteId          = dto.ClienteId,
             Detalles           = MapearDetalles(items),
@@ -535,6 +571,7 @@ public class ComprobanteService : IComprobanteService
             Estado             = "PENDIENTE DE ENVÍO A SUNAT",
             EnlacePdf          = "",
             MetodoPago         = dto.MetodoPago,
+            MontoEfectivoMixto = dto.MetodoPago == MetodoPago.Mixto ? dto.MontoEfectivoMixto : null,
             Cobrado            = dto.MetodoPago != MetodoPago.Fiado,
             ClienteId          = dto.ClienteId,
             Detalles           = MapearDetalles(items),

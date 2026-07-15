@@ -29,6 +29,7 @@ public class ComprobanteConfiguration : IEntityTypeConfiguration<Comprobante>
         // es un valor válido — sirve como "no asignado" sin ambigüedad con HasDefaultValue.
         builder.Property(c => c.MetodoPago).HasColumnName("metodo_pago").HasConversion<int>()
             .HasDefaultValue(MetodoPago.Efectivo).HasSentinel(default(MetodoPago));
+        builder.Property(c => c.MontoEfectivoMixto).HasColumnName("monto_efectivo_mixto").HasPrecision(10, 2);
         builder.Property(c => c.Cobrado).HasColumnName("cobrado").HasDefaultValue(true);
         builder.Property(c => c.FechaCobro).HasColumnName("fecha_cobro");
         builder.Property(c => c.ClienteId).HasColumnName("cliente_id");

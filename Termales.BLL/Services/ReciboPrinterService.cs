@@ -113,7 +113,8 @@ public class ReciboPrinterService : IReciboPrinterService
     private byte[] ConstruirTicket(ComprobanteResultadoDto resultado, IEnumerable<ItemReciboDto> items, string clienteLabel)
     {
         var ancho = _cfg.AnchoTicket;
-        var linea = new string('-', ancho);
+        var lineaFina   = new string('-', ancho);
+        var lineaGruesa = new string('=', ancho);
         var tipoLabel = resultado.TipoComprobante switch
         {
             "BI" => "BOLETA DE VENTA",
@@ -121,59 +122,80 @@ public class ReciboPrinterService : IReciboPrinterService
             _    => "NOTA DE VENTA",
         };
 
-        var cuerpo = new StringBuilder();
-        cuerpo.AppendLine(linea);
-        cuerpo.AppendLine(CentrarTexto(tipoLabel, ancho));
-        cuerpo.AppendLine(CentrarTexto(resultado.NumeroFormateado, ancho));
-        cuerpo.AppendLine(linea);
-        cuerpo.AppendLine($"Fecha : {AhoraLima():dd/MM/yyyy HH:mm}");
-        cuerpo.AppendLine($"Cliente: {clienteLabel}");
-        cuerpo.AppendLine($"Cajero : {resultado.Cajero ?? "-"}");
-        cuerpo.AppendLine(linea);
-        cuerpo.AppendLine(FormatearCabeceraItems(ancho));
-        cuerpo.AppendLine(new string('-', ancho));
-
-        foreach (var i in items)
-            cuerpo.AppendLine(FormatearLineaItem(i.Cantidad, i.Descripcion, i.Total, ancho));
-
-        cuerpo.AppendLine(linea);
-        // La Nota de Venta no es un documento tributario — no se desglosa
-        // IGV, solo el total. Boleta y Factura sí lo requieren.
-        if (resultado.TipoComprobante != "NV")
-        {
-            cuerpo.AppendLine(FormatearLineaMonto("Subtotal s/IGV", resultado.TotalGravada, ancho));
-            cuerpo.AppendLine(FormatearLineaMonto("IGV (18%)", resultado.Impuesto, ancho));
-        }
-        cuerpo.AppendLine(FormatearLineaMonto("TOTAL", resultado.Total, ancho));
-        cuerpo.AppendLine(linea);
-        cuerpo.AppendLine();
-        cuerpo.AppendLine(CentrarTexto("¡Gracias por su visita!", ancho));
-        cuerpo.AppendLine(CentrarTexto("Le esperamos pronto", ancho));
-        cuerpo.AppendLine();
-        cuerpo.AppendLine();
-
         using var ms = new MemoryStream();
 
         // ESC p 0 25 250 — abre el cajón de dinero conectado a la impresora
         // (pin 2 del puerto RJ11/RJ45 de la impresora). Se manda primero
         // para que el cajón se abra de inmediato, sin esperar el corte.
         ms.WriteByte(ESC); ms.WriteByte(0x70); ms.WriteByte(0x00); ms.WriteByte(0x19); ms.WriteByte(0xFA);
+        ms.WriteByte(ESC); ms.WriteByte(0x40); // ESC @ — reset/inicializar
 
-        ms.WriteByte(ESC); ms.WriteByte(0x40);                       // ESC @  — reset/inicializar
-        ms.WriteByte(ESC); ms.WriteByte(0x61); ms.WriteByte(0x01);   // ESC a 1 — centrar
-        ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x01);   // ESC E 1 — negrita on
-        ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(CentrarTexto(_empresa.RazonSocial, ancho)) + "\n"));
-        ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x00);   // negrita off
+        // ── Encabezado del negocio ──
+        Alinear(ms, centrado: true);
+        EscribirNegrita(ms, _empresa.RazonSocial);
         if (!string.IsNullOrWhiteSpace(_empresa.Ruc))
-            ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(CentrarTexto($"RUC {_empresa.Ruc}", ancho)) + "\n"));
+            Escribir(ms, $"RUC {_empresa.Ruc}");
         if (!string.IsNullOrWhiteSpace(_empresa.Direccion))
-            ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(CentrarTexto(_empresa.Direccion, ancho)) + "\n"));
-        ms.WriteByte(ESC); ms.WriteByte(0x61); ms.WriteByte(0x00);   // alinear izquierda
-        ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(cuerpo.ToString())));
+            Escribir(ms, _empresa.Direccion);
+        Escribir(ms, "");
 
-        ms.WriteByte(GS); ms.WriteByte(0x56); ms.WriteByte(0x01);    // GS V 1 — corte parcial
+        // ── Tipo y número de comprobante, destacado entre líneas dobles ──
+        Alinear(ms, centrado: false);
+        Escribir(ms, lineaGruesa);
+        EscribirNegrita(ms, CentrarTexto(tipoLabel, ancho));
+        Escribir(ms, CentrarTexto(resultado.NumeroFormateado, ancho));
+        Escribir(ms, lineaGruesa);
+
+        // ── Datos de la venta (etiquetas alineadas) ──
+        Escribir(ms, $"{"Fecha".PadRight(7)}: {AhoraLima():dd/MM/yyyy HH:mm}");
+        Escribir(ms, $"{"Cliente".PadRight(7)}: {clienteLabel}");
+        Escribir(ms, $"{"Cajero".PadRight(7)}: {resultado.Cajero ?? "-"}");
+        Escribir(ms, lineaFina);
+
+        // ── Detalle de ítems ──
+        Escribir(ms, FormatearCabeceraItems(ancho));
+        Escribir(ms, lineaFina);
+        foreach (var i in items)
+            Escribir(ms, FormatearLineaItem(i.Cantidad, i.Descripcion, i.Total, ancho));
+        Escribir(ms, lineaGruesa);
+
+        // ── Totales (el total final destacado en negrita) ──
+        // La Nota de Venta no es un documento tributario — no se desglosa
+        // IGV, solo el total. Boleta y Factura sí lo requieren.
+        if (resultado.TipoComprobante != "NV")
+        {
+            Escribir(ms, FormatearLineaMonto("Subtotal s/IGV", resultado.TotalGravada, ancho));
+            Escribir(ms, FormatearLineaMonto("IGV (18%)", resultado.Impuesto, ancho));
+        }
+        EscribirNegrita(ms, FormatearLineaMonto("TOTAL", resultado.Total, ancho));
+        Escribir(ms, lineaGruesa);
+
+        // ── Pie ──
+        Escribir(ms, "");
+        Alinear(ms, centrado: true);
+        Escribir(ms, "¡Gracias por su visita!");
+        Escribir(ms, "Le esperamos pronto");
+        Escribir(ms, "");
+        Escribir(ms, "");
+
+        ms.WriteByte(GS); ms.WriteByte(0x56); ms.WriteByte(0x01); // GS V 1 — corte parcial
 
         return ms.ToArray();
+    }
+
+    private static void Escribir(MemoryStream ms, string texto) =>
+        ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(texto) + "\n"));
+
+    private static void EscribirNegrita(MemoryStream ms, string texto)
+    {
+        ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x01); // ESC E 1 — negrita on
+        Escribir(ms, texto);
+        ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x00); // negrita off
+    }
+
+    private static void Alinear(MemoryStream ms, bool centrado)
+    {
+        ms.WriteByte(ESC); ms.WriteByte(0x61); ms.WriteByte(centrado ? (byte)0x01 : (byte)0x00); // ESC a
     }
 
     // Columnas: cantidad (4) + descripción (resto) + total alineado a la derecha
@@ -208,26 +230,24 @@ public class ReciboPrinterService : IReciboPrinterService
     private byte[] ConstruirTicketControl(string titulo, string detalle)
     {
         var ancho = _cfg.AnchoTicket;
-        var linea = new string('-', ancho);
-
-        var cuerpo = new StringBuilder();
-        cuerpo.AppendLine(linea);
-        cuerpo.AppendLine(detalle);
-        cuerpo.AppendLine($"{AhoraLima():dd/MM/yyyy HH:mm}");
-        cuerpo.AppendLine(linea);
-        cuerpo.AppendLine();
-        cuerpo.AppendLine();
+        var lineaGruesa = new string('=', ancho);
 
         using var ms = new MemoryStream();
-        ms.WriteByte(ESC); ms.WriteByte(0x40);                       // ESC @  — reset/inicializar
-        ms.WriteByte(ESC); ms.WriteByte(0x61); ms.WriteByte(0x01);   // ESC a 1 — centrar
-        ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x01);   // ESC E 1 — negrita on
-        ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(CentrarTexto(titulo, ancho)) + "\n"));
-        ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x00);   // negrita off
-        ms.WriteByte(ESC); ms.WriteByte(0x61); ms.WriteByte(0x00);   // alinear izquierda
-        ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(cuerpo.ToString())));
+        ms.WriteByte(ESC); ms.WriteByte(0x40); // ESC @ — reset/inicializar
 
-        ms.WriteByte(GS); ms.WriteByte(0x56); ms.WriteByte(0x01);    // GS V 1 — corte parcial
+        Alinear(ms, centrado: true);
+        Escribir(ms, lineaGruesa);
+        EscribirNegrita(ms, CentrarTexto(titulo, ancho));
+        Escribir(ms, lineaGruesa);
+        Escribir(ms, "");
+
+        Alinear(ms, centrado: false);
+        Escribir(ms, detalle);
+        Escribir(ms, $"{AhoraLima():dd/MM/yyyy HH:mm}");
+        Escribir(ms, "");
+        Escribir(ms, "");
+
+        ms.WriteByte(GS); ms.WriteByte(0x56); ms.WriteByte(0x01); // GS V 1 — corte parcial
 
         return ms.ToArray();
     }

@@ -49,6 +49,10 @@ public class Comprobante
     // Cobro: el comprobante se emite igual si es fiado (obligación SUNAT), pero
     // no cuenta como ingreso de caja hasta que Cobrado pase a true.
     public MetodoPago MetodoPago { get; set; } = MetodoPago.Efectivo;
+
+    // Solo si MetodoPago == Mixto: cuánto de ese pago fue en efectivo (el resto es Yape/Plin).
+    public decimal? MontoEfectivoMixto { get; set; }
+
     public bool Cobrado { get; set; } = true;
     public DateTime? FechaCobro { get; set; }
     public int? ClienteId { get; set; }
