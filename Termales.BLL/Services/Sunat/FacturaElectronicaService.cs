@@ -101,6 +101,8 @@ public class FacturaElectronicaService : IFacturaElectronicaService
             var cdr = _cdrParser.Parsear(resultadoEnvio.CdrZip!);
             comprobanteSunat.CdrCodigoRespuesta = cdr.Codigo;
             comprobanteSunat.CdrDescripcion = cdr.Descripcion;
+            comprobanteSunat.CdrXml = cdr.XmlCrudo;
+            comprobanteSunat.ObservacionesSunat = cdr.Observaciones;
             comprobanteSunat.Estado = cdr.Codigo == 0 ? EstadoEnvioSunat.Aceptado : EstadoEnvioSunat.Rechazado;
             comprobanteSunat.FechaEnvioSunat = DateTime.UtcNow;
             await GuardarAsync(comprobanteSunat, esNuevo);
