@@ -2128,3 +2128,29 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260715201226_AgregarDesgloseSistemaCierreCaja') THEN
+    ALTER TABLE caja.cierres_caja ADD efectivo_sistema numeric(12,2) NOT NULL DEFAULT 0.0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260715201226_AgregarDesgloseSistemaCierreCaja') THEN
+    ALTER TABLE caja.cierres_caja ADD yape_sistema numeric(12,2) NOT NULL DEFAULT 0.0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260715201226_AgregarDesgloseSistemaCierreCaja') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260715201226_AgregarDesgloseSistemaCierreCaja', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

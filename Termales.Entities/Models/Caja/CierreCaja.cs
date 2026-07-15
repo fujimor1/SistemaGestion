@@ -6,6 +6,10 @@ public class CierreCaja
     public DateTime Fecha { get; set; }
     // Sistema
     public decimal TotalSistema { get; set; }
+    // Desglose del sistema por método de pago (Mixto se reparte entre estos dos según
+    // MontoEfectivoMixto) — para poder comparar contra el conteo físico método por método.
+    public decimal EfectivoSistema { get; set; }
+    public decimal YapeSistema { get; set; }
     // Conteo físico (ingresado por el cajero)
     public decimal EfectivoFisico { get; set; }
     public decimal YapeFisico { get; set; }

@@ -13,6 +13,8 @@ public class CierreCajaConfiguration : IEntityTypeConfiguration<CierreCaja>
         builder.Property(c => c.CierreCajaId).HasColumnName("cierre_caja_id");
         builder.Property(c => c.Fecha).HasColumnName("fecha");
         builder.Property(c => c.TotalSistema).HasColumnName("total_sistema").HasPrecision(12, 2);
+        builder.Property(c => c.EfectivoSistema).HasColumnName("efectivo_sistema").HasPrecision(12, 2).HasDefaultValue(0m);
+        builder.Property(c => c.YapeSistema).HasColumnName("yape_sistema").HasPrecision(12, 2).HasDefaultValue(0m);
         builder.Property(c => c.EfectivoFisico).HasColumnName("efectivo_fisico").HasPrecision(12, 2);
         builder.Property(c => c.YapeFisico).HasColumnName("yape_fisico").HasPrecision(12, 2);
         builder.Property(c => c.TransferenciaFisico).HasColumnName("transferencia_fisico").HasPrecision(12, 2);

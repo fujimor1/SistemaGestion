@@ -11,6 +11,11 @@ public class ResumenAmbienteDto
 public class DatosCierreDto
 {
     public decimal TotalSistema { get; set; }
+    // Cuánto de TotalSistema corresponde a cada método de pago (Mixto se reparte según
+    // MontoEfectivoMixto) — para comparar contra el conteo físico método por método antes
+    // de cerrar, y no solo el total agregado.
+    public decimal EfectivoSistema { get; set; }
+    public decimal YapeSistema { get; set; }
     public decimal MontoApertura { get; set; }
     public decimal TotalEgresos { get; set; }
     public decimal SaldoCajaChica { get; set; }
@@ -23,6 +28,8 @@ public class CierreCajaDto
     public int CierreCajaId { get; set; }
     public DateTime Fecha { get; set; }
     public decimal TotalSistema { get; set; }
+    public decimal EfectivoSistema { get; set; }
+    public decimal YapeSistema { get; set; }
     public decimal EfectivoFisico { get; set; }
     public decimal YapeFisico { get; set; }
     public decimal TransferenciaFisico { get; set; }

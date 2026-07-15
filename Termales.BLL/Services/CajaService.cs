@@ -3,6 +3,7 @@ using System.IdentityModel.Tokens.Jwt;
 using Termales.BLL.Interfaces;
 using Termales.Common.DTOs.Caja;
 using Termales.DAL.Context;
+using Termales.Entities.Enums;
 using Termales.Entities.Models.Caja;
 
 namespace Termales.BLL.Services;
@@ -105,13 +106,47 @@ public class CajaService : ICajaService
 
     // ── Cierre ────────────────────────────────────────────────────────────────
 
+    // Una venta cuenta para el día en que el dinero realmente entró a caja: para un
+    // cobro directo (Efectivo/Yape/Mixto) eso es FechaEmision, pero para una deuda a
+    // Crédito que se cobra después, es FechaCobro (el día de la venta original puede
+    // ser otro). El total general se reparte entre Efectivo y Yape/Plin según el método
+    // real de cada comprobante (Mixto se divide según MontoEfectivoMixto); Transferencia
+    // (ya no seleccionable, solo dato histórico) no cae en ninguno de los dos, pero sí
+    // suma al total general.
+    private async Task<(decimal Efectivo, decimal YapePlin, decimal TotalGeneral)> ObtenerTotalesPorMetodoAsync(DateTime dia)
+    {
+        var comprobantes = await _db.Comprobantes.AsNoTracking()
+            .Where(c => c.Estado != "ANULADO" && c.Cobrado && (c.FechaCobro ?? c.FechaEmision).Date == dia)
+            .Select(c => new { c.MetodoPago, c.Total, c.MontoEfectivoMixto })
+            .ToListAsync();
+
+        decimal efectivo = 0, yape = 0;
+        foreach (var c in comprobantes)
+        {
+            switch (c.MetodoPago)
+            {
+                case MetodoPago.Efectivo:
+                    efectivo += c.Total;
+                    break;
+                case MetodoPago.YapePlin:
+                    yape += c.Total;
+                    break;
+                case MetodoPago.Mixto:
+                    var montoEfectivo = c.MontoEfectivoMixto ?? 0;
+                    efectivo += montoEfectivo;
+                    yape += c.Total - montoEfectivo;
+                    break;
+            }
+        }
+
+        return (efectivo, yape, comprobantes.Sum(c => c.Total));
+    }
+
     public async Task<DatosCierreDto> ObtenerDatosCierreAsync()
     {
         var hoy = DateTime.UtcNow.Date;
 
-        var totalSistema = await _db.Comprobantes.AsNoTracking()
-            .Where(c => c.FechaEmision.Date == hoy && c.Estado != "ANULADO" && c.Cobrado)
-            .SumAsync(c => (decimal?)c.Total) ?? 0;
+        var (efectivoSistema, yapeSistema, totalSistema) = await ObtenerTotalesPorMetodoAsync(hoy);
 
         var apertura = await _db.AperturasCaja.AsNoTracking()
             .FirstOrDefaultAsync(a => a.Fecha.Date == hoy);
@@ -121,7 +156,7 @@ public class CajaService : ICajaService
             .SumAsync(e => (decimal?)e.Monto) ?? 0;
 
         var resumenRaw = await _db.Comprobantes.AsNoTracking()
-            .Where(c => c.FechaEmision.Date == hoy && c.Estado != "ANULADO" && c.Cobrado)
+            .Where(c => (c.FechaCobro ?? c.FechaEmision).Date == hoy && c.Estado != "ANULADO" && c.Cobrado)
             .GroupBy(c => c.TipoAmbiente)
             .Select(g => new { Ambiente = g.Key, Cantidad = g.Count(), Total = g.Sum(c => c.Total) })
             .ToListAsync();
@@ -140,6 +175,8 @@ public class CajaService : ICajaService
         return new DatosCierreDto
         {
             TotalSistema = totalSistema,
+            EfectivoSistema = efectivoSistema,
+            YapeSistema = yapeSistema,
             MontoApertura = apertura?.MontoInicial ?? 0,
             TotalEgresos = totalEgresos,
             SaldoCajaChica = (apertura?.MontoInicial ?? 0) - totalEgresos,
@@ -156,9 +193,7 @@ public class CajaService : ICajaService
         if (existente is not null)
             throw new InvalidOperationException("La caja ya fue cerrada hoy.");
 
-        var totalSistema = await _db.Comprobantes.AsNoTracking()
-            .Where(c => c.FechaEmision.Date == hoy && c.Estado != "ANULADO" && c.Cobrado)
-            .SumAsync(c => (decimal?)c.Total) ?? 0;
+        var (efectivoSistema, yapeSistema, totalSistema) = await ObtenerTotalesPorMetodoAsync(hoy);
 
         var apertura = await _db.AperturasCaja.AsNoTracking()
             .FirstOrDefaultAsync(a => a.Fecha.Date == hoy);
@@ -174,6 +209,8 @@ public class CajaService : ICajaService
         {
             Fecha = hoy,
             TotalSistema = totalSistema,
+            EfectivoSistema = efectivoSistema,
+            YapeSistema = yapeSistema,
             EfectivoFisico = dto.EfectivoFisico,
             YapeFisico = dto.YapeFisico,
             TransferenciaFisico = dto.TransferenciaFisico,
@@ -218,6 +255,8 @@ public class CajaService : ICajaService
         CierreCajaId = c.CierreCajaId,
         Fecha = c.Fecha,
         TotalSistema = c.TotalSistema,
+        EfectivoSistema = c.EfectivoSistema,
+        YapeSistema = c.YapeSistema,
         EfectivoFisico = c.EfectivoFisico,
         YapeFisico = c.YapeFisico,
         TransferenciaFisico = c.TransferenciaFisico,
