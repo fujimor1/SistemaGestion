@@ -89,6 +89,7 @@ public static class ServiceCollectionExtensions
         services.Configure<NubefactSettings>(config.GetSection("Nubefact"));
         services.Configure<EmpresaSettings>(config.GetSection("Empresa"));
         services.AddHttpClient("Nubefact");
+        services.AddScoped<INotaCreditoService, NotaCreditoService>();
         services.AddScoped<ISolicitudAnulacionService, SolicitudAnulacionService>();
         services.AddScoped<IReciboPrinterService, ReciboPrinterService>();
         services.AddScoped<IComprobanteService, ComprobanteService>();

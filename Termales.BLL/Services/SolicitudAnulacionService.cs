@@ -1,9 +1,5 @@
-using System.Net.Http.Json;
-using System.Text.Json;
-using Microsoft.Extensions.Options;
 using Termales.BLL.Interfaces;
 using Termales.Common.DTOs.Comprobante;
-using Termales.Common.Settings;
 using Termales.Common.Wrappers;
 using Termales.DAL.UnitOfWork;
 using Termales.Entities.Models;
@@ -12,18 +8,13 @@ namespace Termales.BLL.Services;
 
 public class SolicitudAnulacionService : ISolicitudAnulacionService
 {
-    private readonly IUnitOfWork      _uow;
-    private readonly HttpClient       _nubefactHttp;
-    private readonly NubefactSettings _cfg;
+    private readonly IUnitOfWork _uow;
+    private readonly INotaCreditoService _notaCredito;
 
-    public SolicitudAnulacionService(
-        IUnitOfWork uow,
-        IHttpClientFactory httpFactory,
-        IOptions<NubefactSettings> cfg)
+    public SolicitudAnulacionService(IUnitOfWork uow, INotaCreditoService notaCredito)
     {
-        _uow          = uow;
-        _nubefactHttp = httpFactory.CreateClient("Nubefact");
-        _cfg          = cfg.Value;
+        _uow = uow;
+        _notaCredito = notaCredito;
     }
 
     public async Task<ApiResponse> SolicitarAsync(int comprobanteId, string motivo, string cajero)
@@ -80,27 +71,15 @@ public class SolicitudAnulacionService : ISolicitudAnulacionService
         var comprobante = await _uow.Comprobantes.ObtenerPorIdAsync(solicitud.ComprobanteId);
         if (comprobante is null) return ApiResponse.Fallido("Comprobante no encontrado.");
 
-        // Llamada a Nubefact para BI / FI (simulada si ModoSimulacion = true)
-        if (comprobante.TipoComprobante is "BI" or "FI" && !_cfg.ModoSimulacion)
+        // La anulación de una Boleta/Factura ya aceptada por SUNAT no es un "borrado": se emite
+        // una Nota de Crédito por el total, con motivo "Anulación de la operación". Recién cuando
+        // el supervisor aprueba se dispara esto — la solicitud en sí no toca SUNAT para nada.
+        if (comprobante.TipoComprobante is "BI" or "FI")
         {
-            var tipoDoc = comprobante.TipoComprobante == "FI" ? 1 : 2;
-            try
-            {
-                var req = new HttpRequestMessage(HttpMethod.Delete,
-                    $"{_cfg.UrlBase.TrimEnd('/')}/{_cfg.Ruc}/comprobantes/{tipoDoc}/{comprobante.Serie}/{comprobante.Numero}");
-                req.Headers.Add("Authorization", $"Token {_cfg.Token}");
-
-                var resp = await _nubefactHttp.SendAsync(req);
-                if (!resp.IsSuccessStatusCode)
-                {
-                    var err = await resp.Content.ReadAsStringAsync();
-                    return ApiResponse.Fallido($"Error al anular en Nubefact: {err}");
-                }
-            }
-            catch (HttpRequestException ex)
-            {
-                return ApiResponse.Fallido($"Error al conectar con Nubefact: {ex.Message}");
-            }
+            var dto = new EmitirNotaCreditoDto { Tipo = "total", CodigoMotivo = 1 };
+            var resultadoNc = await _notaCredito.EmitirAsync(comprobante.ComprobanteId, dto, supervisorNombre);
+            if (!resultadoNc.Exito)
+                return ApiResponse.Fallido($"No se pudo emitir la nota de crédito de anulación: {resultadoNc.Mensaje}");
         }
 
         comprobante.Estado          = "ANULADO";
@@ -115,8 +94,7 @@ public class SolicitudAnulacionService : ISolicitudAnulacionService
 
         await _uow.GuardarCambiosAsync();
 
-        var modoLabel = _cfg.ModoSimulacion ? " (simulación)" : "";
-        return ApiResponse.Exitoso($"Anulación aprobada{modoLabel}. Comprobante {comprobante.Serie}-{comprobante.Numero:D5} anulado.");
+        return ApiResponse.Exitoso($"Anulación aprobada. Comprobante {comprobante.Serie}-{comprobante.Numero:D5} anulado.");
     }
 
     public async Task<ApiResponse> RechazarAsync(int solicitudId, string supervisorNombre, string? motivoRechazo)
