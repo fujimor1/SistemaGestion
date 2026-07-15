@@ -10,8 +10,11 @@ public interface IOrdenService
     Task<ApiResponse<OrdenDto>> ObtenerActivaPorMesaAsync(int mesaId);
     Task<ApiResponse<IEnumerable<OrdenDto>>> ObtenerPorEstadoAsync(EstadoOrden estado);
     Task<ApiResponse<IEnumerable<OrdenDto>>> ObtenerPorFechaAsync(DateTime fecha);
-    /// <summary>Pedidos "para llevar" que todavía están en curso (no pagados ni cancelados).</summary>
-    Task<ApiResponse<IEnumerable<OrdenDto>>> ObtenerLlevarActivasAsync();
+    /// <summary>Pedidos "para llevar" que todavía están en curso (no pagados ni cancelados).
+    /// Con soloCreadasPorMozo=true (la app móvil del mesero) solo trae los que un Mozo creó
+    /// desde la tablet, para no mostrarle al mesero los pedidos para llevar que un cajero
+    /// registra desde la web.</summary>
+    Task<ApiResponse<IEnumerable<OrdenDto>>> ObtenerLlevarActivasAsync(bool soloCreadasPorMozo);
     Task<ApiResponse<OrdenDto>> CrearAsync(CrearOrdenDto dto);
     Task<ApiResponse<OrdenDto>> AgregarItemsAsync(int ordenId, AgregarItemsOrdenDto dto);
     Task<ApiResponse<OrdenDetalleDto>> ActualizarEstadoDetalleAsync(int detalleId, ActualizarEstadoDetalleDto dto);

@@ -60,9 +60,9 @@ public class OrdenService : IOrdenService
         return ApiResponse<IEnumerable<OrdenDto>>.Exitoso(ordenes.Select(MapearDto));
     }
 
-    public async Task<ApiResponse<IEnumerable<OrdenDto>>> ObtenerLlevarActivasAsync()
+    public async Task<ApiResponse<IEnumerable<OrdenDto>>> ObtenerLlevarActivasAsync(bool soloCreadasPorMozo)
     {
-        var ordenes = await _uow.Ordenes.ObtenerLlevarActivasAsync();
+        var ordenes = await _uow.Ordenes.ObtenerLlevarActivasAsync(soloCreadasPorMozo);
         return ApiResponse<IEnumerable<OrdenDto>>.Exitoso(ordenes.Select(MapearDto));
     }
 

@@ -52,7 +52,12 @@ public class OrdenesController : ControllerBase
     [Authorize(Roles = Modulos.ComedorLectura)]
     public async Task<IActionResult> ObtenerLlevarActivas()
     {
-        var resultado = await _service.ObtenerLlevarActivasAsync();
+        // La app móvil del mesero (rol Mozo) consume este mismo endpoint solo para mostrar
+        // "sus" pedidos para llevar en curso — los que un cajero registra desde la web no
+        // le sirven ahí, así que para ese rol se filtra por quien creó el pedido. La web de
+        // caja (Administrador/Supervisor) sigue viendo todos, sin filtrar.
+        var soloCreadasPorMozo = User.IsInRole(Modulos.Mozo);
+        var resultado = await _service.ObtenerLlevarActivasAsync(soloCreadasPorMozo);
         return Ok(resultado);
     }
 
