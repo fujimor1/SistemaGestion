@@ -54,21 +54,42 @@ public class RepresentacionImpresaBuilder : IRepresentacionImpresaBuilder
 
                 page.Content().Column(col =>
                 {
-                    col.Item().Text(empresa.RazonSocial).Bold().FontSize(12);
-                    col.Item().Text($"RUC: {empresa.Ruc}");
-                    col.Item().Text(empresa.Direccion);
+                    col.Spacing(8);
 
-                    col.Item().PaddingTop(6).Text(titulo).Bold();
-                    col.Item().Text($"{comprobante.Serie}-{comprobante.Numero}").Bold().FontSize(11);
-                    col.Item().Text($"Fecha de emisión: {fechaLocal:yyyy-MM-dd}");
-                    if (referenciaOrigen is not null)
-                        col.Item().Text(referenciaOrigen);
+                    // ── Emisor + recuadro con tipo y número de documento ──
+                    col.Item().Row(row =>
+                    {
+                        row.RelativeItem(2).Column(c =>
+                        {
+                            c.Item().Text(empresa.RazonSocial).Bold().FontSize(12);
+                            c.Item().Text($"RUC: {empresa.Ruc}");
+                            c.Item().Text(empresa.Direccion);
+                        });
 
-                    col.Item().PaddingTop(8).Text("Cliente").Bold();
-                    col.Item().Text(clienteDocLabel);
-                    col.Item().Text(clienteNombre);
+                        row.ConstantItem(150).Border(1).BorderColor(Colors.Black).Padding(8).Column(c =>
+                        {
+                            c.Item().AlignCenter().Text($"RUC {empresa.Ruc}").FontSize(8);
+                            c.Item().AlignCenter().Text(titulo).Bold().FontSize(9);
+                            c.Item().AlignCenter().Text($"{comprobante.Serie}-{comprobante.Numero}").Bold().FontSize(11);
+                        });
+                    });
 
-                    col.Item().PaddingTop(8).Table(table =>
+                    // ── Datos del cliente y de la venta, en un solo recuadro ──
+                    col.Item().Border(1).BorderColor(Colors.Grey.Darken1).Padding(8).Column(c =>
+                    {
+                        c.Item().Text(text =>
+                        {
+                            text.Span("Cliente: ").Bold();
+                            text.Span(clienteNombre);
+                        });
+                        c.Item().Text(clienteDocLabel);
+                        c.Item().Text($"Fecha de emisión: {fechaLocal:yyyy-MM-dd}");
+                        if (referenciaOrigen is not null)
+                            c.Item().Text(referenciaOrigen);
+                    });
+
+                    // ── Detalle de ítems, con bordes en cada celda ──
+                    col.Item().Table(table =>
                     {
                         table.ColumnsDefinition(columns =>
                         {
@@ -79,25 +100,45 @@ public class RepresentacionImpresaBuilder : IRepresentacionImpresaBuilder
 
                         table.Header(header =>
                         {
-                            header.Cell().Text("Descripción").Bold();
-                            header.Cell().Text("Cant.").Bold();
-                            header.Cell().Text("Importe").Bold();
+                            header.Cell().Border(1).Background(Colors.Grey.Lighten3).Padding(4).Text("Descripción").Bold();
+                            header.Cell().Border(1).Background(Colors.Grey.Lighten3).Padding(4).AlignCenter().Text("Cant.").Bold();
+                            header.Cell().Border(1).Background(Colors.Grey.Lighten3).Padding(4).AlignRight().Text("Importe").Bold();
                         });
 
                         foreach (var detalle in comprobante.Detalles)
                         {
-                            table.Cell().Text(detalle.Descripcion);
-                            table.Cell().Text(detalle.Cantidad.ToString(CultureInfo.InvariantCulture));
-                            table.Cell().Text(detalle.Subtotal.ToString("F2", CultureInfo.InvariantCulture));
+                            table.Cell().Border(1).Padding(4).Text(detalle.Descripcion);
+                            table.Cell().Border(1).Padding(4).AlignCenter().Text(detalle.Cantidad.ToString(CultureInfo.InvariantCulture));
+                            table.Cell().Border(1).Padding(4).AlignRight().Text(detalle.Subtotal.ToString("F2", CultureInfo.InvariantCulture));
                         }
                     });
 
-                    col.Item().PaddingTop(8).AlignRight().Text($"Op. gravada: {comprobante.TotalGravada.ToString("F2", CultureInfo.InvariantCulture)}");
-                    col.Item().AlignRight().Text($"IGV: {comprobante.Impuesto.ToString("F2", CultureInfo.InvariantCulture)}");
-                    col.Item().AlignRight().Text($"IMPORTE TOTAL: {comprobante.Total.ToString("F2", CultureInfo.InvariantCulture)}").Bold();
+                    // ── Totales, en un recuadro alineado a la derecha ──
+                    col.Item().Row(row =>
+                    {
+                        row.RelativeItem();
+                        row.ConstantItem(180).Border(1).BorderColor(Colors.Black).Padding(8).Column(c =>
+                        {
+                            c.Item().Row(r =>
+                            {
+                                r.RelativeItem().Text("Op. gravada:");
+                                r.ConstantItem(70).AlignRight().Text(comprobante.TotalGravada.ToString("F2", CultureInfo.InvariantCulture));
+                            });
+                            c.Item().Row(r =>
+                            {
+                                r.RelativeItem().Text("IGV:");
+                                r.ConstantItem(70).AlignRight().Text(comprobante.Impuesto.ToString("F2", CultureInfo.InvariantCulture));
+                            });
+                            c.Item().PaddingTop(4).Row(r =>
+                            {
+                                r.RelativeItem().Text("IMPORTE TOTAL:").Bold();
+                                r.ConstantItem(70).AlignRight().Text(comprobante.Total.ToString("F2", CultureInfo.InvariantCulture)).Bold();
+                            });
+                        });
+                    });
 
                     // QR en la parte inferior de la representación impresa, por requisito de SUNAT.
-                    col.Item().PaddingTop(10).Row(row =>
+                    col.Item().PaddingTop(4).Row(row =>
                     {
                         row.ConstantItem(120).Image(qrPng);
                         row.RelativeItem().PaddingLeft(10).Column(c =>
