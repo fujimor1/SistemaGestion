@@ -131,6 +131,20 @@ public class ComprobantesController : ControllerBase
         return Ok(resultado);
     }
 
+    [HttpGet("electronica")]
+    public async Task<IActionResult> ObtenerFacturasBoletas([FromQuery] string? fecha)
+    {
+        var resultado = await _service.ObtenerFacturasBoletasAsync(fecha);
+        return Ok(resultado);
+    }
+
+    [HttpGet("notas-credito")]
+    public async Task<IActionResult> ObtenerNotasCredito([FromQuery] string? desde, [FromQuery] string? hasta)
+    {
+        var resultado = await _service.ObtenerNotasCreditoAsync(desde, hasta);
+        return Ok(resultado);
+    }
+
     [HttpPost("{id:int}/reenviar-sunat")]
     public async Task<IActionResult> ReenviarSunat(int id)
     {

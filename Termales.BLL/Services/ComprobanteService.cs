@@ -577,8 +577,8 @@ public class ComprobanteService : IComprobanteService
         var comprobante = await _uow.Comprobantes.ObtenerConDetalleAsync(comprobanteId);
         if (comprobante is null)
             return ApiResponse<ResultadoEmisionSunatDto>.Fallido("Comprobante no encontrado");
-        if (comprobante.TipoComprobante is not ("FI" or "BI"))
-            return ApiResponse<ResultadoEmisionSunatDto>.Fallido("El reenvío solo aplica a Facturas o Boletas emitidas directamente a SUNAT");
+        if (comprobante.TipoComprobante is not ("FI" or "BI" or "NC"))
+            return ApiResponse<ResultadoEmisionSunatDto>.Fallido("El reenvío solo aplica a Facturas, Boletas o Notas de Crédito emitidas directamente a SUNAT");
 
         var resultado = await _facturaElectronica.EmitirAsync(comprobante);
 
@@ -604,6 +604,48 @@ public class ComprobanteService : IComprobanteService
             IntentosEnvio    = p.IntentosEnvio,
             FechaLimiteEnvio = p.FechaLimiteEnvio,
             UltimoError      = p.CdrDescripcion,
+        });
+    }
+
+    public async Task<IEnumerable<ComprobanteElectronicoDto>> ObtenerFacturasBoletasAsync(string? fecha)
+    {
+        var dia = DateOnly.TryParse(fecha, out var d) ? d : DateOnly.FromDateTime(DateTime.UtcNow - TimeSpan.FromHours(5));
+        var comprobantes = await _uow.Comprobantes.ObtenerFacturasBoletasAsync(dia);
+        return comprobantes.Select(c => new ComprobanteElectronicoDto
+        {
+            ComprobanteId    = c.ComprobanteId,
+            NumeroFormateado = $"{c.Serie}-{c.Numero:D5}",
+            TipoComprobante  = c.TipoComprobante,
+            TipoAmbiente     = c.TipoAmbiente,
+            ClienteNombre    = c.TipoComprobante == "FI" ? c.ClienteRazonSocial : c.ClienteNombre,
+            ClienteDocumento = c.TipoComprobante == "FI" ? c.ClienteRuc : c.ClienteDni,
+            Detalle          = string.Join("; ", c.Detalles.Select(det => $"{det.Cantidad}x {det.Descripcion}")),
+            FechaEmision     = c.FechaEmision,
+            Total            = c.Total,
+            Cajero           = c.Cajero,
+            MetodoPago       = (int)c.MetodoPago,
+            Estado           = c.Estado,
+        });
+    }
+
+    public async Task<IEnumerable<NotaCreditoListadoDto>> ObtenerNotasCreditoAsync(string? desde, string? hasta)
+    {
+        var desdeDate = DateOnly.TryParse(desde, out var d) ? d : DateOnly.FromDateTime(DateTime.UtcNow);
+        var hastaDate = DateOnly.TryParse(hasta, out var h) ? h : DateOnly.FromDateTime(DateTime.UtcNow);
+        var notasCredito = await _uow.Comprobantes.ObtenerNotasCreditoAsync(desdeDate, hastaDate);
+        return notasCredito.Select(nc => new NotaCreditoListadoDto
+        {
+            ComprobanteId    = nc.ComprobanteId,
+            NumeroFormateado = $"{nc.Serie}-{nc.Numero:D5}",
+            ComprobanteOrigenTipo = nc.ComprobanteOrigen?.TipoComprobante,
+            ComprobanteOrigenNumeroFormateado = nc.ComprobanteOrigen is null
+                ? null
+                : $"{nc.ComprobanteOrigen.Serie}-{nc.ComprobanteOrigen.Numero:D5}",
+            Motivo       = nc.MotivoAnulacion,
+            FechaEmision = nc.FechaEmision,
+            Total        = nc.Total,
+            Cajero       = nc.Cajero,
+            Estado       = nc.Estado,
         });
     }
 

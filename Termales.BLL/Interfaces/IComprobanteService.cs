@@ -20,4 +20,6 @@ public interface IComprobanteService
     Task<ApiResponse<ComprobanteDetalleCompletoDto>> ObtenerDetalleAsync(int comprobanteId);
     Task<ApiResponse<ResultadoEmisionSunatDto>> ReenviarSunatAsync(int comprobanteId);
     Task<IEnumerable<ComprobanteSunatPendienteDto>> ObtenerPendientesSunatAsync();
+    Task<IEnumerable<ComprobanteElectronicoDto>> ObtenerFacturasBoletasAsync(string? fecha);
+    Task<IEnumerable<NotaCreditoListadoDto>> ObtenerNotasCreditoAsync(string? desde, string? hasta);
 }

@@ -62,4 +62,29 @@ public class ComprobanteRepository : GenericRepository<Comprobante>, IComprobant
             .Include(c => c.Cliente)
             .Include(c => c.ComprobanteOrigen)
             .FirstOrDefaultAsync(c => c.ComprobanteId == comprobanteId);
+
+    public async Task<IEnumerable<Comprobante>> ObtenerFacturasBoletasAsync(DateOnly fecha)
+    {
+        var inicio = fecha.ToDateTime(TimeOnly.MinValue) + OffsetPeru;
+        var fin    = fecha.ToDateTime(TimeOnly.MaxValue) + OffsetPeru;
+
+        return await _dbSet
+            .Include(c => c.Detalles)
+            .Where(c => (c.TipoComprobante == "FI" || c.TipoComprobante == "BI" || c.TipoComprobante == "NV")
+                        && c.FechaEmision >= inicio && c.FechaEmision <= fin)
+            .OrderByDescending(c => c.FechaEmision)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Comprobante>> ObtenerNotasCreditoAsync(DateOnly desde, DateOnly hasta)
+    {
+        var inicio = desde.ToDateTime(TimeOnly.MinValue) + OffsetPeru;
+        var fin    = hasta.ToDateTime(TimeOnly.MaxValue) + OffsetPeru;
+
+        return await _dbSet
+            .Include(c => c.ComprobanteOrigen)
+            .Where(c => c.TipoComprobante == "NC" && c.FechaEmision >= inicio && c.FechaEmision <= fin)
+            .OrderByDescending(c => c.FechaEmision)
+            .ToListAsync();
+    }
 }
