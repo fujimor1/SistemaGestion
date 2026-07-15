@@ -12,6 +12,14 @@ Servidor: `srv1818017` (acceso por SSH como `root`).
 | nginx configs | `/etc/nginx/sites-available/collpa-api` (proxy a `localhost:5018`, dominio `api.termalescollpa.cloud`) y `/etc/nginx/sites-available/collpa-front` (root estático, dominio `termalescollpa.cloud`) |
 | Runtime servidor | .NET 8.0.28 (solo runtime ASP.NET Core instalado, no SDK) — por eso el publish debe ser framework-dependent, no self-contained |
 
+## 0. Antes de cualquier commit (siempre)
+
+- **Backend**: `dotnet build` y `dotnet test Termales.Tests` sin errores antes de comitear. Si hay
+  un `dotnet run` local corriendo, primero mátalo (bloquea los `.dll` del build) — en Windows:
+  `Get-Process Termales.API | Stop-Process -Force`.
+- **Frontend**: `npx tsc --noEmit` y `npm run build` sin errores antes de comitear.
+- Nunca se pushea directo sin este paso, sin importar qué tan chico sea el cambio.
+
 ## 1 y 2. Backend y Frontend — deploy automático por GitHub Actions
 
 Desde julio 2026, el backend (`fujimor1/SistemaGestion`, este repo) y el frontend (`fujimor1/collpa-front`) tienen workflows de GitHub Actions:
@@ -26,6 +34,12 @@ Flujo:
 4. El script en el servidor hace lo mismo que antes se hacía a mano: backup de la carpeta actual (`.bak.<fecha>`), reemplazo de archivos, y (solo backend) `chmod +x` + `systemctl restart collpa-api`.
 
 ⚠️ El workflow del backend preserva el `appsettings.json` real del servidor — nunca sube el de desarrollo.
+
+⚠️ Igual que la contraseña de la base de datos, las credenciales reales de SUNAT (`Sunat:Ruc`,
+`UsuarioSol`, `PasswordSol`, `CertificadoPath`, `CertificadoPassword`, `Ambiente`) solo existen en
+el `appsettings.json` del servidor — nunca en el repo ni en el chat. El certificado `.pfx` vive
+fuera de `/var/www/collpa-api` (ruta típica `/etc/collpa/sunat/certificado.pfx`) porque esa carpeta
+se reemplaza por completo en cada deploy.
 
 ### Método manual (respaldo/emergencia, si Actions no está disponible)
 
@@ -125,8 +139,23 @@ Nota: `sudo -u postgres psql` usa autenticación por socket/peer (no pide contra
 sudo -u postgres psql -c "ALTER USER postgres PASSWORD '<la_misma_que_appsettings.json>';"
 ```
 
+## 3.5 Termales.ImpresoraPuente — NO se despliega por Actions
+
+Es un programa aparte que corre en una PC Windows local (recepción/caja), no en el servidor —
+conecta por SignalR a la API y maneja la impresora térmica/cajón de dinero. Se instala como tarea
+programada de Windows (`PuenteImpresoraCollpa`), a mano:
+
+1. `dotnet publish -c Release -r win-x64 --self-contained true -o publish_puente` (self-contained:
+   esa PC puede no tener el runtime de .NET instalado).
+2. Comprimir a `.zip` y llevarlo a la PC (USB, red compartida, etc. — no hay ruta remota desde aquí).
+3. En la PC: detener la tarea programada, reemplazar los archivos, volver a iniciarla.
+
+No hay automatización para esto — cada vez que cambie `Termales.ImpresoraPuente/Program.cs` y se
+quiera esa mejora funcionando de verdad, hay que repetir estos 3 pasos a mano.
+
 ## 4. Checklist rápido antes de dar por cerrado un deploy
 
+- [ ] Build + tests (backend) / `tsc` + `build` (frontend) sin errores (ver sección 0)
 - [ ] `git push` del código a GitHub (`origin/main`) — en el repo que corresponda (backend o `collpa-front`)
 - [ ] Backend: `Run workflow` en Actions (o método manual), revisar que el job `deploy` quedó en verde y `journalctl` sin errores
 - [ ] Frontend: `Run workflow` en Actions (o método manual)
