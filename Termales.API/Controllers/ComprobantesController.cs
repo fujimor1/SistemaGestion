@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Termales.API.Authorization;
 using Termales.BLL.Interfaces;
+using Termales.BLL.Interfaces.Sunat;
 using Termales.Common.DTOs.Comprobante;
 
 
@@ -13,10 +14,12 @@ namespace Termales.API.Controllers;
 public class ComprobantesController : ControllerBase
 {
     private readonly IComprobanteService _service;
+    private readonly IFacturaElectronicaService _facturaElectronica;
 
-    public ComprobantesController(IComprobanteService service)
+    public ComprobantesController(IComprobanteService service, IFacturaElectronicaService facturaElectronica)
     {
         _service = service;
+        _facturaElectronica = facturaElectronica;
     }
 
     [HttpPost("comedor/{ordenId:int}")]
@@ -140,6 +143,16 @@ public class ComprobantesController : ControllerBase
         {
             return StatusCode(500, new { mensaje = $"Error interno: {ex.Message}" });
         }
+    }
+
+    [HttpGet("{id:int}/representacion-impresa")]
+    public async Task<IActionResult> ObtenerRepresentacionImpresa(int id)
+    {
+        var resultado = await _facturaElectronica.ObtenerRepresentacionImpresaAsync(id);
+        if (!resultado.Exito)
+            return BadRequest(resultado);
+
+        return File(resultado.Data!, "application/pdf", $"comprobante-{id}.pdf");
     }
 
     [HttpPost("{id:int}/nota-credito")]

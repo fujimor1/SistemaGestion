@@ -14,4 +14,6 @@ public class SunatSettings
     public string EndpointProduccion  { get; set; } = "https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService?wsdl";
     public string SerieFactura        { get; set; } = "";
     public string SerieBoleta         { get; set; } = "";
+    public string SerieNcBoleta       { get; set; } = "";
+    public string SerieNcFactura      { get; set; } = "";
 }

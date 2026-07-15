@@ -1,3 +1,4 @@
+using System.Xml.Linq;
 using Microsoft.Extensions.Options;
 using Termales.BLL.Interfaces.Sunat;
 using Termales.Common.DTOs.Sunat;
@@ -12,11 +13,13 @@ namespace Termales.BLL.Services.Sunat;
 /// <summary>Orquesta XML → firma → PDF → ZIP → envío → CDR → persistencia, para Factura/Boleta directa a SUNAT.</summary>
 public class FacturaElectronicaService : IFacturaElectronicaService
 {
-    private const string TipoDocFactura = "01"; // catálogo 01
-    private const string TipoDocBoleta = "03";  // catálogo 01
+    private const string TipoDocFactura = "01";     // catálogo 01
+    private const string TipoDocBoleta = "03";      // catálogo 01
+    private const string TipoDocNotaCredito = "07"; // catálogo 01
 
     private readonly IUnitOfWork _uow;
     private readonly IFacturaXmlBuilder _xmlBuilder;
+    private readonly INotaCreditoXmlBuilder _notaCreditoXmlBuilder;
     private readonly IXmlDsigSigner _signer;
     private readonly IComprobanteZipBuilder _zipBuilder;
     private readonly ISunatBillServiceClient _billServiceClient;
@@ -28,6 +31,7 @@ public class FacturaElectronicaService : IFacturaElectronicaService
     public FacturaElectronicaService(
         IUnitOfWork uow,
         IFacturaXmlBuilder xmlBuilder,
+        INotaCreditoXmlBuilder notaCreditoXmlBuilder,
         IXmlDsigSigner signer,
         IComprobanteZipBuilder zipBuilder,
         ISunatBillServiceClient billServiceClient,
@@ -38,6 +42,7 @@ public class FacturaElectronicaService : IFacturaElectronicaService
     {
         _uow = uow;
         _xmlBuilder = xmlBuilder;
+        _notaCreditoXmlBuilder = notaCreditoXmlBuilder;
         _signer = signer;
         _zipBuilder = zipBuilder;
         _billServiceClient = billServiceClient;
@@ -49,8 +54,22 @@ public class FacturaElectronicaService : IFacturaElectronicaService
 
     public async Task<ApiResponse<ResultadoEmisionSunatDto>> EmitirAsync(Comprobante comprobante)
     {
-        var tipoDoc = comprobante.TipoComprobante == "FI" ? TipoDocFactura : TipoDocBoleta;
-        var xmlSinFirmar = _xmlBuilder.Construir(comprobante, _empresaCfg);
+        string tipoDoc;
+        XDocument xmlSinFirmar;
+
+        if (comprobante.TipoComprobante == "NC")
+        {
+            var origen = comprobante.ComprobanteOrigen
+                ?? await _uow.Comprobantes.ObtenerPorIdAsync(comprobante.ComprobanteOrigenId!.Value);
+            tipoDoc = TipoDocNotaCredito;
+            xmlSinFirmar = _notaCreditoXmlBuilder.Construir(comprobante, origen!, _empresaCfg);
+        }
+        else
+        {
+            tipoDoc = comprobante.TipoComprobante == "FI" ? TipoDocFactura : TipoDocBoleta;
+            xmlSinFirmar = _xmlBuilder.Construir(comprobante, _empresaCfg);
+        }
+
         var firma = _signer.Firmar(xmlSinFirmar);
         var pdf = _representacionImpresaBuilder.Generar(comprobante, _empresaCfg, firma.DigestValueBase64);
         var zip = _zipBuilder.Construir(_sunatCfg.Ruc, tipoDoc, comprobante.Serie, comprobante.Numero, firma.XmlFirmado);
@@ -92,7 +111,7 @@ public class FacturaElectronicaService : IFacturaElectronicaService
                 CdrCodigo = cdr.Codigo,
                 CdrDescripcion = cdr.Descripcion,
                 RepresentacionImpresaPdf = pdf,
-            }, cdr.Codigo == 0 ? "Factura aceptada por SUNAT" : "SUNAT observó/rechazó el comprobante");
+            }, cdr.Codigo == 0 ? "Comprobante aceptado por SUNAT" : "SUNAT observó/rechazó el comprobante");
         }
         catch (Exception ex)
         {
@@ -103,6 +122,20 @@ public class FacturaElectronicaService : IFacturaElectronicaService
             await GuardarAsync(comprobanteSunat, esNuevo);
             return ApiResponse<ResultadoEmisionSunatDto>.Fallido(comprobanteSunat.CdrDescripcion);
         }
+    }
+
+    public async Task<ApiResponse<byte[]>> ObtenerRepresentacionImpresaAsync(int comprobanteId)
+    {
+        var comprobante = await _uow.Comprobantes.ObtenerConDetalleAsync(comprobanteId);
+        if (comprobante is null)
+            return ApiResponse<byte[]>.Fallido("Comprobante no encontrado");
+
+        var comprobanteSunat = await _uow.ComprobantesSunat.ObtenerPorComprobanteIdAsync(comprobanteId);
+        if (comprobanteSunat is null || string.IsNullOrWhiteSpace(comprobanteSunat.HashDigestValue))
+            return ApiResponse<byte[]>.Fallido("Este comprobante todavía no tiene una firma generada para SUNAT");
+
+        var pdf = _representacionImpresaBuilder.Generar(comprobante, _empresaCfg, comprobanteSunat.HashDigestValue);
+        return ApiResponse<byte[]>.Exitoso(pdf);
     }
 
     private async Task GuardarAsync(ComprobanteSunat comprobanteSunat, bool esNuevo)

@@ -43,6 +43,9 @@ public class Comprobante
     public string? MotivoAnulacion { get; set; }
     public string? AutorizadoPor   { get; set; }
 
+    // Nota de crédito directa a SUNAT: código de motivo (catálogo 09, 2 dígitos, ej. "01")
+    public string? CodigoMotivoNc { get; set; }
+
     // Cobro: el comprobante se emite igual si es fiado (obligación SUNAT), pero
     // no cuenta como ingreso de caja hasta que Cobrado pase a true.
     public MetodoPago MetodoPago { get; set; } = MetodoPago.Efectivo;

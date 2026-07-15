@@ -24,6 +24,7 @@ public class ComprobanteConfiguration : IEntityTypeConfiguration<Comprobante>
         builder.Property(c => c.ComprobanteOrigenId).HasColumnName("comprobante_origen_id");
         builder.Property(c => c.MotivoAnulacion).HasColumnName("motivo_anulacion").HasMaxLength(500);
         builder.Property(c => c.AutorizadoPor).HasColumnName("autorizado_por").HasMaxLength(150);
+        builder.Property(c => c.CodigoMotivoNc).HasColumnName("codigo_motivo_nc").HasMaxLength(2);
         builder.Property(c => c.MetodoPago).HasColumnName("metodo_pago").HasConversion<int>().HasDefaultValue(MetodoPago.Efectivo);
         builder.Property(c => c.Cobrado).HasColumnName("cobrado").HasDefaultValue(true);
         builder.Property(c => c.FechaCobro).HasColumnName("fecha_cobro");

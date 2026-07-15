@@ -9,15 +9,24 @@ public class QrContentBuilder : IQrContentBuilder
 {
     public string Construir(Comprobante comprobante, EmpresaSettings empresa, string digestValueBase64)
     {
-        var esFactura = comprobante.TipoComprobante == "FI";
         var fechaLocal = comprobante.FechaEmision.ToUniversalTime().AddHours(-5); // Perú: UTC-5
+
+        // El tipo de documento (catálogo 01) para el QR es el del propio comprobante que se está
+        // representando (Factura/Boleta/Nota de Crédito), no el del comprobante que referencia.
+        var tipoDoc = comprobante.TipoComprobante switch
+        {
+            "FI" => "01",
+            "BI" => "03",
+            "NC" => "07",
+            _ => "01",
+        };
 
         string tipoDocAdquirente;
         string numDocAdquirente;
-        if (esFactura)
+        if (!string.IsNullOrWhiteSpace(comprobante.ClienteRuc))
         {
             tipoDocAdquirente = "6"; // catálogo 06: RUC
-            numDocAdquirente = comprobante.ClienteRuc ?? "";
+            numDocAdquirente = comprobante.ClienteRuc;
         }
         else if (!string.IsNullOrWhiteSpace(comprobante.ClienteDni))
         {
@@ -33,7 +42,7 @@ public class QrContentBuilder : IQrContentBuilder
         var campos = new[]
         {
             empresa.Ruc,
-            esFactura ? "01" : "03", // catálogo 01: Factura / Boleta
+            tipoDoc,
             comprobante.Serie,
             comprobante.Numero.ToString(CultureInfo.InvariantCulture),
             comprobante.Impuesto.ToString("F2", CultureInfo.InvariantCulture),

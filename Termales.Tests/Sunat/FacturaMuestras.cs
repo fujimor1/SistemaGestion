@@ -55,6 +55,41 @@ internal static class FacturaMuestras
         return comprobante;
     }
 
+    public static Comprobante NotaCredito(Comprobante origen, string tipo = "total")
+    {
+        var monto = tipo == "parcial" ? 30.00m : origen.Total;
+        var gravada = Math.Round(monto / 1.18m, 2);
+        var igv = monto - gravada;
+
+        var nc = new Comprobante
+        {
+            Serie = origen.TipoComprobante == "FI" ? "FC02" : "BC02",
+            Numero = 1,
+            TipoComprobante = "NC",
+            ComprobanteOrigenId = origen.ComprobanteId,
+            ComprobanteOrigen = origen,
+            ClienteDni = origen.ClienteDni,
+            ClienteRuc = origen.ClienteRuc,
+            ClienteNombre = origen.ClienteNombre,
+            ClienteRazonSocial = origen.ClienteRazonSocial,
+            Moneda = "PEN",
+            TotalGravada = gravada,
+            Impuesto = igv,
+            Total = monto,
+            CodigoMotivoNc = "01",
+            MotivoAnulacion = "ANULACION DE LA OPERACION",
+            FechaEmision = new DateTime(2026, 7, 15, 10, 0, 0, DateTimeKind.Utc),
+        };
+        nc.Detalles.Add(new ComprobanteDetalle
+        {
+            Descripcion = $"Anulación total - {origen.Serie}-{origen.Numero:D5}",
+            Cantidad = 1,
+            PrecioUnitario = monto,
+            Subtotal = monto,
+        });
+        return nc;
+    }
+
     public static EmpresaSettings Empresa() => new()
     {
         RazonSocial = "EMP. COMUNAL BAÑOS TERMOMEDICINALES DE COLLPA",

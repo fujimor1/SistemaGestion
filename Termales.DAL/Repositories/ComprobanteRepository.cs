@@ -60,5 +60,6 @@ public class ComprobanteRepository : GenericRepository<Comprobante>, IComprobant
         await _dbSet
             .Include(c => c.Detalles)
             .Include(c => c.Cliente)
+            .Include(c => c.ComprobanteOrigen)
             .FirstOrDefaultAsync(c => c.ComprobanteId == comprobanteId);
 }

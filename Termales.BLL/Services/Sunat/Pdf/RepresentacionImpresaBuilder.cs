@@ -27,12 +27,22 @@ public class RepresentacionImpresaBuilder : IRepresentacionImpresaBuilder
 
     public byte[] Generar(Comprobante comprobante, EmpresaSettings empresa, string digestValueBase64)
     {
-        var esFactura = comprobante.TipoComprobante == "FI";
+        var titulo = comprobante.TipoComprobante switch
+        {
+            "FI" => "FACTURA ELECTRÓNICA",
+            "NC" => "NOTA DE CRÉDITO ELECTRÓNICA",
+            _ => "BOLETA DE VENTA ELECTRÓNICA",
+        };
         var qrContenido = _qrContentBuilder.Construir(comprobante, empresa, digestValueBase64);
         var qrPng = GenerarQrPng(qrContenido);
         var fechaLocal = comprobante.FechaEmision.ToUniversalTime().AddHours(-5);
         var clienteNombre = comprobante.ClienteRazonSocial ?? comprobante.ClienteNombre ?? "CLIENTES VARIOS";
-        var clienteDocLabel = esFactura ? $"RUC: {comprobante.ClienteRuc}" : $"DNI: {comprobante.ClienteDni ?? "-"}";
+        var clienteDocLabel = !string.IsNullOrWhiteSpace(comprobante.ClienteRuc)
+            ? $"RUC: {comprobante.ClienteRuc}"
+            : $"DNI: {comprobante.ClienteDni ?? "-"}";
+        var referenciaOrigen = comprobante.TipoComprobante == "NC" && comprobante.ComprobanteOrigen is not null
+            ? $"Afecta a: {comprobante.ComprobanteOrigen.Serie}-{comprobante.ComprobanteOrigen.Numero}"
+            : null;
 
         var documento = Document.Create(container =>
         {
@@ -48,9 +58,11 @@ public class RepresentacionImpresaBuilder : IRepresentacionImpresaBuilder
                     col.Item().Text($"RUC: {empresa.Ruc}");
                     col.Item().Text(empresa.Direccion);
 
-                    col.Item().PaddingTop(6).Text(esFactura ? "FACTURA ELECTRÓNICA" : "BOLETA DE VENTA ELECTRÓNICA").Bold();
+                    col.Item().PaddingTop(6).Text(titulo).Bold();
                     col.Item().Text($"{comprobante.Serie}-{comprobante.Numero}").Bold().FontSize(11);
                     col.Item().Text($"Fecha de emisión: {fechaLocal:yyyy-MM-dd}");
+                    if (referenciaOrigen is not null)
+                        col.Item().Text(referenciaOrigen);
 
                     col.Item().PaddingTop(8).Text("Cliente").Bold();
                     col.Item().Text(clienteDocLabel);

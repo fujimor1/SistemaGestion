@@ -747,10 +747,6 @@ public class ComprobanteService : IComprobanteService
         if (origen.Estado == "ANULADO")
             return ApiResponse<ComprobanteResultadoDto>.Fallido("No se puede emitir nota de crédito sobre un comprobante anulado");
 
-        var esBoleta  = origen.TipoComprobante == "BI";
-        var tipoNc    = esBoleta ? 7 : 8;
-        var serieNc   = esBoleta ? _cfg.SerieNcBoleta : _cfg.SerieNcFactura;
-
         decimal montoNc;
         if (dto.Tipo == "parcial")
         {
@@ -764,6 +760,101 @@ public class ComprobanteService : IComprobanteService
         {
             montoNc = origen.Total;
         }
+
+        return _sunatCfg.Habilitado
+            ? await EmitirNotaCreditoDirectoSunat(origen, dto, montoNc)
+            : await EmitirNotaCreditoConNubefact(origen, dto, montoNc);
+    }
+
+    // ── Nota de crédito directa a SUNAT (sin Nubefact) ────────────────
+    private async Task<ApiResponse<ComprobanteResultadoDto>> EmitirNotaCreditoDirectoSunat(
+        Comprobante origen, EmitirNotaCreditoDto dto, decimal montoNc)
+    {
+        var esBoleta  = origen.TipoComprobante == "BI";
+        var serieNc   = esBoleta ? _sunatCfg.SerieNcBoleta : _sunatCfg.SerieNcFactura;
+        var gravadaNc = Math.Round(montoNc / 1.18m, 2);
+        var igvNc     = Math.Round(montoNc - gravadaNc, 2);
+        var numero    = await _uow.ComprobanteSeries.SiguienteNumeroAsync(serieNc, "NC");
+        var cajero    = ObtenerCajero();
+        var (codigoMotivo, motivoTexto) = ObtenerMotivoNc(dto.CodigoMotivo);
+        var descripcionLinea = dto.Tipo == "parcial"
+            ? $"Devolución parcial - {origen.Serie}-{origen.Numero:D5}"
+            : $"Anulación total - {origen.Serie}-{origen.Numero:D5}";
+
+        var nc = new Comprobante
+        {
+            Serie               = serieNc,
+            Numero              = numero,
+            TipoComprobante     = "NC",
+            TipoAmbiente        = origen.TipoAmbiente,
+            ReferenciaId        = origen.ReferenciaId,
+            ComprobanteOrigenId = origen.ComprobanteId,
+            ComprobanteOrigen   = origen,
+            ClienteDni          = origen.ClienteDni,
+            ClienteRuc          = origen.ClienteRuc,
+            ClienteNombre       = origen.ClienteNombre,
+            ClienteRazonSocial  = origen.ClienteRazonSocial,
+            Cajero              = cajero,
+            TotalGravada        = gravadaNc,
+            Impuesto            = igvNc,
+            Total               = montoNc,
+            Estado              = "PENDIENTE DE ENVÍO A SUNAT",
+            EnlacePdf           = "",
+            CodigoMotivoNc      = codigoMotivo,
+            MotivoAnulacion     = motivoTexto,
+            Detalles = new List<ComprobanteDetalle>
+            {
+                new() { Descripcion = descripcionLinea, Cantidad = 1, PrecioUnitario = montoNc, Subtotal = montoNc },
+            },
+        };
+        await _uow.Comprobantes.AgregarAsync(nc);
+        await _uow.GuardarCambiosAsync();
+
+        var resultadoSunat = await _facturaElectronica.EmitirAsync(nc);
+        nc.Estado = resultadoSunat.Exito
+            ? (resultadoSunat.Data!.Aceptado ? "ENVIADO A SUNAT" : "RECHAZADO POR SUNAT")
+            : "PENDIENTE DE ENVÍO A SUNAT";
+        await _uow.Comprobantes.ActualizarAsync(nc);
+        await _uow.GuardarCambiosAsync();
+
+        var tipoLabelDirecto = dto.Tipo == "parcial" ? "parcial" : "total";
+        return ApiResponse<ComprobanteResultadoDto>.Exitoso(new ComprobanteResultadoDto
+        {
+            TipoComprobante  = "NC",
+            Ambiente         = origen.TipoAmbiente,
+            Serie            = serieNc,
+            Numero           = numero,
+            NumeroFormateado = $"{serieNc}-{numero:D5}",
+            Cajero           = cajero,
+            TotalGravada     = gravadaNc,
+            Impuesto         = igvNc,
+            Total            = montoNc,
+            Estado           = nc.Estado,
+            EnlacePdf        = "",
+            ModoSimulacion   = false,
+        }, resultadoSunat.Exito
+            ? resultadoSunat.Mensaje
+            : $"Nota de crédito {tipoLabelDirecto} registrada; pendiente de envío a SUNAT ({resultadoSunat.Mensaje})");
+    }
+
+    private static (string Codigo, string Descripcion) ObtenerMotivoNc(int codigoMotivo) => codigoMotivo switch
+    {
+        1 => ("01", "ANULACION DE LA OPERACION"),
+        2 => ("02", "ANULACION POR ERROR EN EL RUC"),
+        3 => ("03", "CORRECCION POR ERROR EN LA DESCRIPCION"),
+        4 => ("04", "DESCUENTO GLOBAL"),
+        5 => ("05", "DESCUENTO POR ITEM"),
+        6 => ("06", "DEVOLUCION TOTAL"),
+        _ => ("01", "ANULACION DE LA OPERACION"),
+    };
+
+    // ── Nota de crédito vía Nubefact (legado) ──────────────────────────
+    private async Task<ApiResponse<ComprobanteResultadoDto>> EmitirNotaCreditoConNubefact(
+        Comprobante origen, EmitirNotaCreditoDto dto, decimal montoNc)
+    {
+        var esBoleta  = origen.TipoComprobante == "BI";
+        var tipoNc    = esBoleta ? 7 : 8;
+        var serieNc   = esBoleta ? _cfg.SerieNcBoleta : _cfg.SerieNcFactura;
 
         var gravadaNc = Math.Round(montoNc / 1.18m, 2);
         var igvNc     = Math.Round(montoNc - gravadaNc, 2);

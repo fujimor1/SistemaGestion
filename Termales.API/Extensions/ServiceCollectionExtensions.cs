@@ -93,10 +93,11 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IReciboPrinterService, ReciboPrinterService>();
         services.AddScoped<IComprobanteService, ComprobanteService>();
 
-        // Facturación electrónica directa con SUNAT (solo Factura por ahora — Boleta/NC siguen en Nubefact)
+        // Facturación electrónica directa con SUNAT (Factura, Boleta y Nota de Crédito)
         services.Configure<SunatSettings>(config.GetSection("Sunat"));
         services.AddHttpClient<ISunatBillServiceClient, SunatBillServiceClient>(c => c.Timeout = TimeSpan.FromSeconds(60));
         services.AddScoped<IFacturaXmlBuilder, FacturaXmlBuilder>();
+        services.AddScoped<INotaCreditoXmlBuilder, NotaCreditoXmlBuilder>();
         services.AddScoped<IXmlDsigSigner, XmlDsigSigner>();
         services.AddScoped<IComprobanteZipBuilder, ComprobanteZipBuilder>();
         services.AddScoped<ICdrParser, CdrParser>();
