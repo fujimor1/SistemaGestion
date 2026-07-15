@@ -357,9 +357,15 @@ public class ReporteService : IReporteService
 
         // Tienda no tiene FK exacta de línea de venta a Producto (ComprobanteDetalle
         // solo guarda la descripción) — se empareja por nombre exacto, que es como
-        // GenerarComprobanteTienda arma la descripción de cada línea.
-        var costosPorNombre = await _db.Productos.AsNoTracking()
-            .ToDictionaryAsync(p => p.Nombre, p => p.PrecioCompra);
+        // GenerarComprobanteTienda arma la descripción de cada línea. Se agrupa antes de
+        // pasar a diccionario porque nada impide que existan dos productos con el mismo
+        // nombre (solo el código de barras es único) — con dos iguales, ToDictionary
+        // directo lanzaría ArgumentException por llave duplicada.
+        var costosPorNombre = (await _db.Productos.AsNoTracking()
+            .Select(p => new { p.Nombre, p.PrecioCompra })
+            .ToListAsync())
+            .GroupBy(p => p.Nombre)
+            .ToDictionary(g => g.Key, g => g.First().PrecioCompra);
 
         var detallesTienda = await _db.ComprobanteDetalles.AsNoTracking()
             .Include(d => d.Comprobante)
