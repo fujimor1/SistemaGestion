@@ -5,6 +5,7 @@ namespace Termales.BLL.Interfaces;
 public interface IReporteService
 {
     Task<ReporteComprobantesDto> ReporteComprobantesAsync(string mes);
+    Task<List<ResumenDiarioComprobanteDto>> ReporteVentasPorRangoAsync(string desde, string hasta);
     Task<ReporteCajaDto>         ReporteCajaAsync(string mes);
     Task<RegistroComprasDto>     ReporteComprasAsync(string mes);
     Task<ReporteInventarioDto>   ReporteInventarioAsync();
@@ -16,4 +17,5 @@ public interface IReporteService
     Task<ReportePagoQrDto>       ReportePagoQrAsync(string mes);
     Task<ReporteComandasDto>     ReporteComandasAsync(string mes);
     Task<ReporteStockMinimoDto>  ReporteStockMinimoAsync();
+    Task<LiquidacionCajaDto>     ReporteLiquidacionCajaAsync(string fecha);
 }

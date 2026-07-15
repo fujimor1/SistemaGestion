@@ -187,7 +187,7 @@ public class NotaCreditoService : INotaCreditoService
                 cliente_denominacion        = clienteNom,
                 cliente_direccion    = "",
                 cliente_email        = "",
-                fecha_de_emision     = DateTime.Now.ToString("dd/MM/yyyy"),
+                fecha_de_emision     = DateTime.UtcNow.AddHours(-5).ToString("dd/MM/yyyy"), // Perú UTC-5
                 moneda               = 1,
                 porcentaje_de_igv    = 18,
                 total_gravada        = gravadaNc,

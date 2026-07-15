@@ -17,6 +17,10 @@ public class ComandaPrinterService : IComandaPrinterService
     private const byte ESC = 0x1B;
     private const byte GS  = 0x1D;
 
+    // Perú es UTC-5 fijo (sin horario de verano). No se usa DateTime.Now porque depende
+    // de que el reloj/timezone del sistema operativo del servidor esté bien configurado.
+    private static DateTime AhoraLima() => DateTime.UtcNow.AddHours(-5);
+
     public ComandaPrinterService(IOptions<ImpresoraComandaSettings> cfg, IHubContext<ComandaHub> hub)
     {
         _cfg = cfg.Value;
@@ -96,7 +100,7 @@ public class ComandaPrinterService : IComandaPrinterService
 
         var cabecera = new StringBuilder();
         cabecera.AppendLine($"Mesero: {NombreMesero(orden)}");
-        cabecera.AppendLine($"Orden #{orden.OrdenId}  {DateTime.Now:dd/MM HH:mm}  — {titulo}");
+        cabecera.AppendLine($"Orden #{orden.OrdenId}  {AhoraLima():dd/MM HH:mm}  — {titulo}");
         cabecera.AppendLine(linea);
 
         var pie = new StringBuilder();

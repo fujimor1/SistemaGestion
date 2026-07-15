@@ -28,21 +28,25 @@ public class ReporteService : IReporteService
         return (fallback, fallback.AddMonths(1));
     }
 
+    // Perú es UTC-5 fijo (sin horario de verano): medianoche en Lima = 05:00 UTC del mismo día.
+    private static readonly TimeSpan OffsetPeru = TimeSpan.FromHours(5);
+
+    private static (DateTime inicio, DateTime fin) ParseDia(string fecha)
+    {
+        if (DateOnly.TryParse(fecha, out var dia))
+        {
+            var inicio = dia.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) + OffsetPeru;
+            return (inicio, inicio.AddDays(1));
+        }
+        var hoyLima = DateOnly.FromDateTime(DateTime.UtcNow - OffsetPeru);
+        var fallbackInicio = hoyLima.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc) + OffsetPeru;
+        return (fallbackInicio, fallbackInicio.AddDays(1));
+    }
+
     // ── Reporte de Comprobantes ──────────────────────────────────────────────
 
-    public async Task<ReporteComprobantesDto> ReporteComprobantesAsync(string mes)
-    {
-        var (inicio, fin) = ParseMes(mes);
-
-        var comprobantes = await _db.Comprobantes.AsNoTracking()
-            .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin)
-            .OrderBy(c => c.FechaEmision)
-            .ToListAsync();
-
-        var emitidos = comprobantes.Where(c => c.Estado != "ANULADO").ToList();
-        var anulados = comprobantes.Where(c => c.Estado == "ANULADO").ToList();
-
-        var porDia = comprobantes
+    private static List<ResumenDiarioComprobanteDto> AgruparPorDia(List<Termales.Entities.Models.Comprobante> comprobantes) =>
+        comprobantes
             .GroupBy(c => DateOnly.FromDateTime(c.FechaEmision))
             .OrderBy(g => g.Key)
             .Select(g =>
@@ -62,6 +66,20 @@ public class ReporteService : IReporteService
                     MontoNeto        = em.Sum(c => c.Total),
                 };
             }).ToList();
+
+    public async Task<ReporteComprobantesDto> ReporteComprobantesAsync(string mes)
+    {
+        var (inicio, fin) = ParseMes(mes);
+
+        var comprobantes = await _db.Comprobantes.AsNoTracking()
+            .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin)
+            .OrderBy(c => c.FechaEmision)
+            .ToListAsync();
+
+        var emitidos = comprobantes.Where(c => c.Estado != "ANULADO").ToList();
+        var anulados = comprobantes.Where(c => c.Estado == "ANULADO").ToList();
+
+        var porDia = AgruparPorDia(comprobantes);
 
         var detalle = comprobantes.Select(c => new DetalleComprobanteReporteDto
         {
@@ -91,6 +109,21 @@ public class ReporteService : IReporteService
             PorDia            = porDia,
             Detalle           = detalle,
         };
+    }
+
+    /// <summary>Ventas netas por día para un rango de fechas arbitrario (no necesariamente un mes
+    /// calendario) — usado por el gráfico de ventas en su vista "Día".</summary>
+    public async Task<List<ResumenDiarioComprobanteDto>> ReporteVentasPorRangoAsync(string desde, string hasta)
+    {
+        var inicio = ParseDia(desde).inicio;
+        var fin    = ParseDia(hasta).fin;
+
+        var comprobantes = await _db.Comprobantes.AsNoTracking()
+            .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin)
+            .OrderBy(c => c.FechaEmision)
+            .ToListAsync();
+
+        return AgruparPorDia(comprobantes);
     }
 
     // ── Reporte de Caja ──────────────────────────────────────────────────────
@@ -296,10 +329,8 @@ public class ReporteService : IReporteService
 
     // ── Utilidad (Comedor + Tienda) ─────────────────────────────────────────────
 
-    public async Task<ReporteUtilidadDto> ReporteUtilidadAsync(string mes)
+    private async Task<List<UtilidadDetalleDto>> ObtenerDetalleUtilidadAsync(DateTime inicio, DateTime fin)
     {
-        var (inicio, fin) = ParseMes(mes);
-
         var detallesComedor = await _db.OrdenDetalles.AsNoTracking()
             .Include(d => d.ItemMenu).ThenInclude(i => i!.Receta).ThenInclude(r => r.Insumo)
             .Include(d => d.Comprobante)
@@ -352,7 +383,13 @@ public class ReporteService : IReporteService
             };
         }).ToList();
 
-        var todas = filasComedor.Concat(filasTienda).OrderByDescending(f => f.Utilidad).ToList();
+        return filasComedor.Concat(filasTienda).OrderByDescending(f => f.Utilidad).ToList();
+    }
+
+    public async Task<ReporteUtilidadDto> ReporteUtilidadAsync(string mes)
+    {
+        var (inicio, fin) = ParseMes(mes);
+        var todas = await ObtenerDetalleUtilidadAsync(inicio, fin);
 
         return new ReporteUtilidadDto
         {
@@ -361,6 +398,75 @@ public class ReporteService : IReporteService
             CostoTotal    = todas.Sum(f => f.Costo),
             UtilidadTotal = todas.Sum(f => f.Utilidad),
             Detalle       = todas,
+        };
+    }
+
+    // ── Liquidación de Caja (resumen imprimible de un día específico) ───────────
+
+    public async Task<LiquidacionCajaDto> ReporteLiquidacionCajaAsync(string fecha)
+    {
+        var (inicio, fin) = ParseDia(fecha);
+
+        var itemsConCosto = await ObtenerDetalleUtilidadAsync(inicio, fin);
+
+        // Baños y Habitaciones no tienen concepto de costo en el modelo, pero igual
+        // cuentan para "todo lo que se vendió hoy" — aparecen con costo/utilidad en null.
+        var detallesOtros = await _db.ComprobanteDetalles.AsNoTracking()
+            .Include(d => d.Comprobante)
+            .Where(d => (d.Comprobante!.TipoAmbiente == "banio" || d.Comprobante.TipoAmbiente == "habitacion") &&
+                        d.Comprobante.FechaEmision >= inicio && d.Comprobante.FechaEmision < fin &&
+                        d.Comprobante.Estado != "ANULADO")
+            .ToListAsync();
+
+        var itemsSinCosto = detallesOtros.Select(d => new LiquidacionItemDto
+        {
+            Nombre          = d.Descripcion,
+            Ambiente        = d.Comprobante!.TipoAmbiente,
+            CantidadVendida = d.Cantidad,
+            Ingreso         = d.Subtotal,
+            Costo           = null,
+            Utilidad        = null,
+        });
+
+        var items = itemsConCosto
+            .Select(i => new LiquidacionItemDto
+            {
+                Nombre = i.Nombre, Ambiente = i.Ambiente, CantidadVendida = i.CantidadVendida,
+                Ingreso = i.Ingreso, Costo = i.Costo, Utilidad = i.Utilidad,
+            })
+            .Concat(itemsSinCosto)
+            .OrderByDescending(i => i.Ingreso)
+            .ToList();
+
+        var apertura = await _db.AperturasCaja.AsNoTracking().FirstOrDefaultAsync(a => a.Fecha >= inicio && a.Fecha < fin);
+        var cierre   = await _db.CierresCaja.AsNoTracking().FirstOrDefaultAsync(c => c.Fecha >= inicio && c.Fecha < fin);
+        var egresos  = await _db.EgresosCajaChica.AsNoTracking().Where(e => e.Fecha >= inicio && e.Fecha < fin).SumAsync(e => e.Monto);
+        var ventasSistema = await _db.Comprobantes.AsNoTracking()
+            .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin && c.Estado != "ANULADO" && c.Cobrado)
+            .SumAsync(c => c.Total);
+
+        var efectivo      = cierre?.EfectivoFisico ?? 0;
+        var yape          = cierre?.YapeFisico ?? 0;
+        var transferencia = cierre?.TransferenciaFisico ?? 0;
+
+        return new LiquidacionCajaDto
+        {
+            Fecha                = fecha,
+            TieneApertura        = apertura is not null,
+            MontoApertura        = apertura?.MontoInicial ?? 0,
+            VentasSistema        = ventasSistema,
+            EgresosCajaChica     = egresos,
+            TieneCierre          = cierre is not null,
+            EfectivoContado      = efectivo,
+            YapeContado          = yape,
+            TransferenciaContado = transferencia,
+            TotalContado         = efectivo + yape + transferencia,
+            Diferencia           = cierre?.Diferencia ?? 0,
+            EstadoCaja           = cierre is not null ? "Cerrada" : apertura is not null ? "Abierta" : "Sin apertura",
+            IngresoTotal         = items.Sum(i => i.Ingreso),
+            CostoTotal           = itemsConCosto.Count > 0 ? itemsConCosto.Sum(i => i.Costo) : null,
+            UtilidadTotal        = itemsConCosto.Count > 0 ? itemsConCosto.Sum(i => i.Utilidad) : null,
+            Items                = items,
         };
     }
 

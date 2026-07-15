@@ -29,6 +29,17 @@ public class ReportesController : ControllerBase
     }
 
     /// <summary>
+    /// Ventas netas por día para un rango de fechas arbitrario (no necesariamente un mes calendario).
+    /// desde/hasta = "YYYY-MM-DD"
+    /// </summary>
+    [HttpGet("ventas-por-rango")]
+    public async Task<IActionResult> GetVentasPorRango([FromQuery] string desde, [FromQuery] string hasta)
+    {
+        var resultado = await _service.ReporteVentasPorRangoAsync(desde, hasta);
+        return Ok(resultado);
+    }
+
+    /// <summary>
     /// Reporte mensual de caja: apertura, ventas, egresos, cierre y cuadre por día.
     /// mes = "YYYY-MM"
     /// </summary>
@@ -143,6 +154,18 @@ public class ReportesController : ControllerBase
     public async Task<IActionResult> GetStockMinimo()
     {
         var resultado = await _service.ReporteStockMinimoAsync();
+        return Ok(resultado);
+    }
+
+    /// <summary>Resumen imprimible del día: todo lo vendido (con costo cuando se conoce) más el
+    /// cuadre de caja, sin importar la forma de pago. fecha = "YYYY-MM-DD"</summary>
+    [HttpGet("liquidacion-caja")]
+    public async Task<IActionResult> GetLiquidacionCaja([FromQuery] string fecha)
+    {
+        if (string.IsNullOrWhiteSpace(fecha))
+            fecha = DateTime.UtcNow.AddHours(-5).ToString("yyyy-MM-dd");
+
+        var resultado = await _service.ReporteLiquidacionCajaAsync(fecha);
         return Ok(resultado);
     }
 }

@@ -19,6 +19,10 @@ public class ReciboPrinterService : IReciboPrinterService
     private const byte ESC = 0x1B;
     private const byte GS  = 0x1D;
 
+    // Perú es UTC-5 fijo (sin horario de verano). No se usa DateTime.Now porque depende
+    // de que el reloj/timezone del sistema operativo del servidor esté bien configurado.
+    private static DateTime AhoraLima() => DateTime.UtcNow.AddHours(-5);
+
     public ReciboPrinterService(IOptions<ImpresoraComandaSettings> cfg, IOptions<EmpresaSettings> empresa, IHubContext<ComandaHub> hub)
     {
         _cfg = cfg.Value;
@@ -122,7 +126,7 @@ public class ReciboPrinterService : IReciboPrinterService
         cuerpo.AppendLine(CentrarTexto(tipoLabel, ancho));
         cuerpo.AppendLine(CentrarTexto(resultado.NumeroFormateado, ancho));
         cuerpo.AppendLine(linea);
-        cuerpo.AppendLine($"Fecha : {DateTime.Now:dd/MM/yyyy HH:mm}");
+        cuerpo.AppendLine($"Fecha : {AhoraLima():dd/MM/yyyy HH:mm}");
         cuerpo.AppendLine($"Cliente: {clienteLabel}");
         cuerpo.AppendLine($"Cajero : {resultado.Cajero ?? "-"}");
         cuerpo.AppendLine(linea);
@@ -209,7 +213,7 @@ public class ReciboPrinterService : IReciboPrinterService
         var cuerpo = new StringBuilder();
         cuerpo.AppendLine(linea);
         cuerpo.AppendLine(detalle);
-        cuerpo.AppendLine($"{DateTime.Now:dd/MM/yyyy HH:mm}");
+        cuerpo.AppendLine($"{AhoraLima():dd/MM/yyyy HH:mm}");
         cuerpo.AppendLine(linea);
         cuerpo.AppendLine();
         cuerpo.AppendLine();

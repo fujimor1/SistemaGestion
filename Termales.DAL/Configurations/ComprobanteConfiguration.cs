@@ -25,7 +25,10 @@ public class ComprobanteConfiguration : IEntityTypeConfiguration<Comprobante>
         builder.Property(c => c.MotivoAnulacion).HasColumnName("motivo_anulacion").HasMaxLength(500);
         builder.Property(c => c.AutorizadoPor).HasColumnName("autorizado_por").HasMaxLength(150);
         builder.Property(c => c.CodigoMotivoNc).HasColumnName("codigo_motivo_nc").HasMaxLength(2);
-        builder.Property(c => c.MetodoPago).HasColumnName("metodo_pago").HasConversion<int>().HasDefaultValue(MetodoPago.Efectivo);
+        // Sentinel explícito: los valores reales del enum empiezan en 1 (Efectivo), así que 0 nunca
+        // es un valor válido — sirve como "no asignado" sin ambigüedad con HasDefaultValue.
+        builder.Property(c => c.MetodoPago).HasColumnName("metodo_pago").HasConversion<int>()
+            .HasDefaultValue(MetodoPago.Efectivo).HasSentinel(default(MetodoPago));
         builder.Property(c => c.Cobrado).HasColumnName("cobrado").HasDefaultValue(true);
         builder.Property(c => c.FechaCobro).HasColumnName("fecha_cobro");
         builder.Property(c => c.ClienteId).HasColumnName("cliente_id");
