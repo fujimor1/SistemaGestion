@@ -7,17 +7,31 @@ using Microsoft.Extensions.Logging;
 using Termales.ImpresoraPuente;
 
 var baseDir = AppContext.BaseDirectory;
+Logger.Ruta = Path.Combine(baseDir, "puente.log");
+AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+    Logger.Log($"ERROR FATAL no controlado: {e.ExceptionObject}");
+
 var cfg = JsonSerializer.Deserialize<Config>(
     await File.ReadAllTextAsync(Path.Combine(baseDir, "appsettings.json")),
     new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
     ?? throw new InvalidOperationException("No se pudo leer appsettings.json");
 
-Console.WriteLine("=== Puente de Impresión Collpa ===");
-Console.WriteLine($"API: {cfg.ApiBaseUrl}");
-Console.WriteLine($"Modo de impresión: {cfg.Modo}");
+Logger.Log("=== Puente de Impresión Collpa iniciado ===");
+Logger.Log($"API: {cfg.ApiBaseUrl}");
+Logger.Log($"Modo de impresión: {cfg.Modo}" + (string.Equals(cfg.Modo, "usb", StringComparison.OrdinalIgnoreCase) ? $" (impresora: {cfg.NombreImpresora})" : $" ({cfg.Ip}:{cfg.Puerto})"));
+Logger.Log($"Cuenta de Windows: {Environment.UserDomainName}\\{Environment.UserName}");
 
-string token = await LoginAsync(cfg);
-Console.WriteLine("Login OK.");
+string token;
+try
+{
+    token = await LoginAsync(cfg);
+    Logger.Log("Login OK.");
+}
+catch (Exception ex)
+{
+    Logger.Log($"ERROR FATAL: no se pudo iniciar sesión contra la API ({ex.Message}). El puente se cierra.");
+    return;
+}
 
 var connection = new HubConnectionBuilder()
     .WithUrl($"{cfg.ApiBaseUrl.TrimEnd('/')}/hubs/comanda", options =>
@@ -38,13 +52,11 @@ connection.On<string>("ImprimirComanda", async ticketBase64 =>
     {
         var bytes = Convert.FromBase64String(ticketBase64);
         await ImprimirAsync(cfg, bytes);
-        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Comanda impresa OK.");
+        Logger.Log("Comanda impresa OK.");
     }
     catch (Exception ex)
     {
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Error al imprimir comanda: {ex.Message}");
-        Console.ResetColor();
+        Logger.Log($"ERROR al imprimir comanda: {ex.Message}");
     }
 });
 
@@ -54,41 +66,35 @@ connection.On<string>("ImprimirBoleta", async ticketBase64 =>
     {
         var bytes = Convert.FromBase64String(ticketBase64);
         await ImprimirAsync(cfg, bytes);
-        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Boleta impresa OK.");
+        Logger.Log("Boleta impresa OK.");
     }
     catch (Exception ex)
     {
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Error al imprimir boleta: {ex.Message}");
-        Console.ResetColor();
+        Logger.Log($"ERROR al imprimir boleta: {ex.Message}");
     }
 });
 
 connection.Reconnecting += ex =>
 {
-    Console.ForegroundColor = ConsoleColor.Yellow;
-    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Conexión perdida, reintentando...");
-    Console.ResetColor();
+    Logger.Log("Conexión perdida, reintentando...");
     return Task.CompletedTask;
 };
 
 connection.Reconnected += async _ =>
 {
-    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Reconectado, uniéndose a los grupos de impresión...");
+    Logger.Log("Reconectado, uniéndose a los grupos de impresión...");
     await UnirseSegunRolAsync(connection, cfg);
 };
 
 connection.Closed += async ex =>
 {
-    Console.ForegroundColor = ConsoleColor.Red;
-    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Conexión cerrada: {ex?.Message}. Reintentando en 5s...");
-    Console.ResetColor();
+    Logger.Log($"Conexión cerrada: {ex?.Message}. Reintentando en 5s...");
     await Task.Delay(5000);
     await ConectarConReintentosAsync(connection, cfg);
 };
 
 await ConectarConReintentosAsync(connection, cfg);
-Console.WriteLine($"Conectado (rol: {cfg.Rol}) y esperando comandas/boletas. Presiona Ctrl+C para salir.");
+Logger.Log($"Conectado (rol: {cfg.Rol}) y esperando comandas/boletas. Presiona Ctrl+C para salir.");
 
 var salir = new TaskCompletionSource();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; salir.SetResult(); };
@@ -119,9 +125,7 @@ static async Task ConectarConReintentosAsync(HubConnection connection, Config cf
         }
         catch (Exception ex)
         {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] No se pudo conectar al hub: {ex.Message}. Reintentando en 5s...");
-            Console.ResetColor();
+            Logger.Log($"No se pudo conectar al hub: {ex.Message}. Reintentando en 5s...");
             await Task.Delay(5000);
         }
     }
@@ -180,4 +184,22 @@ file class AuthData
 {
     [JsonPropertyName("token")]
     public string Token { get; set; } = string.Empty;
+}
+
+file static class Logger
+{
+    public static string Ruta = string.Empty;
+    private static readonly object candado = new();
+
+    public static void Log(string mensaje)
+    {
+        var linea = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {mensaje}";
+        Console.WriteLine(linea);
+        if (string.IsNullOrEmpty(Ruta)) return;
+        try
+        {
+            lock (candado) File.AppendAllText(Ruta, linea + Environment.NewLine);
+        }
+        catch { /* si no se puede escribir el log, no debe tumbar el puente */ }
+    }
 }
