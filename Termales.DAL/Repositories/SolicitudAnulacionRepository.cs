@@ -22,6 +22,7 @@ public class SolicitudAnulacionRepository : GenericRepository<SolicitudAnulacion
         var fin    = hasta.ToDateTime(TimeOnly.MaxValue);
         return await _dbSet
             .Include(s => s.Comprobante)
+            .Include(s => s.NotaCreditoComprobante)
             .Where(s => s.Estado != "Pendiente" && s.FechaResolucion >= inicio && s.FechaResolucion <= fin)
             .OrderByDescending(s => s.FechaResolucion)
             .ToListAsync();

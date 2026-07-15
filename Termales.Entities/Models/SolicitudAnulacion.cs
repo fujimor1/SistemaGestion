@@ -18,4 +18,8 @@ public class SolicitudAnulacion
     public string?  ResueltoPor                  { get; set; }
     public DateTime? FechaResolucion             { get; set; }
     public string?  MotivoRechazo               { get; set; }
+
+    // Nota de Crédito emitida a SUNAT al aprobar (solo para Boleta/Factura, no para NV)
+    public int?         NotaCreditoComprobanteId { get; set; }
+    public Comprobante? NotaCreditoComprobante   { get; set; }
 }

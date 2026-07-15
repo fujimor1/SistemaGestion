@@ -80,6 +80,7 @@ public class SolicitudAnulacionService : ISolicitudAnulacionService
             var resultadoNc = await _notaCredito.EmitirAsync(comprobante.ComprobanteId, dto, supervisorNombre);
             if (!resultadoNc.Exito)
                 return ApiResponse.Fallido($"No se pudo emitir la nota de crédito de anulación: {resultadoNc.Mensaje}");
+            solicitud.NotaCreditoComprobanteId = resultadoNc.Data!.ComprobanteId;
         }
 
         comprobante.Estado          = "ANULADO";
@@ -137,5 +138,9 @@ public class SolicitudAnulacionService : ISolicitudAnulacionService
         ResueltoPor          = s.ResueltoPor,
         FechaResolucion      = s.FechaResolucion,
         MotivoRechazo        = s.MotivoRechazo,
+        NotaCreditoNumeroFormateado = s.NotaCreditoComprobante is null
+            ? null
+            : $"{s.NotaCreditoComprobante.Serie}-{s.NotaCreditoComprobante.Numero:D5}",
+        NotaCreditoEstado    = s.NotaCreditoComprobante?.Estado,
     };
 }

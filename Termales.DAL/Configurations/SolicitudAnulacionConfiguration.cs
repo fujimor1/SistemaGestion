@@ -20,10 +20,16 @@ public class SolicitudAnulacionConfiguration : IEntityTypeConfiguration<Solicitu
         builder.Property(s => s.ResueltoPor).HasColumnName("resuelto_por").HasMaxLength(150);
         builder.Property(s => s.FechaResolucion).HasColumnName("fecha_resolucion");
         builder.Property(s => s.MotivoRechazo).HasColumnName("motivo_rechazo").HasMaxLength(500);
+        builder.Property(s => s.NotaCreditoComprobanteId).HasColumnName("nota_credito_comprobante_id");
 
         builder.HasOne(s => s.Comprobante)
                .WithMany()
                .HasForeignKey(s => s.ComprobanteId)
+               .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(s => s.NotaCreditoComprobante)
+               .WithMany()
+               .HasForeignKey(s => s.NotaCreditoComprobanteId)
                .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(s => s.ComprobanteId);

@@ -116,6 +116,7 @@ public class NotaCreditoService : INotaCreditoService
         var tipoLabelDirecto = dto.Tipo == "parcial" ? "parcial" : "total";
         return ApiResponse<ComprobanteResultadoDto>.Exitoso(new ComprobanteResultadoDto
         {
+            ComprobanteId    = nc.ComprobanteId,
             TipoComprobante  = "NC",
             Ambiente         = origen.TipoAmbiente,
             Serie            = serieNc,
@@ -267,6 +268,7 @@ public class NotaCreditoService : INotaCreditoService
 
         return ApiResponse<ComprobanteResultadoDto>.Exitoso(new ComprobanteResultadoDto
         {
+            ComprobanteId    = nc.ComprobanteId,
             TipoComprobante  = "NC",
             Ambiente         = origen.TipoAmbiente,
             Serie            = serieNc,

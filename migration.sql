@@ -2076,3 +2076,36 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260715041542_AgregarNotaCreditoASolicitudAnulacion') THEN
+    ALTER TABLE public.solicitudes_anulacion ADD nota_credito_comprobante_id integer;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260715041542_AgregarNotaCreditoASolicitudAnulacion') THEN
+    CREATE INDEX "IX_solicitudes_anulacion_nota_credito_comprobante_id" ON public.solicitudes_anulacion (nota_credito_comprobante_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260715041542_AgregarNotaCreditoASolicitudAnulacion') THEN
+    ALTER TABLE public.solicitudes_anulacion ADD CONSTRAINT "FK_solicitudes_anulacion_comprobantes_nota_credito_comprobante~" FOREIGN KEY (nota_credito_comprobante_id) REFERENCES public.comprobantes (comprobante_id) ON DELETE RESTRICT;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260715041542_AgregarNotaCreditoASolicitudAnulacion') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260715041542_AgregarNotaCreditoASolicitudAnulacion', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
