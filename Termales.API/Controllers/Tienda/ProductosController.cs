@@ -32,6 +32,15 @@ public class ProductosController : ControllerBase
         return Ok(resultado);
     }
 
+    /// <summary>Todos los productos, activos o no — para Inventario y el selector de Compras
+    /// (a diferencia de "todos", que es solo lo vendible en la Tienda).</summary>
+    [HttpGet("todos-gestion")]
+    public async Task<IActionResult> ObtenerTodosParaGestion()
+    {
+        var resultado = await _service.ObtenerTodosParaGestionAsync();
+        return Ok(resultado);
+    }
+
     [HttpGet("{id:int}")]
     public async Task<IActionResult> ObtenerPorId(int id)
     {

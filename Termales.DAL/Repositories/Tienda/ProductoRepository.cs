@@ -15,6 +15,9 @@ public class ProductoRepository : GenericRepository<Producto>, IProductoReposito
     public async Task<IEnumerable<Producto>> ObtenerActivosAsync() =>
         await _dbSet.Where(p => p.Activo).OrderBy(p => p.Nombre).ToListAsync();
 
+    public async Task<IEnumerable<Producto>> ObtenerTodosParaGestionAsync() =>
+        await _dbSet.OrderBy(p => p.Nombre).ToListAsync();
+
     public async Task<(IEnumerable<Producto> Items, int Total)> ObtenerPaginadoAsync(
         int pagina, int tamanoPagina, string? busqueda)
     {

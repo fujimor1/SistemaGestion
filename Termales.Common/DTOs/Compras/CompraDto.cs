@@ -92,6 +92,10 @@ public class RegistrarDetalleCompraDto
     public string? TipoAmbienteNuevoInsumo { get; set; }
     /// <summary>Solo aplica si se crea un producto nuevo: precio de venta en tienda.</summary>
     public decimal? PrecioVentaNuevoProducto { get; set; }
+    /// <summary>Solo aplica si se crea un producto nuevo: si aparece como vendible en Tienda.
+    /// Falso para insumos operativos que se registran como "producto" (ej. artículos de limpieza)
+    /// pero que no se le venden al cliente. Por defecto true (comportamiento histórico).</summary>
+    public bool? ActivoParaVenta { get; set; }
 
     [Required]
     public decimal Cantidad { get; set; }

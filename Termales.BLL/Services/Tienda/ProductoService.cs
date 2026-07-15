@@ -18,6 +18,12 @@ public class ProductoService : IProductoService
         return ApiResponse<IEnumerable<ProductoDto>>.Exitoso(productos.Select(MapDto));
     }
 
+    public async Task<ApiResponse<IEnumerable<ProductoDto>>> ObtenerTodosParaGestionAsync()
+    {
+        var productos = await _uow.Productos.ObtenerTodosParaGestionAsync();
+        return ApiResponse<IEnumerable<ProductoDto>>.Exitoso(productos.Select(MapDto));
+    }
+
     public async Task<ApiResponse<(IEnumerable<ProductoDto> Items, int Total)>> ObtenerPaginadoAsync(
         int pagina, int tamanoPagina, string? busqueda)
     {

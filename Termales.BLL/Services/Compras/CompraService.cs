@@ -174,7 +174,7 @@ public class CompraService : ICompraService
                         Precio = linea.PrecioVentaNuevoProducto ?? linea.PrecioUnitario,
                         Stock = (int)linea.Cantidad,
                         StockMinimo = 0,
-                        Activo = true,
+                        Activo = linea.ActivoParaVenta ?? true,
                     };
                     await _uow.Productos.AgregarAsync(producto);
                 }
