@@ -15,7 +15,7 @@ public interface ICajaService
     // Egresos
     Task<IEnumerable<EgresoCajaChicaDto>> ObtenerEgresosHoyAsync();
     Task<IEnumerable<EgresoCajaChicaDto>> ObtenerEgresosPorFechaAsync(DateTime fecha);
-    Task<EgresoCajaChicaDto> RegistrarEgresoAsync(RegistrarEgresoDto dto, string registradoPor);
+    Task<EgresoCajaChicaDto> RegistrarEgresoAsync(RegistrarEgresoDto dto, string registradoPor, int? compraId = null);
     Task<bool> EliminarEgresoAsync(int id);
 
     // Cierre

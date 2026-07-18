@@ -11,4 +11,9 @@ public class EgresoCajaChica
     public string? NumeroDocumento { get; set; }
     public string RegistradoPor { get; set; } = string.Empty;
     public string? Observaciones { get; set; }
+
+    // No nulo únicamente cuando el egreso se generó automáticamente al pagar
+    // una Compra con "Pagar con Caja Chica" — permite distinguirlo de un
+    // egreso manual sin depender de parsear el texto de Concepto.
+    public int? CompraId { get; set; }
 }

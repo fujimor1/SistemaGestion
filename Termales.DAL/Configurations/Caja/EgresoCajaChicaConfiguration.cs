@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Termales.Entities.Models.Caja;
+using Termales.Entities.Models.Compras;
 
 namespace Termales.DAL.Configurations.Caja;
 
@@ -19,6 +20,12 @@ public class EgresoCajaChicaConfiguration : IEntityTypeConfiguration<EgresoCajaC
         builder.Property(e => e.NumeroDocumento).HasColumnName("numero_documento").HasMaxLength(50);
         builder.Property(e => e.RegistradoPor).HasColumnName("registrado_por").HasMaxLength(150);
         builder.Property(e => e.Observaciones).HasColumnName("observaciones").HasMaxLength(300);
+        builder.Property(e => e.CompraId).HasColumnName("compra_id");
         builder.HasIndex(e => e.Fecha);
+
+        builder.HasOne<Compra>()
+               .WithMany()
+               .HasForeignKey(e => e.CompraId)
+               .OnDelete(DeleteBehavior.SetNull);
     }
 }

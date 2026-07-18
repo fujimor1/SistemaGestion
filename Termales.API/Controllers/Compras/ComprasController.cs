@@ -32,6 +32,13 @@ public class ComprasController : ControllerBase
         return Ok(new { items, total });
     }
 
+    [HttpGet("resumen-mes-actual")]
+    public async Task<IActionResult> ObtenerResumenMesActual()
+    {
+        var resumen = await _service.ObtenerResumenMesActualAsync();
+        return Ok(resumen);
+    }
+
     [HttpGet("{id:int}")]
     public async Task<IActionResult> ObtenerPorId(int id)
     {

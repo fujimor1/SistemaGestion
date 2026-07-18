@@ -9,4 +9,5 @@ public interface ICompraService
         int pagina, int tamanoPagina, int? proveedorId, string? estado);
     Task<CompraDto> RegistrarAsync(RegistrarCompraDto dto, string registradoPor);
     Task<CompraDto> PagarAsync(int id, PagarCompraDto dto, string registradoPor);
+    Task<ResumenComprasDto> ObtenerResumenMesActualAsync();
 }

@@ -11,6 +11,7 @@ public class EgresoCajaChicaDto
     public string? NumeroDocumento { get; set; }
     public string RegistradoPor { get; set; } = string.Empty;
     public string? Observaciones { get; set; }
+    public int? CompraId { get; set; }
 }
 
 public class RegistrarEgresoDto

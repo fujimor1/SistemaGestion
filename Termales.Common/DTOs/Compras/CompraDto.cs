@@ -108,3 +108,11 @@ public class PagarCompraDto
 {
     public bool PagarConCajaChica { get; set; }
 }
+
+public class ResumenComprasDto
+{
+    public DateTime Desde { get; set; }
+    public DateTime Hasta { get; set; }
+    public decimal TotalGastado { get; set; }
+    public int CantidadCompras { get; set; }
+}

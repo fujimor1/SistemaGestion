@@ -222,7 +222,7 @@ public class CompraService : ICompraService
                 NumeroDocumento = $"{compra.Serie}-{compra.Numero}",
                 Observaciones = compra.Observaciones
             };
-            var egreso = await _cajaService.RegistrarEgresoAsync(egresoDto, registradoPor);
+            var egreso = await _cajaService.RegistrarEgresoAsync(egresoDto, registradoPor, compra.CompraId);
             compra.EgresoCajaChicaId = egreso.EgresoCajaChicaId;
         }
 
@@ -233,6 +233,21 @@ public class CompraService : ICompraService
         await _uow.GuardarCambiosAsync();
 
         return MapearDto(compra);
+    }
+
+    public async Task<ResumenComprasDto> ObtenerResumenMesActualAsync()
+    {
+        var hoy = DateTime.UtcNow;
+        var desde = new DateTime(hoy.Year, hoy.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var hasta = desde.AddMonths(1);
+        var (total, cantidad) = await _uow.Compras.ObtenerResumenAsync(desde, hasta);
+        return new ResumenComprasDto
+        {
+            Desde = desde,
+            Hasta = hasta.AddTicks(-1),
+            TotalGastado = total,
+            CantidadCompras = cantidad,
+        };
     }
 
     private static CompraDto MapearDto(Compra c) => new()

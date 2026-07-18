@@ -78,7 +78,7 @@ public class CajaService : ICajaService
         return egresos.Select(MapEgreso);
     }
 
-    public async Task<EgresoCajaChicaDto> RegistrarEgresoAsync(RegistrarEgresoDto dto, string registradoPor)
+    public async Task<EgresoCajaChicaDto> RegistrarEgresoAsync(RegistrarEgresoDto dto, string registradoPor, int? compraId = null)
     {
         var egreso = new EgresoCajaChica
         {
@@ -89,6 +89,7 @@ public class CajaService : ICajaService
             NumeroDocumento = dto.NumeroDocumento,
             RegistradoPor = registradoPor,
             Observaciones = dto.Observaciones,
+            CompraId = compraId,
         };
         _db.EgresosCajaChica.Add(egreso);
         await _db.SaveChangesAsync();
@@ -248,6 +249,7 @@ public class CajaService : ICajaService
         NumeroDocumento = e.NumeroDocumento,
         RegistradoPor = e.RegistradoPor,
         Observaciones = e.Observaciones,
+        CompraId = e.CompraId,
     };
 
     private static CierreCajaDto MapCierre(CierreCaja c) => new()

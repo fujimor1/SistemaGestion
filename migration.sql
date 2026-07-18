@@ -2173,3 +2173,36 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260718050304_AgregarCompraIdEnEgresoCajaChica') THEN
+    ALTER TABLE caja.egresos_caja_chica ADD compra_id integer;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260718050304_AgregarCompraIdEnEgresoCajaChica') THEN
+    CREATE INDEX "IX_egresos_caja_chica_compra_id" ON caja.egresos_caja_chica (compra_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260718050304_AgregarCompraIdEnEgresoCajaChica') THEN
+    ALTER TABLE caja.egresos_caja_chica ADD CONSTRAINT "FK_egresos_caja_chica_compras_compra_id" FOREIGN KEY (compra_id) REFERENCES compras.compras (compra_id) ON DELETE SET NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260718050304_AgregarCompraIdEnEgresoCajaChica') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260718050304_AgregarCompraIdEnEgresoCajaChica', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

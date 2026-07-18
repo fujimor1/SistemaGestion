@@ -36,4 +36,12 @@ public class CompraRepository : GenericRepository<Compra>, ICompraRepository
 
         return (items, total);
     }
+
+    public async Task<(decimal Total, int Cantidad)> ObtenerResumenAsync(DateTime desde, DateTime hasta)
+    {
+        var query = _dbSet.Where(c => c.FechaEmision >= desde && c.FechaEmision < hasta && c.Estado != "ANULADA");
+        var total = await query.SumAsync(c => (decimal?)c.Total) ?? 0;
+        var cantidad = await query.CountAsync();
+        return (total, cantidad);
+    }
 }
