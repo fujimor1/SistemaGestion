@@ -4,7 +4,7 @@ public class NubefactSettings
 {
     public string Token         { get; set; } = string.Empty;
     public string Ruc           { get; set; } = string.Empty;
-    public string SerieNV        { get; set; } = "NV01";
+    public string SerieNV        { get; set; } = "NV02";
     public string SerieBoleta   { get; set; } = "B001";
     public string SerieFactura  { get; set; } = "F001";
     public string SerieNcBoleta { get; set; } = "BC01";
