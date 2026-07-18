@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Termales.Entities.Enums;
 using Termales.Entities.Models;
 
 namespace Termales.DAL.Configurations;
@@ -17,6 +18,8 @@ public class HabitacionConfiguration : IEntityTypeConfiguration<Habitacion>
         builder.Property(h => h.Precio).HasColumnName("precio").HasPrecision(10, 2).HasDefaultValue(0m);
         builder.Property(h => h.Ocupado).HasColumnName("ocupado").HasDefaultValue(false);
         builder.Property(h => h.Activo).HasColumnName("activo").HasDefaultValue(true);
+        builder.Property(h => h.EstadoLimpieza).HasColumnName("estado_limpieza").HasConversion<int>()
+            .HasDefaultValue(EstadoLimpieza.Limpia).HasSentinel(default(EstadoLimpieza));
         builder.Property(h => h.FechaCheckIn).HasColumnName("fecha_check_in");
         builder.Property(h => h.FechaCheckOut).HasColumnName("fecha_check_out");
     }

@@ -11,6 +11,8 @@ public class HabitacionDto
     public decimal Precio { get; set; }
     public bool Ocupado { get; set; }
     public bool Activo { get; set; }
+    public int EstadoLimpieza { get; set; }
+    public string EstadoLimpiezaDescripcion { get; set; } = string.Empty;
     public DateTime? FechaCheckIn { get; set; }
     public DateTime? FechaCheckOut { get; set; }
 }

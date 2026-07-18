@@ -1,3 +1,5 @@
+using Termales.Entities.Enums;
+
 namespace Termales.Entities.Models;
 
 public class Habitacion
@@ -9,6 +11,10 @@ public class Habitacion
     public decimal Precio { get; set; }
     public bool Ocupado { get; set; } = false;
     public bool Activo { get; set; } = true;
+
+    /// <summary>Al liberar (checkout) queda en PorLimpiar automáticamente — el personal de
+    /// limpieza la marca como Limpia antes de poder asignarla a un cliente nuevo.</summary>
+    public EstadoLimpieza EstadoLimpieza { get; set; } = EstadoLimpieza.Limpia;
 
     /// <summary>Fecha/hora del check-in vigente (null si está libre).</summary>
     public DateTime? FechaCheckIn { get; set; }

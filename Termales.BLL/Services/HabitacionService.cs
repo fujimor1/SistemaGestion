@@ -2,6 +2,7 @@ using Termales.BLL.Interfaces;
 using Termales.Common.DTOs;
 using Termales.Common.Wrappers;
 using Termales.DAL.UnitOfWork;
+using Termales.Entities.Enums;
 using Termales.Entities.Models;
 
 namespace Termales.BLL.Services;
@@ -35,6 +36,7 @@ public class HabitacionService : IHabitacionService
             Capacidad = dto.Capacidad,
             Precio = dto.Precio,
             Ocupado = false,
+            EstadoLimpieza = EstadoLimpieza.Limpia,
             Activo = true
         };
 
@@ -74,10 +76,27 @@ public class HabitacionService : IHabitacionService
         else
         {
             h.FechaCheckOut = DateTime.UtcNow;
+            // Al liberar, la habitación queda pendiente de limpieza — el personal de
+            // limpieza la marca lista antes de poder asignarla a un cliente nuevo.
+            h.EstadoLimpieza = EstadoLimpieza.PorLimpiar;
         }
         await _uow.Habitaciones.ActualizarAsync(h);
         await _uow.GuardarCambiosAsync();
-        return ApiResponse.Exitoso(ocupado ? "Habitación marcada como ocupada" : "Habitación marcada como libre");
+        return ApiResponse.Exitoso(ocupado ? "Habitación marcada como ocupada" : "Habitación liberada, pendiente de limpieza");
+    }
+
+    public async Task<ApiResponse> MarcarLimpiaAsync(int id)
+    {
+        var h = await _uow.Habitaciones.ObtenerPorIdAsync(id);
+        if (h is null)
+            return ApiResponse.Fallido("Habitación no encontrada");
+        if (h.Ocupado)
+            return ApiResponse.Fallido("La habitación está ocupada, no se puede marcar limpia todavía");
+
+        h.EstadoLimpieza = EstadoLimpieza.Limpia;
+        await _uow.Habitaciones.ActualizarAsync(h);
+        await _uow.GuardarCambiosAsync();
+        return ApiResponse.Exitoso("Habitación marcada como limpia — ya se puede asignar");
     }
 
     public async Task<ApiResponse> EliminarAsync(int id)
@@ -143,6 +162,8 @@ public class HabitacionService : IHabitacionService
         Precio = h.Precio,
         Ocupado = h.Ocupado,
         Activo = h.Activo,
+        EstadoLimpieza = (int)h.EstadoLimpieza,
+        EstadoLimpiezaDescripcion = h.EstadoLimpieza == EstadoLimpieza.PorLimpiar ? "Por limpiar" : "Limpia",
         FechaCheckIn = h.FechaCheckIn,
         FechaCheckOut = h.FechaCheckOut
     };

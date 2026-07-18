@@ -232,6 +232,8 @@ public class ComprobanteService : IComprobanteService
         if (hab is null)    return ApiResponse<ComprobanteResultadoDto>.Fallido("Habitación no encontrada");
         // Ahora se cobra al asignar (al entrar el cliente), no al liberar.
         if (hab.Ocupado)    return ApiResponse<ComprobanteResultadoDto>.Fallido("La habitación ya está ocupada");
+        if (hab.EstadoLimpieza == EstadoLimpieza.PorLimpiar)
+            return ApiResponse<ComprobanteResultadoDto>.Fallido("La habitación está pendiente de limpieza — márcala como limpia antes de asignarla");
         if (dto.Monto is null or <= 0) return ApiResponse<ComprobanteResultadoDto>.Fallido("Debe indicar el monto a cobrar");
 
         var monto     = dto.Monto.Value;

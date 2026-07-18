@@ -55,6 +55,13 @@ public class HabitacionesController : ControllerBase
         return resultado.Exito ? Ok(resultado) : NotFound(resultado);
     }
 
+    [HttpPatch("{id:int}/marcar-limpia")]
+    public async Task<IActionResult> MarcarLimpia(int id)
+    {
+        var resultado = await _service.MarcarLimpiaAsync(id);
+        return resultado.Exito ? Ok(resultado) : BadRequest(resultado);
+    }
+
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Eliminar(int id)
     {
