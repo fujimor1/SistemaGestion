@@ -547,32 +547,39 @@ public class ReporteService : IReporteService
 
     // ── Pagos por QR (Yape/Plin) ──────────────────────────────────────────────
 
-    public async Task<ReportePagoQrDto> ReportePagoQrAsync(string mes)
+    /// <summary>Acumulado de lo cobrado por Yape/Plin en un rango de fechas arbitrario.
+    /// Incluye tanto comprobantes 100% QR como la porción QR de pagos Mixto — el reporte
+    /// anterior (mensual, solo MetodoPago == YapePlin) subestimaba el total real porque
+    /// ignoraba los pagos divididos efectivo + Yape.</summary>
+    public async Task<ReportePagoQrDto> ReportePagoQrAsync(string desde, string hasta)
     {
-        var (inicio, fin) = ParseMes(mes);
+        var inicio = ParseDia(desde).inicio;
+        var fin    = ParseDia(hasta).fin;
 
         var comprobantes = await _db.Comprobantes.AsNoTracking()
             .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin &&
-                        c.Estado != "ANULADO" && c.MetodoPago == MetodoPago.YapePlin && c.Cobrado)
+                        c.Estado != "ANULADO" && c.Cobrado &&
+                        (c.MetodoPago == MetodoPago.YapePlin || c.MetodoPago == MetodoPago.Mixto))
             .OrderBy(c => c.FechaEmision)
             .ToListAsync();
 
-        var detalle = comprobantes.Select(c => new DetalleComprobanteReporteDto
+        var detalle = comprobantes.Select(c => new DetallePagoQrDto
         {
             NumeroFormateado = $"{c.Serie}-{c.Numero:D5}",
             TipoComprobante  = c.TipoComprobante,
             TipoAmbiente     = c.TipoAmbiente,
             ClienteNombre    = c.ClienteNombre ?? c.ClienteRazonSocial,
-            Total            = c.Total,
-            Estado           = c.Estado,
+            MontoYape        = c.MetodoPago == MetodoPago.Mixto ? c.Total - (c.MontoEfectivoMixto ?? 0) : c.Total,
+            EsMixto          = c.MetodoPago == MetodoPago.Mixto,
             FechaEmision     = c.FechaEmision,
         }).ToList();
 
         return new ReportePagoQrDto
         {
-            Mes                = mes,
+            Desde              = desde,
+            Hasta              = hasta,
             TotalTransacciones = detalle.Count,
-            MontoTotal         = detalle.Sum(d => d.Total),
+            MontoTotal         = detalle.Sum(d => d.MontoYape),
             Detalle            = detalle,
         };
     }

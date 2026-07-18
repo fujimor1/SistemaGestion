@@ -14,7 +14,7 @@ public interface IReporteService
     Task<ReporteUtilidadDto>     ReporteUtilidadAsync(string mes);
     Task<ReportePersonalDto>     ReportePersonalAsync(string mes);
     Task<CatalogoDto>            ObtenerCatalogoAsync();
-    Task<ReportePagoQrDto>       ReportePagoQrAsync(string mes);
+    Task<ReportePagoQrDto>       ReportePagoQrAsync(string desde, string hasta);
     Task<ReporteComandasDto>     ReporteComandasAsync(string mes);
     Task<ReporteStockMinimoDto>  ReporteStockMinimoAsync();
     Task<LiquidacionCajaDto>     ReporteLiquidacionCajaAsync(string fecha);

@@ -127,14 +127,12 @@ public class ReportesController : ControllerBase
         return Ok(resultado);
     }
 
-    /// <summary>Ventas cobradas por Yape/Plin. mes = "YYYY-MM"</summary>
+    /// <summary>Acumulado cobrado por Yape/Plin (incluye la porción QR de pagos Mixto)
+    /// en un rango de fechas arbitrario. desde/hasta = "YYYY-MM-DD"</summary>
     [HttpGet("pago-qr")]
-    public async Task<IActionResult> GetPagoQr([FromQuery] string mes)
+    public async Task<IActionResult> GetPagoQr([FromQuery] string desde, [FromQuery] string hasta)
     {
-        if (string.IsNullOrWhiteSpace(mes))
-            mes = DateTime.UtcNow.ToString("yyyy-MM");
-
-        var resultado = await _service.ReportePagoQrAsync(mes);
+        var resultado = await _service.ReportePagoQrAsync(desde, hasta);
         return Ok(resultado);
     }
 
