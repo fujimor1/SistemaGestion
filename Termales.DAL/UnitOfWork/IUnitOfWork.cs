@@ -34,6 +34,7 @@ public interface IUnitOfWork : IDisposable
     ISalidaInsumoRepository SalidasInsumo { get; }
     IProveedorRepository Proveedores { get; }
     ICompraRepository Compras { get; }
+    ICompraImagenRepository CompraImagenes { get; }
     IPaqueteBanioRepository PaquetesBanio { get; }
 
     Task<int> GuardarCambiosAsync();

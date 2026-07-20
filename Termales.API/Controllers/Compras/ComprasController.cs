@@ -73,4 +73,50 @@ public class ComprasController : ControllerBase
             return BadRequest(new { mensaje = ex.Message });
         }
     }
+
+    /// <summary>Sube una o más fotos del comprobante físico (boleta/factura en papel del
+    /// proveedor). Máximo 8 MB por foto, solo JPG/PNG/WEBP.</summary>
+    [HttpPost("{id:int}/imagenes")]
+    [RequestSizeLimit(50_000_000)]
+    public async Task<IActionResult> AgregarImagenes(int id, [FromForm] List<IFormFile> archivos)
+    {
+        try
+        {
+            var imagenes = await _service.AgregarImagenesAsync(id, archivos);
+            return Ok(imagenes);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+    }
+
+    [HttpGet("{id:int}/imagenes")]
+    public async Task<IActionResult> ObtenerImagenes(int id)
+    {
+        var imagenes = await _service.ObtenerImagenesAsync(id);
+        return Ok(imagenes);
+    }
+
+    [HttpGet("imagenes/{imagenId:int}/archivo")]
+    public async Task<IActionResult> ObtenerArchivoImagen(int imagenId)
+    {
+        var archivo = await _service.ObtenerArchivoImagenAsync(imagenId);
+        if (archivo is null) return NotFound();
+        return File(archivo.Value.Bytes, archivo.Value.ContentType, archivo.Value.NombreArchivo);
+    }
+
+    [HttpDelete("imagenes/{imagenId:int}")]
+    public async Task<IActionResult> EliminarImagen(int imagenId)
+    {
+        try
+        {
+            await _service.EliminarImagenAsync(imagenId);
+            return Ok(new { mensaje = "Imagen eliminada" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+    }
 }

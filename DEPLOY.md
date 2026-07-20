@@ -41,6 +41,15 @@ el `appsettings.json` del servidor — nunca en el repo ni en el chat. El certif
 fuera de `/var/www/collpa-api` (ruta típica `/etc/collpa/sunat/certificado.pfx`) porque esa carpeta
 se reemplaza por completo en cada deploy.
 
+⚠️ Mismo criterio para las fotos de comprobantes de Compras (`Uploads:ComprasPath` en
+`appsettings.json`): deben vivir fuera de `/var/www/collpa-api` (ruta típica
+`/etc/collpa/uploads/compras/`), o se borran en el siguiente deploy. Si el servidor todavía no
+tiene esa carpeta creada, hay que crearla y darle permisos antes de configurar la ruta:
+```bash
+mkdir -p /etc/collpa/uploads/compras
+chown -R www-data:www-data /etc/collpa/uploads
+```
+
 ### Método manual (respaldo/emergencia, si Actions no está disponible)
 
 **Backend, en tu máquina:**

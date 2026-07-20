@@ -31,6 +31,14 @@ public class CompraDto
     public int? EgresoCajaChicaId { get; set; }
 
     public List<DetalleCompraDto> Detalles { get; set; } = [];
+    public List<CompraImagenDto> Imagenes { get; set; } = [];
+}
+
+public class CompraImagenDto
+{
+    public int CompraImagenId { get; set; }
+    public string NombreArchivo { get; set; } = string.Empty;
+    public DateTime FechaSubida { get; set; }
 }
 
 public class DetalleCompraDto

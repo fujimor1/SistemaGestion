@@ -31,4 +31,5 @@ public class Compra
 
     public Proveedor? Proveedor { get; set; }
     public ICollection<DetalleCompra> Detalles { get; set; } = new List<DetalleCompra>();
+    public ICollection<CompraImagen> Imagenes { get; set; } = new List<CompraImagen>();
 }

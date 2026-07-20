@@ -1,7 +1,10 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 using Termales.BLL.Interfaces;
 using Termales.BLL.Interfaces.Compras;
 using Termales.Common.DTOs.Caja;
 using Termales.Common.DTOs.Compras;
+using Termales.Common.Settings;
 using Termales.DAL.UnitOfWork;
 using Termales.Entities.Models.Compras;
 using Termales.Entities.Models.Inventario;
@@ -11,14 +14,27 @@ namespace Termales.BLL.Services.Compras;
 
 public class CompraService : ICompraService
 {
+    private static readonly HashSet<string> ExtensionesPermitidas = new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".webp" };
+    private const long TamanoMaximoBytes = 8 * 1024 * 1024; // 8 MB por foto
+
     private readonly IUnitOfWork _uow;
     private readonly ICajaService _cajaService;
+    private readonly UploadsSettings _uploadsCfg;
 
-    public CompraService(IUnitOfWork uow, ICajaService cajaService)
+    public CompraService(IUnitOfWork uow, ICajaService cajaService, IOptions<UploadsSettings> uploadsCfg)
     {
         _uow = uow;
         _cajaService = cajaService;
+        _uploadsCfg = uploadsCfg.Value;
     }
+
+    // En el servidor real, Uploads:ComprasPath apunta fuera de /var/www/collpa-api
+    // (esa carpeta se borra en cada deploy). En dev local, si queda vacío, cae a una
+    // carpeta junto al build — no hace falta configurar nada para probar en local.
+    private string ObtenerCarpetaBase() =>
+        string.IsNullOrWhiteSpace(_uploadsCfg.ComprasPath)
+            ? Path.Combine(AppContext.BaseDirectory, "uploads-dev", "compras")
+            : _uploadsCfg.ComprasPath;
 
     public async Task<CompraDto?> ObtenerPorIdAsync(int id)
     {
@@ -250,6 +266,87 @@ public class CompraService : ICompraService
         };
     }
 
+    public async Task<List<CompraImagenDto>> AgregarImagenesAsync(int compraId, List<IFormFile> archivos)
+    {
+        var compra = await _uow.Compras.ObtenerPorIdAsync(compraId)
+            ?? throw new InvalidOperationException($"Compra {compraId} no encontrada");
+
+        if (archivos.Count == 0)
+            throw new InvalidOperationException("No se recibió ninguna imagen");
+
+        foreach (var archivo in archivos)
+        {
+            var extension = Path.GetExtension(archivo.FileName);
+            if (!ExtensionesPermitidas.Contains(extension))
+                throw new InvalidOperationException($"Formato no permitido: {archivo.FileName} (solo JPG, PNG o WEBP)");
+            if (archivo.Length > TamanoMaximoBytes)
+                throw new InvalidOperationException($"\"{archivo.FileName}\" pesa demasiado (máximo 8 MB por foto)");
+        }
+
+        var carpeta = Path.Combine(ObtenerCarpetaBase(), compraId.ToString());
+        Directory.CreateDirectory(carpeta);
+
+        foreach (var archivo in archivos)
+        {
+            var extension = Path.GetExtension(archivo.FileName);
+            var nombreEnDisco = $"{Guid.NewGuid()}{extension}";
+            var rutaCompleta = Path.Combine(carpeta, nombreEnDisco);
+
+            await using (var stream = File.Create(rutaCompleta))
+                await archivo.CopyToAsync(stream);
+
+            await _uow.CompraImagenes.AgregarAsync(new CompraImagen
+            {
+                CompraId = compraId,
+                NombreArchivo = archivo.FileName,
+                RutaArchivo = rutaCompleta,
+            });
+        }
+
+        await _uow.GuardarCambiosAsync();
+        return await ObtenerImagenesAsync(compraId);
+    }
+
+    public async Task<List<CompraImagenDto>> ObtenerImagenesAsync(int compraId)
+    {
+        var imagenes = await _uow.CompraImagenes.BuscarAsync(i => i.CompraId == compraId);
+        return imagenes
+            .OrderBy(i => i.FechaSubida)
+            .Select(i => new CompraImagenDto
+            {
+                CompraImagenId = i.CompraImagenId,
+                NombreArchivo = i.NombreArchivo,
+                FechaSubida = i.FechaSubida,
+            }).ToList();
+    }
+
+    public async Task<(byte[] Bytes, string ContentType, string NombreArchivo)?> ObtenerArchivoImagenAsync(int imagenId)
+    {
+        var imagen = await _uow.CompraImagenes.ObtenerPorIdAsync(imagenId);
+        if (imagen is null || !File.Exists(imagen.RutaArchivo)) return null;
+
+        var bytes = await File.ReadAllBytesAsync(imagen.RutaArchivo);
+        var contentType = Path.GetExtension(imagen.RutaArchivo).ToLowerInvariant() switch
+        {
+            ".png" => "image/png",
+            ".webp" => "image/webp",
+            _ => "image/jpeg",
+        };
+        return (bytes, contentType, imagen.NombreArchivo);
+    }
+
+    public async Task EliminarImagenAsync(int imagenId)
+    {
+        var imagen = await _uow.CompraImagenes.ObtenerPorIdAsync(imagenId)
+            ?? throw new InvalidOperationException("Imagen no encontrada");
+
+        try { if (File.Exists(imagen.RutaArchivo)) File.Delete(imagen.RutaArchivo); }
+        catch { /* si el archivo ya no está en disco, igual se limpia el registro */ }
+
+        await _uow.CompraImagenes.EliminarAsync(imagenId);
+        await _uow.GuardarCambiosAsync();
+    }
+
     private static CompraDto MapearDto(Compra c) => new()
     {
         CompraId = c.CompraId,
@@ -283,6 +380,12 @@ public class CompraService : ICompraService
             Cantidad = d.Cantidad,
             PrecioUnitario = d.PrecioUnitario,
             Total = d.Total
+        }).ToList(),
+        Imagenes = c.Imagenes.Select(i => new CompraImagenDto
+        {
+            CompraImagenId = i.CompraImagenId,
+            NombreArchivo = i.NombreArchivo,
+            FechaSubida = i.FechaSubida,
         }).ToList()
     };
 }

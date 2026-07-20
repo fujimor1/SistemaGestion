@@ -43,6 +43,7 @@ public class UnitOfWork : IUnitOfWork
     public ISalidaInsumoRepository SalidasInsumo { get; }
     public IProveedorRepository Proveedores { get; }
     public ICompraRepository Compras { get; }
+    public ICompraImagenRepository CompraImagenes { get; }
     public IPaqueteBanioRepository PaquetesBanio { get; }
 
     public UnitOfWork(TermalesDbContext context)
@@ -74,6 +75,7 @@ public class UnitOfWork : IUnitOfWork
         SalidasInsumo = new SalidaInsumoRepository(context);
         Proveedores = new ProveedorRepository(context);
         Compras = new CompraRepository(context);
+        CompraImagenes = new CompraImagenRepository(context);
         PaquetesBanio = new PaqueteBanioRepository(context);
     }
 

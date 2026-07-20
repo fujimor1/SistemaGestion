@@ -14,6 +14,7 @@ public class CompraRepository : GenericRepository<Compra>, ICompraRepository
             .Include(c => c.Proveedor)
             .Include(c => c.Detalles).ThenInclude(d => d.Insumo)
             .Include(c => c.Detalles).ThenInclude(d => d.Producto)
+            .Include(c => c.Imagenes)
             .FirstOrDefaultAsync(c => c.CompraId == compraId);
 
     public async Task<(IEnumerable<Compra> Items, int Total)> ObtenerPaginadoAsync(

@@ -106,6 +106,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRepresentacionImpresaBuilder, RepresentacionImpresaBuilder>();
         services.AddScoped<IFacturaElectronicaService, FacturaElectronicaService>();
 
+        // Fotos de comprobantes de Compras (guardadas fuera de /var/www/collpa-api)
+        services.Configure<UploadsSettings>(config.GetSection("Uploads"));
+
         // Consulta de DNI/RUC (Decolecta) para autocompletar nombre/razón social
         services.Configure<ConsultaDocumentoSettings>(config.GetSection("ConsultaDocumento"));
         services.AddHttpClient("Decolecta");
