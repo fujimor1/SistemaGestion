@@ -117,7 +117,8 @@ public class CajaService : ICajaService
     private async Task<(decimal Efectivo, decimal YapePlin, decimal TotalGeneral)> ObtenerTotalesPorMetodoAsync(DateTime dia)
     {
         var comprobantes = await _db.Comprobantes.AsNoTracking()
-            .Where(c => c.Estado != "ANULADO" && c.Cobrado && (c.FechaCobro ?? c.FechaEmision).Date == dia)
+            .Where(c => c.Estado != "ANULADO" && c.Cobrado && c.TipoComprobante != "NC"
+                        && (c.FechaCobro ?? c.FechaEmision).Date == dia)
             .Select(c => new { c.MetodoPago, c.Total, c.MontoEfectivoMixto })
             .ToListAsync();
 
@@ -157,7 +158,8 @@ public class CajaService : ICajaService
             .SumAsync(e => (decimal?)e.Monto) ?? 0;
 
         var resumenRaw = await _db.Comprobantes.AsNoTracking()
-            .Where(c => (c.FechaCobro ?? c.FechaEmision).Date == hoy && c.Estado != "ANULADO" && c.Cobrado)
+            .Where(c => (c.FechaCobro ?? c.FechaEmision).Date == hoy && c.Estado != "ANULADO" && c.Cobrado
+                        && c.TipoComprobante != "NC")
             .GroupBy(c => c.TipoAmbiente)
             .Select(g => new { Ambiente = g.Key, Cantidad = g.Count(), Total = g.Sum(c => c.Total) })
             .ToListAsync();

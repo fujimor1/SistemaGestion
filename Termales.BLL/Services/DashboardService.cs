@@ -103,7 +103,10 @@ public class DashboardService : IDashboardService
         var hace30 = hoy.AddDays(-29);
 
         var aforos = _db.Aforos.AsNoTracking();
-        var comprobantes = _db.Comprobantes.AsNoTracking().Where(c => c.TipoAmbiente == "banio");
+        // Sin este filtro se sumaban comprobantes ANULADOS y Notas de Crédito como si
+        // fueran ingreso — una NC anula/reduce una venta anterior, no es venta nueva.
+        var comprobantes = _db.Comprobantes.AsNoTracking()
+            .Where(c => c.TipoAmbiente == "banio" && c.Estado != "ANULADO" && c.Cobrado && c.TipoComprobante != "NC");
 
         var personasHoy = await aforos
             .Where(a => a.Fecha.Date == hoy)
@@ -180,7 +183,8 @@ public class DashboardService : IDashboardService
         // de la tabla Reservas, que en realidad está ligada a Piscina y es
         // un módulo aparte, sin relación con las habitaciones reales.
         var comprobantes = _db.Comprobantes.AsNoTracking()
-            .Where(c => c.TipoAmbiente == "habitacion" && c.Estado != "ANULADO" && c.Cobrado);
+            .Where(c => c.TipoAmbiente == "habitacion" && c.Estado != "ANULADO" && c.Cobrado
+                        && c.TipoComprobante != "NC"); // la NC anula una venta anterior, no es ingreso nuevo
 
         var reservasHoy = await comprobantes.CountAsync(c => c.FechaEmision.Date == hoy);
         var reservasMes = await comprobantes.CountAsync(c => c.FechaEmision >= mes);
@@ -241,7 +245,10 @@ public class DashboardService : IDashboardService
         var mes = new DateTime(ahora.Year, ahora.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var hace30 = hoy.AddDays(-29);
 
-        var comprobantes = _db.Comprobantes.AsNoTracking().Where(c => c.TipoAmbiente == "tienda");
+        // Sin este filtro se sumaban comprobantes ANULADOS y Notas de Crédito como si
+        // fueran ingreso — una NC anula/reduce una venta anterior, no es venta nueva.
+        var comprobantes = _db.Comprobantes.AsNoTracking()
+            .Where(c => c.TipoAmbiente == "tienda" && c.Estado != "ANULADO" && c.Cobrado && c.TipoComprobante != "NC");
 
         var ingresoHoy = await comprobantes
             .Where(c => c.FechaEmision.Date == hoy)
