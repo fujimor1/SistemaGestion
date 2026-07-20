@@ -2,7 +2,8 @@ namespace Termales.Common.DTOs.Reporte;
 
 public class ReporteComprobantesDto
 {
-    public string Mes                  { get; set; } = string.Empty;
+    public string Desde                { get; set; } = string.Empty;
+    public string Hasta                { get; set; } = string.Empty;
     public int    TotalEmitidos        { get; set; }
     public int    TotalAnulados        { get; set; }
     public int    TotalNV              { get; set; }

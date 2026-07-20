@@ -15,16 +15,13 @@ public class ReportesController : ControllerBase
     public ReportesController(IReporteService service) => _service = service;
 
     /// <summary>
-    /// Reporte mensual de comprobantes (NV, BI, FI, NC) con resumen diario y detalle.
-    /// mes = "YYYY-MM"
+    /// Reporte de comprobantes (NV, BI, FI, NC) con resumen diario y detalle, en un rango de fechas.
+    /// desde/hasta = "YYYY-MM-DD"
     /// </summary>
     [HttpGet("comprobantes")]
-    public async Task<IActionResult> GetComprobantes([FromQuery] string mes)
+    public async Task<IActionResult> GetComprobantes([FromQuery] string desde, [FromQuery] string hasta)
     {
-        if (string.IsNullOrWhiteSpace(mes))
-            mes = DateTime.UtcNow.ToString("yyyy-MM");
-
-        var resultado = await _service.ReporteComprobantesAsync(mes);
+        var resultado = await _service.ReporteComprobantesAsync(desde, hasta);
         return Ok(resultado);
     }
 
@@ -40,30 +37,24 @@ public class ReportesController : ControllerBase
     }
 
     /// <summary>
-    /// Reporte mensual de caja: apertura, ventas, egresos, cierre y cuadre por día.
-    /// mes = "YYYY-MM"
+    /// Reporte de caja en un rango de fechas: apertura, ventas, egresos, cierre y cuadre por día.
+    /// desde/hasta = "YYYY-MM-DD"
     /// </summary>
     [HttpGet("caja")]
-    public async Task<IActionResult> GetCaja([FromQuery] string mes)
+    public async Task<IActionResult> GetCaja([FromQuery] string desde, [FromQuery] string hasta)
     {
-        if (string.IsNullOrWhiteSpace(mes))
-            mes = DateTime.UtcNow.ToString("yyyy-MM");
-
-        var resultado = await _service.ReporteCajaAsync(mes);
+        var resultado = await _service.ReporteCajaAsync(desde, hasta);
         return Ok(resultado);
     }
 
     /// <summary>
-    /// Registro de Compras (SUNAT): compras del mes con RUC/razón social del proveedor y desglose de IGV.
-    /// mes = "YYYY-MM"
+    /// Registro de Compras (SUNAT): compras del rango con RUC/razón social del proveedor y desglose de IGV.
+    /// desde/hasta = "YYYY-MM-DD"
     /// </summary>
     [HttpGet("compras")]
-    public async Task<IActionResult> GetCompras([FromQuery] string mes)
+    public async Task<IActionResult> GetCompras([FromQuery] string desde, [FromQuery] string hasta)
     {
-        if (string.IsNullOrWhiteSpace(mes))
-            mes = DateTime.UtcNow.ToString("yyyy-MM");
-
-        var resultado = await _service.ReporteComprasAsync(mes);
+        var resultado = await _service.ReporteComprasAsync(desde, hasta);
         return Ok(resultado);
     }
 
@@ -75,47 +66,35 @@ public class ReportesController : ControllerBase
         return Ok(resultado);
     }
 
-    /// <summary>Ventas por categoría de menú (solo Comedor). mes = "YYYY-MM"</summary>
+    /// <summary>Ventas por categoría de menú (solo Comedor), en un rango de fechas. desde/hasta = "YYYY-MM-DD"</summary>
     [HttpGet("ventas-categoria")]
-    public async Task<IActionResult> GetVentasCategoria([FromQuery] string mes)
+    public async Task<IActionResult> GetVentasCategoria([FromQuery] string desde, [FromQuery] string hasta)
     {
-        if (string.IsNullOrWhiteSpace(mes))
-            mes = DateTime.UtcNow.ToString("yyyy-MM");
-
-        var resultado = await _service.ReporteVentasCategoriaAsync(mes);
+        var resultado = await _service.ReporteVentasCategoriaAsync(desde, hasta);
         return Ok(resultado);
     }
 
-    /// <summary>Productos/platos más vendidos, todas las ambientes. mes = "YYYY-MM"</summary>
+    /// <summary>Productos/platos más vendidos, todas las ambientes, en un rango de fechas. desde/hasta = "YYYY-MM-DD"</summary>
     [HttpGet("productos-mas-vendidos")]
-    public async Task<IActionResult> GetProductosMasVendidos([FromQuery] string mes)
+    public async Task<IActionResult> GetProductosMasVendidos([FromQuery] string desde, [FromQuery] string hasta)
     {
-        if (string.IsNullOrWhiteSpace(mes))
-            mes = DateTime.UtcNow.ToString("yyyy-MM");
-
-        var resultado = await _service.ReporteProductosMasVendidosAsync(mes);
+        var resultado = await _service.ReporteProductosMasVendidosAsync(desde, hasta);
         return Ok(resultado);
     }
 
-    /// <summary>Utilidad (ingreso - costo) de Comedor y Tienda. mes = "YYYY-MM"</summary>
+    /// <summary>Utilidad (ingreso - costo) de Comedor y Tienda, en un rango de fechas. desde/hasta = "YYYY-MM-DD"</summary>
     [HttpGet("utilidad")]
-    public async Task<IActionResult> GetUtilidad([FromQuery] string mes)
+    public async Task<IActionResult> GetUtilidad([FromQuery] string desde, [FromQuery] string hasta)
     {
-        if (string.IsNullOrWhiteSpace(mes))
-            mes = DateTime.UtcNow.ToString("yyyy-MM");
-
-        var resultado = await _service.ReporteUtilidadAsync(mes);
+        var resultado = await _service.ReporteUtilidadAsync(desde, hasta);
         return Ok(resultado);
     }
 
-    /// <summary>Ventas por cajero/mesero. mes = "YYYY-MM"</summary>
+    /// <summary>Ventas por cajero/mesero, en un rango de fechas. desde/hasta = "YYYY-MM-DD"</summary>
     [HttpGet("personal")]
-    public async Task<IActionResult> GetPersonal([FromQuery] string mes)
+    public async Task<IActionResult> GetPersonal([FromQuery] string desde, [FromQuery] string hasta)
     {
-        if (string.IsNullOrWhiteSpace(mes))
-            mes = DateTime.UtcNow.ToString("yyyy-MM");
-
-        var resultado = await _service.ReportePersonalAsync(mes);
+        var resultado = await _service.ReportePersonalAsync(desde, hasta);
         return Ok(resultado);
     }
 
@@ -136,14 +115,11 @@ public class ReportesController : ControllerBase
         return Ok(resultado);
     }
 
-    /// <summary>Comandas del mes: cantidad, tiempos de atención por mesa. mes = "YYYY-MM"</summary>
+    /// <summary>Comandas en un rango de fechas: cantidad, tiempos de atención por mesa. desde/hasta = "YYYY-MM-DD"</summary>
     [HttpGet("comandas")]
-    public async Task<IActionResult> GetComandas([FromQuery] string mes)
+    public async Task<IActionResult> GetComandas([FromQuery] string desde, [FromQuery] string hasta)
     {
-        if (string.IsNullOrWhiteSpace(mes))
-            mes = DateTime.UtcNow.ToString("yyyy-MM");
-
-        var resultado = await _service.ReporteComandasAsync(mes);
+        var resultado = await _service.ReporteComandasAsync(desde, hasta);
         return Ok(resultado);
     }
 

@@ -2,7 +2,8 @@ namespace Termales.Common.DTOs.Reporte;
 
 public class ReporteCajaDto
 {
-    public string  Mes                      { get; set; } = string.Empty;
+    public string  Desde                    { get; set; } = string.Empty;
+    public string  Hasta                    { get; set; } = string.Empty;
     public int     DiasConApertura          { get; set; }
     public int     DiasConCierre            { get; set; }
     public decimal TotalVentasSistema       { get; set; }

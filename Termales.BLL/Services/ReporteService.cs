@@ -13,21 +13,6 @@ public class ReporteService : IReporteService
 
     public ReporteService(TermalesDbContext db) => _db = db;
 
-    private static (DateTime inicio, DateTime fin) ParseMes(string mes)
-    {
-        var partes = mes.Split('-');
-        if (partes.Length == 2
-            && int.TryParse(partes[0], out var year)
-            && int.TryParse(partes[1], out var month))
-        {
-            var inicio = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
-            return (inicio, inicio.AddMonths(1));
-        }
-        var hoy = DateTime.UtcNow;
-        var fallback = new DateTime(hoy.Year, hoy.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        return (fallback, fallback.AddMonths(1));
-    }
-
     // Perú es UTC-5 fijo (sin horario de verano): medianoche en Lima = 05:00 UTC del mismo día.
     private static readonly TimeSpan OffsetPeru = TimeSpan.FromHours(5);
 
@@ -67,9 +52,10 @@ public class ReporteService : IReporteService
                 };
             }).ToList();
 
-    public async Task<ReporteComprobantesDto> ReporteComprobantesAsync(string mes)
+    public async Task<ReporteComprobantesDto> ReporteComprobantesAsync(string desde, string hasta)
     {
-        var (inicio, fin) = ParseMes(mes);
+        var inicio = ParseDia(desde).inicio;
+        var fin    = ParseDia(hasta).fin;
 
         var comprobantes = await _db.Comprobantes.AsNoTracking()
             .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin)
@@ -96,7 +82,8 @@ public class ReporteService : IReporteService
 
         return new ReporteComprobantesDto
         {
-            Mes               = mes,
+            Desde             = desde,
+            Hasta             = hasta,
             TotalEmitidos     = emitidos.Count,
             TotalAnulados     = anulados.Count,
             TotalNV           = emitidos.Count(c => c.TipoComprobante == "NV"),
@@ -128,9 +115,10 @@ public class ReporteService : IReporteService
 
     // ── Reporte de Caja ──────────────────────────────────────────────────────
 
-    public async Task<ReporteCajaDto> ReporteCajaAsync(string mes)
+    public async Task<ReporteCajaDto> ReporteCajaAsync(string desde, string hasta)
     {
-        var (inicio, fin) = ParseMes(mes);
+        var inicio = ParseDia(desde).inicio;
+        var fin    = ParseDia(hasta).fin;
 
         var aperturas = await _db.AperturasCaja.AsNoTracking()
             .Where(a => a.Fecha >= inicio && a.Fecha < fin)
@@ -190,7 +178,8 @@ public class ReporteService : IReporteService
 
         return new ReporteCajaDto
         {
-            Mes                       = mes,
+            Desde                     = desde,
+            Hasta                     = hasta,
             DiasConApertura           = porDia.Count(d => d.TieneApertura),
             DiasConCierre             = porDia.Count(d => d.TieneCierre),
             TotalVentasSistema        = porDia.Sum(d => d.VentasSistema),
@@ -206,9 +195,10 @@ public class ReporteService : IReporteService
 
     // ── Registro de Compras (SUNAT) ──────────────────────────────────────────
 
-    public async Task<RegistroComprasDto> ReporteComprasAsync(string mes)
+    public async Task<RegistroComprasDto> ReporteComprasAsync(string desde, string hasta)
     {
-        var (inicio, fin) = ParseMes(mes);
+        var inicio = ParseDia(desde).inicio;
+        var fin    = ParseDia(hasta).fin;
 
         var compras = await _db.Compras.AsNoTracking()
             .Include(c => c.Proveedor)
@@ -234,7 +224,8 @@ public class ReporteService : IReporteService
 
         return new RegistroComprasDto
         {
-            Mes               = mes,
+            Desde             = desde,
+            Hasta             = hasta,
             TotalRegistros    = vigentes.Count,
             MontoTotalGravada = vigentes.Sum(c => c.TotalGravada),
             MontoTotalIgv     = vigentes.Sum(c => c.Igv),
@@ -270,9 +261,10 @@ public class ReporteService : IReporteService
 
     // ── Ventas por categoría (Comedor) ────────────────────────────────────────
 
-    public async Task<ReporteVentasCategoriaDto> ReporteVentasCategoriaAsync(string mes)
+    public async Task<ReporteVentasCategoriaDto> ReporteVentasCategoriaAsync(string desde, string hasta)
     {
-        var (inicio, fin) = ParseMes(mes);
+        var inicio = ParseDia(desde).inicio;
+        var fin    = ParseDia(hasta).fin;
 
         var detalles = await _db.OrdenDetalles.AsNoTracking()
             .Include(d => d.ItemMenu).ThenInclude(i => i!.Categoria)
@@ -295,7 +287,8 @@ public class ReporteService : IReporteService
 
         return new ReporteVentasCategoriaDto
         {
-            Mes        = mes,
+            Desde      = desde,
+            Hasta      = hasta,
             MontoTotal = porCategoria.Sum(v => v.MontoTotal),
             Detalle    = porCategoria,
         };
@@ -303,9 +296,10 @@ public class ReporteService : IReporteService
 
     // ── Productos más vendidos (todas las ambientes) ───────────────────────────
 
-    public async Task<ReporteProductosMasVendidosDto> ReporteProductosMasVendidosAsync(string mes)
+    public async Task<ReporteProductosMasVendidosDto> ReporteProductosMasVendidosAsync(string desde, string hasta)
     {
-        var (inicio, fin) = ParseMes(mes);
+        var inicio = ParseDia(desde).inicio;
+        var fin    = ParseDia(hasta).fin;
 
         var detalles = await _db.ComprobanteDetalles.AsNoTracking()
             .Include(d => d.Comprobante)
@@ -324,7 +318,7 @@ public class ReporteService : IReporteService
             .OrderByDescending(p => p.CantidadVendida)
             .ToList();
 
-        return new ReporteProductosMasVendidosDto { Mes = mes, Detalle = porProducto };
+        return new ReporteProductosMasVendidosDto { Desde = desde, Hasta = hasta, Detalle = porProducto };
     }
 
     // ── Utilidad (Comedor + Tienda) ─────────────────────────────────────────────
@@ -392,14 +386,16 @@ public class ReporteService : IReporteService
         return filasComedor.Concat(filasTienda).OrderByDescending(f => f.Utilidad).ToList();
     }
 
-    public async Task<ReporteUtilidadDto> ReporteUtilidadAsync(string mes)
+    public async Task<ReporteUtilidadDto> ReporteUtilidadAsync(string desde, string hasta)
     {
-        var (inicio, fin) = ParseMes(mes);
+        var inicio = ParseDia(desde).inicio;
+        var fin    = ParseDia(hasta).fin;
         var todas = await ObtenerDetalleUtilidadAsync(inicio, fin);
 
         return new ReporteUtilidadDto
         {
-            Mes           = mes,
+            Desde         = desde,
+            Hasta         = hasta,
             IngresoTotal  = todas.Sum(f => f.Ingreso),
             CostoTotal    = todas.Sum(f => f.Costo),
             UtilidadTotal = todas.Sum(f => f.Utilidad),
@@ -478,9 +474,10 @@ public class ReporteService : IReporteService
 
     // ── Ventas por cajero/mesero ─────────────────────────────────────────────
 
-    public async Task<ReportePersonalDto> ReportePersonalAsync(string mes)
+    public async Task<ReportePersonalDto> ReportePersonalAsync(string desde, string hasta)
     {
-        var (inicio, fin) = ParseMes(mes);
+        var inicio = ParseDia(desde).inicio;
+        var fin    = ParseDia(hasta).fin;
 
         var comprobantes = await _db.Comprobantes.AsNoTracking()
             .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin && c.Estado != "ANULADO")
@@ -500,7 +497,8 @@ public class ReporteService : IReporteService
 
         return new ReportePersonalDto
         {
-            Mes        = mes,
+            Desde      = desde,
+            Hasta      = hasta,
             MontoTotal = porCajero.Sum(v => v.MontoTotal),
             Detalle    = porCajero,
         };
@@ -586,9 +584,10 @@ public class ReporteService : IReporteService
 
     // ── Reporte de comandas ───────────────────────────────────────────────────
 
-    public async Task<ReporteComandasDto> ReporteComandasAsync(string mes)
+    public async Task<ReporteComandasDto> ReporteComandasAsync(string desde, string hasta)
     {
-        var (inicio, fin) = ParseMes(mes);
+        var inicio = ParseDia(desde).inicio;
+        var fin    = ParseDia(hasta).fin;
 
         var ordenes = await _db.Ordenes.AsNoTracking()
             .Include(o => o.Mesa)
@@ -615,7 +614,8 @@ public class ReporteService : IReporteService
 
         return new ReporteComandasDto
         {
-            Mes                   = mes,
+            Desde                 = desde,
+            Hasta                 = hasta,
             TotalComandas         = detalle.Count,
             TiempoPromedioMinutos = duraciones.Count > 0 ? Math.Round(duraciones.Average(), 1) : 0,
             Detalle               = detalle,

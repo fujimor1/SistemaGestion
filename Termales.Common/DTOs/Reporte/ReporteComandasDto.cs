@@ -2,7 +2,8 @@ namespace Termales.Common.DTOs.Reporte;
 
 public class ReporteComandasDto
 {
-    public string Mes { get; set; } = string.Empty;
+    public string Desde { get; set; } = string.Empty;
+    public string Hasta { get; set; } = string.Empty;
     public int TotalComandas { get; set; }
     public decimal TiempoPromedioMinutos { get; set; }
     public List<ComandaDetalleDto> Detalle { get; set; } = [];
