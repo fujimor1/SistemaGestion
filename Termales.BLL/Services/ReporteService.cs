@@ -347,12 +347,14 @@ public class ReporteService : IReporteService
             var costoTotal = Math.Round(costoUnitario * d.Cantidad, 2);
             return new UtilidadDetalleDto
             {
-                Nombre          = d.ItemMenu.Nombre,
-                Ambiente        = "comedor",
-                CantidadVendida = d.Cantidad,
-                Ingreso         = d.Subtotal,
-                Costo           = costoTotal,
-                Utilidad        = Math.Round(d.Subtotal - costoTotal, 2),
+                Nombre            = d.ItemMenu.Nombre,
+                Ambiente          = "comedor",
+                CantidadVendida   = d.Cantidad,
+                Ingreso           = d.Subtotal,
+                Costo             = costoTotal,
+                Utilidad          = Math.Round(d.Subtotal - costoTotal, 2),
+                NumeroComprobante = $"{d.Comprobante!.Serie}-{d.Comprobante.Numero:D5}",
+                TipoComprobante   = d.Comprobante.TipoComprobante,
             };
         }).ToList();
 
@@ -381,12 +383,14 @@ public class ReporteService : IReporteService
             var costoTotal    = Math.Round(costoUnitario * d.Cantidad, 2);
             return new UtilidadDetalleDto
             {
-                Nombre          = d.Descripcion,
-                Ambiente        = "tienda",
-                CantidadVendida = d.Cantidad,
-                Ingreso         = d.Subtotal,
-                Costo           = costoTotal,
-                Utilidad        = Math.Round(d.Subtotal - costoTotal, 2),
+                Nombre            = d.Descripcion,
+                Ambiente          = "tienda",
+                CantidadVendida   = d.Cantidad,
+                Ingreso           = d.Subtotal,
+                Costo             = costoTotal,
+                Utilidad          = Math.Round(d.Subtotal - costoTotal, 2),
+                NumeroComprobante = $"{d.Comprobante!.Serie}-{d.Comprobante.Numero:D5}",
+                TipoComprobante   = d.Comprobante.TipoComprobante,
             };
         }).ToList();
 
@@ -429,12 +433,14 @@ public class ReporteService : IReporteService
 
         var itemsSinCosto = detallesOtros.Select(d => new LiquidacionItemDto
         {
-            Nombre          = d.Descripcion,
-            Ambiente        = d.Comprobante!.TipoAmbiente,
-            CantidadVendida = d.Cantidad,
-            Ingreso         = d.Subtotal,
-            Costo           = null,
-            Utilidad        = null,
+            Nombre            = d.Descripcion,
+            Ambiente          = d.Comprobante!.TipoAmbiente,
+            CantidadVendida   = d.Cantidad,
+            Ingreso           = d.Subtotal,
+            Costo             = null,
+            Utilidad          = null,
+            NumeroComprobante = $"{d.Comprobante.Serie}-{d.Comprobante.Numero:D5}",
+            TipoComprobante   = d.Comprobante.TipoComprobante,
         });
 
         var items = itemsConCosto
@@ -442,6 +448,7 @@ public class ReporteService : IReporteService
             {
                 Nombre = i.Nombre, Ambiente = i.Ambiente, CantidadVendida = i.CantidadVendida,
                 Ingreso = i.Ingreso, Costo = i.Costo, Utilidad = i.Utilidad,
+                NumeroComprobante = i.NumeroComprobante, TipoComprobante = i.TipoComprobante,
             })
             .Concat(itemsSinCosto)
             .OrderByDescending(i => i.Ingreso)
@@ -449,11 +456,52 @@ public class ReporteService : IReporteService
 
         var apertura = await _db.AperturasCaja.AsNoTracking().FirstOrDefaultAsync(a => a.Fecha >= inicio && a.Fecha < fin);
         var cierre   = await _db.CierresCaja.AsNoTracking().FirstOrDefaultAsync(c => c.Fecha >= inicio && c.Fecha < fin);
-        var egresos  = await _db.EgresosCajaChica.AsNoTracking().Where(e => e.Fecha >= inicio && e.Fecha < fin).SumAsync(e => e.Monto);
-        var ventasSistema = await _db.Comprobantes.AsNoTracking()
+        var egresosLista = await _db.EgresosCajaChica.AsNoTracking()
+            .Where(e => e.Fecha >= inicio && e.Fecha < fin)
+            .OrderBy(e => e.Fecha)
+            .ToListAsync();
+        var egresos = egresosLista.Sum(e => e.Monto);
+
+        // Se materializa la lista (y no un simple SumAsync) porque de acá salen varios
+        // desgloses distintos: por forma de pago, por ambiente y por tipo de comprobante.
+        var comprobantesDia = await _db.Comprobantes.AsNoTracking()
             .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin && c.Estado != "ANULADO" && c.Cobrado
                         && c.TipoComprobante != "NC")
-            .SumAsync(c => c.Total);
+            .ToListAsync();
+        var ventasSistema = comprobantesDia.Sum(c => c.Total);
+
+        var montoInterno = comprobantesDia.Where(c => c.TipoComprobante == "NV").Sum(c => c.Total);
+        var montoSunat   = comprobantesDia.Where(c => c.TipoComprobante is "BI" or "FI").Sum(c => c.Total);
+
+        // Desglose por forma de pago real de cada comprobante — Mixto se reparte entre
+        // efectivo y yape según MontoEfectivoMixto (el resto del total es Yape/Plin).
+        decimal ventasEfectivo = 0, ventasYape = 0, ventasOtros = 0;
+        foreach (var c in comprobantesDia)
+        {
+            switch (c.MetodoPago)
+            {
+                case MetodoPago.Efectivo:
+                    ventasEfectivo += c.Total;
+                    break;
+                case MetodoPago.YapePlin:
+                    ventasYape += c.Total;
+                    break;
+                case MetodoPago.Mixto:
+                    var parteEfectivo = c.MontoEfectivoMixto ?? 0;
+                    ventasEfectivo += parteEfectivo;
+                    ventasYape     += c.Total - parteEfectivo;
+                    break;
+                default: // Transferencia (legado, ya no seleccionable) u otro caso no contemplado
+                    ventasOtros += c.Total;
+                    break;
+            }
+        }
+
+        var ventasPorAmbiente = comprobantesDia
+            .GroupBy(c => c.TipoAmbiente)
+            .Select(g => new VentaAmbienteDto { Ambiente = g.Key, Total = g.Sum(c => c.Total) })
+            .OrderByDescending(v => v.Total)
+            .ToList();
 
         var efectivo      = cierre?.EfectivoFisico ?? 0;
         var yape          = cierre?.YapeFisico ?? 0;
@@ -476,6 +524,18 @@ public class ReporteService : IReporteService
             IngresoTotal         = items.Sum(i => i.Ingreso),
             CostoTotal           = itemsConCosto.Count > 0 ? itemsConCosto.Sum(i => i.Costo) : null,
             UtilidadTotal        = itemsConCosto.Count > 0 ? itemsConCosto.Sum(i => i.Utilidad) : null,
+            VentasEfectivo       = ventasEfectivo,
+            VentasYape           = ventasYape,
+            VentasOtros          = ventasOtros,
+            MontoInterno         = montoInterno,
+            MontoSunat           = montoSunat,
+            VentasPorAmbiente    = ventasPorAmbiente,
+            EgresosDetalle       = egresosLista.Select(e => new EgresoLiquidacionDto
+            {
+                Concepto    = e.Concepto,
+                Monto       = e.Monto,
+                Responsable = e.Responsable,
+            }).ToList(),
             Items                = items,
         };
     }

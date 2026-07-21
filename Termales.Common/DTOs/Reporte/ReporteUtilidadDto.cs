@@ -20,4 +20,8 @@ public class UtilidadDetalleDto
     public decimal Ingreso { get; set; }
     public decimal Costo { get; set; }
     public decimal Utilidad { get; set; }
+    /// <summary>Comprobante al que pertenece esta línea, ej. "BI01-00123".</summary>
+    public string NumeroComprobante { get; set; } = string.Empty;
+    /// <summary>NV | BI | FI</summary>
+    public string TipoComprobante { get; set; } = string.Empty;
 }
