@@ -503,6 +503,11 @@ public class ReporteService : IReporteService
             .OrderByDescending(v => v.Total)
             .ToList();
 
+        var montoAnulado = await _db.Comprobantes.AsNoTracking()
+            .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin && c.Estado == "ANULADO"
+                        && c.TipoComprobante != "NC")
+            .SumAsync(c => c.Total);
+
         var efectivo      = cierre?.EfectivoFisico ?? 0;
         var yape          = cierre?.YapeFisico ?? 0;
         var transferencia = cierre?.TransferenciaFisico ?? 0;
@@ -529,6 +534,7 @@ public class ReporteService : IReporteService
             VentasOtros          = ventasOtros,
             MontoInterno         = montoInterno,
             MontoSunat           = montoSunat,
+            MontoAnulado         = montoAnulado,
             VentasPorAmbiente    = ventasPorAmbiente,
             EgresosDetalle       = egresosLista.Select(e => new EgresoLiquidacionDto
             {

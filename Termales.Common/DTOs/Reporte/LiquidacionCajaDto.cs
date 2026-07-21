@@ -36,6 +36,9 @@ public class LiquidacionCajaDto
     /// <summary>Boletas + Facturas del día — sí se envían/simulan ante SUNAT.</summary>
     public decimal MontoSunat { get; set; }
 
+    /// <summary>Comprobantes del día que terminaron anulados — no cuentan en VentasSistema/IngresoTotal.</summary>
+    public decimal MontoAnulado { get; set; }
+
     public List<VentaAmbienteDto> VentasPorAmbiente { get; set; } = [];
     public List<EgresoLiquidacionDto> EgresosDetalle { get; set; } = [];
 
