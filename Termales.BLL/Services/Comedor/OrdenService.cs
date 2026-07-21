@@ -285,7 +285,9 @@ public class OrdenService : IOrdenService
         if (orden.Estado != EstadoOrden.EnCocina)
             return ApiResponse<OrdenDto>.Fallido("Solo se pueden marcar como listas las órdenes que están en cocina");
 
-        foreach (var detalle in orden.Detalles)
+        // Los ítems que el mesero ya sacó de la orden (Cancelado) no deben
+        // revivir acá — si no, "Marcar lista" los hace reaparecer como listos.
+        foreach (var detalle in orden.Detalles.Where(d => d.Estado != EstadoOrdenDetalle.Cancelado))
             detalle.Estado = EstadoOrdenDetalle.Listo;
 
         orden.Estado = EstadoOrden.Lista;
