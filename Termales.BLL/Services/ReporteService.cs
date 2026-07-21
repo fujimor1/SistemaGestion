@@ -311,21 +311,76 @@ public class ReporteService : IReporteService
         var detalles = await _db.ComprobanteDetalles.AsNoTracking()
             .Include(d => d.Comprobante)
             .Where(d => d.Comprobante!.FechaEmision >= inicio && d.Comprobante.FechaEmision < fin &&
-                        d.Comprobante.Estado != "ANULADO" && d.Comprobante.TipoComprobante != "NC")
+                        d.Comprobante.Estado != "ANULADO" && d.Comprobante.TipoComprobante != "NC" &&
+                        d.Comprobante.Cobrado)
             .ToListAsync();
 
-        var porProducto = detalles
-            .GroupBy(d => d.Descripcion)
-            .Select(g => new ProductoMasVendidoDto
+        // Aparte, para poder repartir cada ambiente en efectivo/Yape según la forma de
+        // pago real de cada venta (igual que en Liquidación de Caja).
+        var comprobantesRango = await _db.Comprobantes.AsNoTracking()
+            .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin && c.Estado != "ANULADO"
+                        && c.Cobrado && c.TipoComprobante != "NC")
+            .ToListAsync();
+
+        var ambientes = detalles
+            .GroupBy(d => d.Comprobante!.TipoAmbiente)
+            .Select(gAmbiente =>
             {
-                Descripcion     = g.Key,
-                CantidadVendida = g.Sum(d => d.Cantidad),
-                MontoTotal      = g.Sum(d => d.Subtotal),
+                var productos = gAmbiente
+                    .GroupBy(d => d.Descripcion)
+                    .Select(g =>
+                    {
+                        var cantidad = g.Sum(d => d.Cantidad);
+                        var monto    = g.Sum(d => d.Subtotal);
+                        return new ProductoMasVendidoDto
+                        {
+                            Descripcion     = g.Key,
+                            CantidadVendida = cantidad,
+                            MontoTotal      = monto,
+                            PrecioUnitario  = cantidad > 0 ? Math.Round(monto / cantidad, 2) : 0,
+                        };
+                    })
+                    .OrderByDescending(p => p.CantidadVendida)
+                    .ToList();
+
+                decimal efectivo = 0, yape = 0;
+                foreach (var c in comprobantesRango.Where(c => c.TipoAmbiente == gAmbiente.Key))
+                {
+                    switch (c.MetodoPago)
+                    {
+                        case MetodoPago.YapePlin:
+                            yape += c.Total;
+                            break;
+                        case MetodoPago.Mixto:
+                            var parteEfectivo = c.MontoEfectivoMixto ?? 0;
+                            efectivo += parteEfectivo;
+                            yape     += c.Total - parteEfectivo;
+                            break;
+                        default: // Efectivo, y Transferencia (legado, ya no seleccionable)
+                            efectivo += c.Total;
+                            break;
+                    }
+                }
+
+                return new AmbienteProductosMasVendidosDto
+                {
+                    Ambiente      = gAmbiente.Key,
+                    Productos     = productos,
+                    MontoEfectivo = efectivo,
+                    MontoYape     = yape,
+                    MontoTotal    = productos.Sum(p => p.MontoTotal),
+                };
             })
-            .OrderByDescending(p => p.CantidadVendida)
+            .OrderByDescending(a => a.MontoTotal)
             .ToList();
 
-        return new ReporteProductosMasVendidosDto { Desde = desde, Hasta = hasta, Detalle = porProducto };
+        return new ReporteProductosMasVendidosDto
+        {
+            Desde             = desde,
+            Hasta             = hasta,
+            Ambientes         = ambientes,
+            MontoTotalGeneral = ambientes.Sum(a => a.MontoTotal),
+        };
     }
 
     // ── Utilidad (Comedor + Tienda) ─────────────────────────────────────────────
