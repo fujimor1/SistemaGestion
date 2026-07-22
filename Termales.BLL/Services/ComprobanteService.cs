@@ -757,6 +757,31 @@ public class ComprobanteService : IComprobanteService
         return ApiResponse.Exitoso("Comprobante marcado como cobrado");
     }
 
+    // Corrige la forma de pago de un comprobante ya emitido (ej. el cajero se
+    // equivocó al elegir Efectivo en vez de Yape) — a diferencia de
+    // MarcarCobradoAsync, no toca Cobrado/FechaCobro, solo el método de pago.
+    public async Task<ApiResponse> ActualizarMetodoPagoAsync(int comprobanteId, ActualizarMetodoPagoDto dto)
+    {
+        var comprobante = await _uow.Comprobantes.ObtenerPorIdAsync(comprobanteId);
+        if (comprobante is null)
+            return ApiResponse.Fallido("Comprobante no encontrado");
+        if (comprobante.Estado == "ANULADO")
+            return ApiResponse.Fallido("El comprobante está anulado");
+        if (dto.MetodoPago == MetodoPago.Fiado)
+            return ApiResponse.Fallido("No se puede dejar un comprobante ya cobrado como 'Fiado'");
+        if (dto.MetodoPago == MetodoPago.Mixto)
+        {
+            if (dto.MontoEfectivoMixto is null || dto.MontoEfectivoMixto < 0 || dto.MontoEfectivoMixto > comprobante.Total)
+                return ApiResponse.Fallido("El monto en efectivo del pago mixto no puede ser mayor al total ni negativo");
+        }
+
+        comprobante.MetodoPago         = dto.MetodoPago;
+        comprobante.MontoEfectivoMixto = dto.MetodoPago == MetodoPago.Mixto ? dto.MontoEfectivoMixto : null;
+        await _uow.Comprobantes.ActualizarAsync(comprobante);
+        await _uow.GuardarCambiosAsync();
+        return ApiResponse.Exitoso("Forma de pago actualizada");
+    }
+
     public Task<ApiResponse> SolicitarAnulacionAsync(int id, string motivo, string cajero) =>
         _solicitudes.SolicitarAsync(id, motivo, cajero);
 

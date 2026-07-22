@@ -89,11 +89,11 @@ public class ItemMenuService : IItemMenuService
         return ApiResponse<ItemMenuDto>.Exitoso(MapearDto(itemCompleto!), "Item de menú actualizado exitosamente");
     }
 
+    // La receta es opcional — hay platos/productos del menú que no consumen ningún
+    // insumo con stock propio (ej. algo que se compra ya preparado), así que no se
+    // exige al menos una línea; solo se valida que, si hay líneas, cada insumo exista.
     private async Task<string?> ValidarRecetaAsync(List<RecetaInsumoInputDto> receta)
     {
-        if (receta.Count == 0)
-            return "Debe registrar al menos un insumo en la receta";
-
         foreach (var r in receta)
         {
             var insumoExiste = await _uow.Insumos.ExisteAsync(i => i.InsumoId == r.InsumoId && i.Activo);

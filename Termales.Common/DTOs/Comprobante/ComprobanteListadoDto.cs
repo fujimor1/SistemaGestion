@@ -26,6 +26,16 @@ public class MarcarCobradoDto
     public MetodoPago MetodoPago { get; set; }
 }
 
+/// <summary>Corrige la forma de pago de un comprobante ya emitido (ej. el cajero se
+/// equivocó al elegir Efectivo en vez de Yape) — no toca Cobrado/FechaCobro ni nada
+/// más del comprobante.</summary>
+public class ActualizarMetodoPagoDto
+{
+    public MetodoPago MetodoPago { get; set; }
+    /// <summary>Solo si MetodoPago == Mixto: cuánto de eso es efectivo (el resto es Yape/Plin).</summary>
+    public decimal? MontoEfectivoMixto { get; set; }
+}
+
 /// <summary>Comprobante ya emitido, con sus ítems, para reimprimir/ver el ticket
 /// desde "Comprobantes Emitidos" (el eventual PDF de Nubefact usa EnlacePdf en
 /// su lugar; esto cubre las Notas de Venta y el modo simulación).</summary>

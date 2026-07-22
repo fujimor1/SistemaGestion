@@ -14,6 +14,7 @@ public interface IComprobanteService
     Task<IEnumerable<ComprobanteListadoDto>> ObtenerPorFechaAsync(string? fecha, string? tipoAmbiente);
     Task<IEnumerable<ComprobanteListadoDto>> ObtenerPendientesDeCobroAsync();
     Task<ApiResponse> MarcarCobradoAsync(int comprobanteId, MetodoPago metodoPagoReal);
+    Task<ApiResponse> ActualizarMetodoPagoAsync(int comprobanteId, ActualizarMetodoPagoDto dto);
     Task<ApiResponse> SolicitarAnulacionAsync(int id, string motivo, string cajero);
     Task<ApiResponse<ComprobanteResultadoDto>> EmitirNotaCreditoAsync(int comprobanteOrigenId, EmitirNotaCreditoDto dto);
     Task<IEnumerable<AnulacionListadoDto>> ObtenerAnulacionesAsync(string? desde, string? hasta);

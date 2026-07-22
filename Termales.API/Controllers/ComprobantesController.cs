@@ -116,6 +116,13 @@ public class ComprobantesController : ControllerBase
         return resultado.Exito ? Ok(resultado) : BadRequest(resultado);
     }
 
+    [HttpPatch("{id:int}/metodo-pago")]
+    public async Task<IActionResult> ActualizarMetodoPago(int id, [FromBody] ActualizarMetodoPagoDto dto)
+    {
+        var resultado = await _service.ActualizarMetodoPagoAsync(id, dto);
+        return resultado.Exito ? Ok(resultado) : BadRequest(resultado);
+    }
+
     [HttpPost("{id:int}/solicitar-anulacion")]
     public async Task<IActionResult> SolicitarAnulacion(int id, [FromBody] SolicitarAnulacionDto dto)
     {
