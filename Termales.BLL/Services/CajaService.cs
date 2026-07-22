@@ -22,11 +22,33 @@ public class CajaService : ICajaService
         ["tienda"]      = "Tienda",
     };
 
+    // Perú es UTC-5 fijo (sin horario de verano): medianoche en Lima = 05:00 UTC del
+    // mismo día. Antes todo este archivo usaba DateTime.UtcNow.Date directo, así que
+    // entre las 7pm y medianoche hora Perú (cuando UTC ya cruzó al día siguiente) el
+    // sistema creía que ya era "mañana": no encontraba la apertura de hoy, dejaba
+    // registrar un cierre para el día equivocado, y al día siguiente la caja aparecía
+    // "ya cerrada" sin que nadie la hubiera cerrado en ese día real — un cierre
+    // "fantasma" que explica que la caja se vea cerrada sin que el cajero la cerrara.
+    private static readonly TimeSpan OffsetPeru = TimeSpan.FromHours(5);
+
+    // Día de negocio "hoy" en Perú, para las claves de Apertura/Cierre (que solo se
+    // comparan por fecha, sin hora).
+    private static DateTime HoyPeru() => (DateTime.UtcNow - OffsetPeru).Date;
+
+    // Rango [inicio, fin) en UTC de un día de negocio en Perú, para filtrar
+    // timestamps reales (ej. EgresoCajaChica.Fecha, Comprobante.FechaEmision) en vez
+    // de compararlos por fecha directa.
+    private static (DateTime inicio, DateTime fin) RangoDiaPeru(DateTime dia)
+    {
+        var inicio = dia.Date + OffsetPeru;
+        return (inicio, inicio.AddDays(1));
+    }
+
     // ── Apertura ──────────────────────────────────────────────────────────────
 
     public async Task<AperturaCajaDto?> ObtenerAperturaHoyAsync()
     {
-        var hoy = DateTime.UtcNow.Date;
+        var hoy = HoyPeru();
         var apertura = await _db.AperturasCaja.AsNoTracking()
             .FirstOrDefaultAsync(a => a.Fecha.Date == hoy);
         return apertura is null ? null : MapApertura(apertura);
@@ -34,7 +56,7 @@ public class CajaService : ICajaService
 
     public async Task<AperturaCajaDto> AbrirCajaAsync(AbrirCajaDto dto, string registradoPor)
     {
-        var hoy = DateTime.UtcNow.Date;
+        var hoy = HoyPeru();
         var existente = await _db.AperturasCaja.FirstOrDefaultAsync(a => a.Fecha.Date == hoy);
         if (existente is not null)
             throw new InvalidOperationException("La caja ya fue abierta hoy.");
@@ -53,7 +75,7 @@ public class CajaService : ICajaService
 
     public async Task<bool> HayCajaAbiertaAsync()
     {
-        var hoy = DateTime.UtcNow.Date;
+        var hoy = HoyPeru();
         var hayApertura = await _db.AperturasCaja.AsNoTracking().AnyAsync(a => a.Fecha.Date == hoy);
         if (!hayApertura) return false;
 
@@ -65,14 +87,14 @@ public class CajaService : ICajaService
 
     public async Task<IEnumerable<EgresoCajaChicaDto>> ObtenerEgresosHoyAsync()
     {
-        var hoy = DateTime.UtcNow.Date;
-        return await ObtenerEgresosPorFechaAsync(hoy);
+        return await ObtenerEgresosPorFechaAsync(HoyPeru());
     }
 
     public async Task<IEnumerable<EgresoCajaChicaDto>> ObtenerEgresosPorFechaAsync(DateTime fecha)
     {
+        var (inicio, fin) = RangoDiaPeru(fecha);
         var egresos = await _db.EgresosCajaChica.AsNoTracking()
-            .Where(e => e.Fecha.Date == fecha.Date)
+            .Where(e => e.Fecha >= inicio && e.Fecha < fin)
             .OrderByDescending(e => e.Fecha)
             .ToListAsync();
         return egresos.Select(MapEgreso);
@@ -116,9 +138,10 @@ public class CajaService : ICajaService
     // suma al total general.
     private async Task<(decimal Efectivo, decimal YapePlin, decimal TotalGeneral)> ObtenerTotalesPorMetodoAsync(DateTime dia)
     {
+        var (inicio, fin) = RangoDiaPeru(dia);
         var comprobantes = await _db.Comprobantes.AsNoTracking()
             .Where(c => c.Estado != "ANULADO" && c.Cobrado && c.TipoComprobante != "NC"
-                        && (c.FechaCobro ?? c.FechaEmision).Date == dia)
+                        && (c.FechaCobro ?? c.FechaEmision) >= inicio && (c.FechaCobro ?? c.FechaEmision) < fin)
             .Select(c => new { c.MetodoPago, c.Total, c.MontoEfectivoMixto })
             .ToListAsync();
 
@@ -146,7 +169,8 @@ public class CajaService : ICajaService
 
     public async Task<DatosCierreDto> ObtenerDatosCierreAsync()
     {
-        var hoy = DateTime.UtcNow.Date;
+        var hoy = HoyPeru();
+        var (inicio, fin) = RangoDiaPeru(hoy);
 
         var (efectivoSistema, yapeSistema, totalSistema) = await ObtenerTotalesPorMetodoAsync(hoy);
 
@@ -154,12 +178,12 @@ public class CajaService : ICajaService
             .FirstOrDefaultAsync(a => a.Fecha.Date == hoy);
 
         var totalEgresos = await _db.EgresosCajaChica.AsNoTracking()
-            .Where(e => e.Fecha.Date == hoy)
+            .Where(e => e.Fecha >= inicio && e.Fecha < fin)
             .SumAsync(e => (decimal?)e.Monto) ?? 0;
 
         var resumenRaw = await _db.Comprobantes.AsNoTracking()
-            .Where(c => (c.FechaCobro ?? c.FechaEmision).Date == hoy && c.Estado != "ANULADO" && c.Cobrado
-                        && c.TipoComprobante != "NC")
+            .Where(c => (c.FechaCobro ?? c.FechaEmision) >= inicio && (c.FechaCobro ?? c.FechaEmision) < fin
+                        && c.Estado != "ANULADO" && c.Cobrado && c.TipoComprobante != "NC")
             .GroupBy(c => c.TipoAmbiente)
             .Select(g => new { Ambiente = g.Key, Cantidad = g.Count(), Total = g.Sum(c => c.Total) })
             .ToListAsync();
@@ -190,7 +214,8 @@ public class CajaService : ICajaService
 
     public async Task<CierreCajaDto> CerrarCajaAsync(CerrarCajaDto dto)
     {
-        var hoy = DateTime.UtcNow.Date;
+        var hoy = HoyPeru();
+        var (inicio, fin) = RangoDiaPeru(hoy);
 
         var existente = await _db.CierresCaja.FirstOrDefaultAsync(c => c.Fecha.Date == hoy);
         if (existente is not null)
@@ -202,7 +227,7 @@ public class CajaService : ICajaService
             .FirstOrDefaultAsync(a => a.Fecha.Date == hoy);
 
         var totalEgresos = await _db.EgresosCajaChica.AsNoTracking()
-            .Where(e => e.Fecha.Date == hoy)
+            .Where(e => e.Fecha >= inicio && e.Fecha < fin)
             .SumAsync(e => (decimal?)e.Monto) ?? 0;
 
         var totalFisico = dto.EfectivoFisico + dto.YapeFisico + dto.TransferenciaFisico;
