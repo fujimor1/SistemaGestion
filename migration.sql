@@ -2240,3 +2240,22 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260722101557_AgregarMontoDejadoCierreCaja') THEN
+    ALTER TABLE caja.cierres_caja ADD "MontoDejado" numeric NOT NULL DEFAULT 0.0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260722101557_AgregarMontoDejadoCierreCaja') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260722101557_AgregarMontoDejadoCierreCaja', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

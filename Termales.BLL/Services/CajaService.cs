@@ -258,6 +258,7 @@ public class CajaService : ICajaService
             TotalEgresos = totalEgresos,
             MontoApertura = montoApertura,
             Diferencia = diferencia,
+            MontoDejado = dto.MontoDejado,
             Observaciones = dto.Observaciones,
             EncargadoCierre = dto.EncargadoCierre,
         };
@@ -305,6 +306,7 @@ public class CajaService : ICajaService
         TotalEgresos = c.TotalEgresos,
         MontoApertura = c.MontoApertura,
         Diferencia = c.Diferencia,
+        MontoDejado = c.MontoDejado,
         Observaciones = c.Observaciones,
         EncargadoCierre = c.EncargadoCierre,
         FechaRegistro = c.FechaRegistro,

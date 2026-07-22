@@ -43,6 +43,8 @@ public class CierreCajaDto
     public decimal TotalEgresos { get; set; }
     public decimal MontoApertura { get; set; }
     public decimal Diferencia { get; set; }
+    /// <summary>Efectivo físico que el encargado deja en caja para la apertura del día siguiente.</summary>
+    public decimal MontoDejado { get; set; }
     public string? Observaciones { get; set; }
     public string EncargadoCierre { get; set; } = string.Empty;
     public DateTime FechaRegistro { get; set; }
@@ -53,6 +55,8 @@ public class CerrarCajaDto
     public decimal EfectivoFisico { get; set; }
     public decimal YapeFisico { get; set; }
     public decimal TransferenciaFisico { get; set; }
+    /// <summary>Efectivo físico que el encargado deja en caja para la apertura del día siguiente.</summary>
+    public decimal MontoDejado { get; set; }
     public string? Observaciones { get; set; }
     public string EncargadoCierre { get; set; } = string.Empty;
 }

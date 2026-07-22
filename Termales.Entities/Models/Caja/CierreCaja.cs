@@ -19,6 +19,9 @@ public class CierreCaja
     public decimal MontoApertura { get; set; }
     // Resultado
     public decimal Diferencia { get; set; }
+    // Cuánto efectivo físico deja el encargado en la caja (para la apertura del
+    // día siguiente) — el resto de lo contado se retira/deposita aparte.
+    public decimal MontoDejado { get; set; }
     // Meta
     public string? Observaciones { get; set; }
     public string EncargadoCierre { get; set; } = string.Empty;
