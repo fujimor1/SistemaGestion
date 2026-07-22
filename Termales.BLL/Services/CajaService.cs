@@ -199,14 +199,22 @@ public class CajaService : ICajaService
         var cierreExistente = await _db.CierresCaja.AsNoTracking()
             .FirstOrDefaultAsync(c => c.Fecha.Date == hoy);
 
+        var montoApertura = apertura?.MontoInicial ?? 0;
+        // Los egresos salen físicamente de la caja — sin restarlos (y sin sumar la
+        // apertura), un cierre "sin diferencias" no detectaba que faltaba justo el
+        // monto de los egresos del día.
+        var efectivoEsperado = montoApertura + efectivoSistema - totalEgresos;
+
         return new DatosCierreDto
         {
             TotalSistema = totalSistema,
             EfectivoSistema = efectivoSistema,
             YapeSistema = yapeSistema,
-            MontoApertura = apertura?.MontoInicial ?? 0,
+            MontoApertura = montoApertura,
             TotalEgresos = totalEgresos,
-            SaldoCajaChica = (apertura?.MontoInicial ?? 0) - totalEgresos,
+            SaldoCajaChica = montoApertura - totalEgresos,
+            EfectivoEsperado = efectivoEsperado,
+            TotalEsperado = efectivoEsperado + yapeSistema,
             ResumenPorAmbiente = resumen,
             CierreExistente = cierreExistente is null ? null : MapCierre(cierreExistente),
         };
@@ -230,8 +238,13 @@ public class CajaService : ICajaService
             .Where(e => e.Fecha >= inicio && e.Fecha < fin)
             .SumAsync(e => (decimal?)e.Monto) ?? 0;
 
+        var montoApertura = apertura?.MontoInicial ?? 0;
+        // Igual que en ObtenerDatosCierreAsync: los egresos salen físicamente de la
+        // caja, así que la diferencia se calcula contra lo que debería haber
+        // (apertura + ventas - egresos), no contra las ventas crudas.
+        var totalEsperado = montoApertura + totalSistema - totalEgresos;
         var totalFisico = dto.EfectivoFisico + dto.YapeFisico + dto.TransferenciaFisico;
-        var diferencia = totalFisico - totalSistema;
+        var diferencia = totalFisico - totalEsperado;
 
         var cierre = new CierreCaja
         {
@@ -243,7 +256,7 @@ public class CajaService : ICajaService
             YapeFisico = dto.YapeFisico,
             TransferenciaFisico = dto.TransferenciaFisico,
             TotalEgresos = totalEgresos,
-            MontoApertura = apertura?.MontoInicial ?? 0,
+            MontoApertura = montoApertura,
             Diferencia = diferencia,
             Observaciones = dto.Observaciones,
             EncargadoCierre = dto.EncargadoCierre,

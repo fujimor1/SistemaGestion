@@ -126,12 +126,15 @@ public class ReporteService : IReporteService
         var inicio = ParseDia(desde).inicio;
         var fin    = ParseDia(hasta).fin;
 
+        // AperturaCaja.Fecha y CierreCaja.Fecha son solo una "clave de día" (medianoche,
+        // sin hora real) — a diferencia de egresos/comprobantes, comparar contra el rango
+        // con el offset de ParseDia nunca calzaba y ningún día aparecía con apertura/cierre.
         var aperturas = await _db.AperturasCaja.AsNoTracking()
-            .Where(a => a.Fecha >= inicio && a.Fecha < fin)
+            .Where(a => a.Fecha.Date >= inicio.Date && a.Fecha.Date < fin.Date)
             .ToListAsync();
 
         var cierres = await _db.CierresCaja.AsNoTracking()
-            .Where(c => c.Fecha >= inicio && c.Fecha < fin)
+            .Where(c => c.Fecha.Date >= inicio.Date && c.Fecha.Date < fin.Date)
             .ToListAsync();
 
         var egresos = await _db.EgresosCajaChica.AsNoTracking()
@@ -509,8 +512,13 @@ public class ReporteService : IReporteService
             .OrderByDescending(i => i.Ingreso)
             .ToList();
 
-        var apertura = await _db.AperturasCaja.AsNoTracking().FirstOrDefaultAsync(a => a.Fecha >= inicio && a.Fecha < fin);
-        var cierre   = await _db.CierresCaja.AsNoTracking().FirstOrDefaultAsync(c => c.Fecha >= inicio && c.Fecha < fin);
+        // A diferencia de EgresoCajaChica/Comprobante (timestamps reales, por eso se
+        // comparan con el rango [inicio, fin)), AperturaCaja.Fecha y CierreCaja.Fecha
+        // son solo una "clave de día" (medianoche, sin la hora de apertura/cierre real)
+        // — compararlas contra el rango con offset de ParseDia nunca calzaba, así que
+        // la apertura/cierre del día jamás se encontraba y todo el cuadre salía en 0.
+        var apertura = await _db.AperturasCaja.AsNoTracking().FirstOrDefaultAsync(a => a.Fecha.Date == inicio.Date);
+        var cierre   = await _db.CierresCaja.AsNoTracking().FirstOrDefaultAsync(c => c.Fecha.Date == inicio.Date);
         var egresosLista = await _db.EgresosCajaChica.AsNoTracking()
             .Where(e => e.Fecha >= inicio && e.Fecha < fin)
             .OrderBy(e => e.Fecha)

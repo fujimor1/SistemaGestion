@@ -19,6 +19,13 @@ public class DatosCierreDto
     public decimal MontoApertura { get; set; }
     public decimal TotalEgresos { get; set; }
     public decimal SaldoCajaChica { get; set; }
+    // Lo que debería haber físicamente en caja considerando que los egresos salen de
+    // ahí mismo: apertura + lo cobrado - lo pagado en egresos. Antes el conteo físico
+    // se comparaba contra EfectivoSistema/TotalSistema directo (sin restar egresos ni
+    // sumar la apertura), así que un cierre sin diferencias no detectaba que faltaba
+    // exactamente el monto de los egresos.
+    public decimal EfectivoEsperado { get; set; }
+    public decimal TotalEsperado { get; set; }
     public List<ResumenAmbienteDto> ResumenPorAmbiente { get; set; } = new();
     public CierreCajaDto? CierreExistente { get; set; }
 }
