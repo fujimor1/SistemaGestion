@@ -28,10 +28,21 @@ public class GenerarComprobanteDto
     public decimal? MontoEfectivoMixto { get; set; }
 }
 
+public class ItemComedorCobroDto
+{
+    public int OrdenDetalleId { get; set; }
+
+    /// <summary>Cuántas unidades de esa línea se cobran ahora — puede ser menor a la cantidad
+    /// total de la línea (ej. cobrar 2 de 4 cafés), en cuyo caso la línea se divide: el resto
+    /// queda pendiente para que el grupo lo cobre después.</summary>
+    public int Cantidad { get; set; }
+}
+
 public class GenerarComprobanteComedorDto : GenerarComprobanteDto
 {
-    /// <summary>Líneas de la orden a cobrar en este comprobante (permite cobro parcial por grupo).</summary>
-    public List<int> OrdenDetalleIds { get; set; } = new();
+    /// <summary>Líneas (y cuántas unidades de cada una) a cobrar en este comprobante — permite
+    /// cobro parcial tanto por línea como dentro de una misma línea.</summary>
+    public List<ItemComedorCobroDto> Items { get; set; } = new();
 }
 
 public class ItemBanioDto

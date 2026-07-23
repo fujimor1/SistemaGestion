@@ -13,6 +13,7 @@ using Termales.Common.Wrappers;
 using Termales.DAL.UnitOfWork;
 using Termales.Entities.Enums;
 using Termales.Entities.Models;
+using Termales.Entities.Models.Comedor;
 
 namespace Termales.BLL.Services;
 
@@ -64,44 +65,85 @@ public class ComprobanteService : IComprobanteService
             return ApiResponse<ComprobanteResultadoDto>.Fallido("Orden no encontrada");
         if (orden.Estado != EstadoOrden.ParaCobrar)
             return ApiResponse<ComprobanteResultadoDto>.Fallido("La orden no está lista para cobrar");
-        if (dto.OrdenDetalleIds is null || dto.OrdenDetalleIds.Count == 0)
+        if (dto.Items is null || dto.Items.Count == 0)
             return ApiResponse<ComprobanteResultadoDto>.Fallido("Debe seleccionar al menos un plato a cobrar");
 
-        var idsUnicos = dto.OrdenDetalleIds.Distinct().ToList();
-        var detallesACobrar = orden.Detalles.Where(d => idsUnicos.Contains(d.OrdenDetalleId)).ToList();
-        if (detallesACobrar.Count != idsUnicos.Count)
-            return ApiResponse<ComprobanteResultadoDto>.Fallido("Alguna línea seleccionada no pertenece a esta orden");
-        if (detallesACobrar.Any(d => d.Estado == EstadoOrdenDetalle.Cancelado))
-            return ApiResponse<ComprobanteResultadoDto>.Fallido("No se puede cobrar una línea cancelada");
-        if (detallesACobrar.Any(d => d.ComprobanteId is not null))
-            return ApiResponse<ComprobanteResultadoDto>.Fallido("Alguna línea seleccionada ya fue cobrada");
+        var idsUnicos = dto.Items.Select(i => i.OrdenDetalleId).Distinct().ToList();
+        if (idsUnicos.Count != dto.Items.Count)
+            return ApiResponse<ComprobanteResultadoDto>.Fallido("Cada línea solo puede aparecer una vez en el cobro");
 
-        var items = detallesACobrar.Select(d =>
+        var detallesPorId = orden.Detalles.ToDictionary(d => d.OrdenDetalleId);
+        foreach (var itemDto in dto.Items)
         {
-            var valorUnit = Math.Round(d.PrecioUnitario / 1.18m, 2);
-            var subtotal  = Math.Round(valorUnit * d.Cantidad, 2);
-            return new ItemComprobante
-            {
-                Descripcion    = d.ItemMenu?.Nombre ?? d.Producto?.Nombre ?? "Producto",
-                Cantidad       = d.Cantidad,
-                ValorUnitario  = valorUnit,
-                PrecioUnitario = d.PrecioUnitario,
-                Subtotal       = subtotal,
-                Igv            = Math.Round(d.PrecioUnitario * d.Cantidad - subtotal, 2),
-                Total          = Math.Round(d.PrecioUnitario * d.Cantidad, 2),
-            };
-        }).ToList();
+            if (!detallesPorId.TryGetValue(itemDto.OrdenDetalleId, out var detalle))
+                return ApiResponse<ComprobanteResultadoDto>.Fallido("Alguna línea seleccionada no pertenece a esta orden");
+            if (detalle.Estado == EstadoOrdenDetalle.Cancelado)
+                return ApiResponse<ComprobanteResultadoDto>.Fallido("No se puede cobrar una línea cancelada");
+            if (detalle.ComprobanteId is not null)
+                return ApiResponse<ComprobanteResultadoDto>.Fallido("Alguna línea seleccionada ya fue cobrada");
+            if (itemDto.Cantidad <= 0 || itemDto.Cantidad > detalle.Cantidad)
+                return ApiResponse<ComprobanteResultadoDto>.Fallido(
+                    $"Cantidad inválida para {detalle.ItemMenu?.Nombre ?? detalle.Producto?.Nombre ?? "un plato"}");
+        }
 
-        var monto = detallesACobrar.Sum(d => d.Subtotal);
+        // Si se cobra menos de la cantidad total de una línea (ej. 2 de 4 cafés), esa línea
+        // se divide: la original se queda con lo que resta pendiente, y se crea una línea
+        // nueva con la cantidad recién cobrada (a la que se le asigna el comprobante).
+        var items = new List<ItemComprobante>();
+        var detallesACobrar = new List<OrdenDetalle>();
+        decimal monto = 0;
+
+        foreach (var itemDto in dto.Items)
+        {
+            var detalle = detallesPorId[itemDto.OrdenDetalleId];
+            var valorUnit = Math.Round(detalle.PrecioUnitario / 1.18m, 2);
+
+            OrdenDetalle detalleACobrar;
+            if (itemDto.Cantidad == detalle.Cantidad)
+            {
+                detalleACobrar = detalle;
+            }
+            else
+            {
+                detalle.Cantidad -= itemDto.Cantidad;
+                detalleACobrar = new OrdenDetalle
+                {
+                    OrdenId        = orden.OrdenId,
+                    ItemMenuId     = detalle.ItemMenuId,
+                    ProductoId     = detalle.ProductoId,
+                    Cantidad       = itemDto.Cantidad,
+                    PrecioUnitario = detalle.PrecioUnitario,
+                    Estado         = detalle.Estado,
+                    Observaciones  = detalle.Observaciones,
+                };
+                orden.Detalles.Add(detalleACobrar);
+            }
+
+            var subtotalLinea = Math.Round(valorUnit * itemDto.Cantidad, 2);
+            var totalLinea    = Math.Round(detalle.PrecioUnitario * itemDto.Cantidad, 2);
+            items.Add(new ItemComprobante
+            {
+                Descripcion    = detalle.ItemMenu?.Nombre ?? detalle.Producto?.Nombre ?? "Producto",
+                Cantidad       = itemDto.Cantidad,
+                ValorUnitario  = valorUnit,
+                PrecioUnitario = detalle.PrecioUnitario,
+                Subtotal       = subtotalLinea,
+                Igv            = Math.Round(totalLinea - subtotalLinea, 2),
+                Total          = totalLinea,
+            });
+
+            // "monto" es lo que paga el cliente (con IGV incluido) — no el valor neto.
+            monto += totalLinea;
+            detallesACobrar.Add(detalleACobrar);
+        }
+        monto = Math.Round(monto, 2);
 
         var resultado = await Emitir(dto, monto, items, "comedor", ordenId);
         if (!resultado.Exito) return resultado;
 
         foreach (var detalle in detallesACobrar)
-        {
             detalle.ComprobanteId = resultado.Data!.ComprobanteId;
-            await _uow.Ordenes.ActualizarAsync(orden);
-        }
+        await _uow.Ordenes.ActualizarAsync(orden);
 
         // Solo se cierra la mesa cuando TODAS las líneas no canceladas ya
         // tienen comprobante — mientras queden platos sin cobrar, la orden
