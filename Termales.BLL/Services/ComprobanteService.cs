@@ -834,6 +834,8 @@ public class ComprobanteService : IComprobanteService
             Estado             = c.Estado,
             EnlacePdf          = string.IsNullOrWhiteSpace(c.EnlacePdf) ? null : c.EnlacePdf,
             FechaEmision       = c.FechaEmision,
+            MetodoPago         = c.MetodoPago,
+            MontoEfectivoMixto = c.MontoEfectivoMixto,
             Items = c.Detalles.Select(d => new ItemReciboDto
             {
                 Descripcion    = d.Descripcion,

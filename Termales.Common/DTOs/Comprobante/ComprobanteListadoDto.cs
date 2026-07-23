@@ -58,5 +58,7 @@ public class ComprobanteDetalleCompletoDto
     public string Estado { get; set; } = string.Empty;
     public string? EnlacePdf { get; set; }
     public DateTime FechaEmision { get; set; }
+    public MetodoPago MetodoPago { get; set; }
+    public decimal? MontoEfectivoMixto { get; set; }
     public List<ItemReciboDto> Items { get; set; } = new();
 }
