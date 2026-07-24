@@ -38,12 +38,21 @@ public class ReportesController : ControllerBase
 
     /// <summary>
     /// Reporte de caja en un rango de fechas: apertura, ventas, egresos, cierre y cuadre por día.
-    /// desde/hasta = "YYYY-MM-DD"
+    /// desde/hasta = "YYYY-MM-DD". cajero (opcional) filtra "Ventas sistema" por vendedor —
+    /// el cuadre físico (apertura/efectivo/yape/diferencia) siempre es del día completo.
     /// </summary>
     [HttpGet("caja")]
-    public async Task<IActionResult> GetCaja([FromQuery] string desde, [FromQuery] string hasta)
+    public async Task<IActionResult> GetCaja([FromQuery] string desde, [FromQuery] string hasta, [FromQuery] string? cajero = null)
     {
-        var resultado = await _service.ReporteCajaAsync(desde, hasta);
+        var resultado = await _service.ReporteCajaAsync(desde, hasta, cajero);
+        return Ok(resultado);
+    }
+
+    /// <summary>Nombres de cajeros (usuarios activos) para poblar el selector de filtro en los reportes.</summary>
+    [HttpGet("cajeros")]
+    public async Task<IActionResult> GetCajeros()
+    {
+        var resultado = await _service.ObtenerCajerosAsync();
         return Ok(resultado);
     }
 
@@ -74,11 +83,12 @@ public class ReportesController : ControllerBase
         return Ok(resultado);
     }
 
-    /// <summary>Productos/platos más vendidos, todas las ambientes, en un rango de fechas. desde/hasta = "YYYY-MM-DD"</summary>
+    /// <summary>Productos/platos más vendidos, todas las ambientes, en un rango de fechas.
+    /// desde/hasta = "YYYY-MM-DD". cajero (opcional) filtra por vendedor.</summary>
     [HttpGet("productos-mas-vendidos")]
-    public async Task<IActionResult> GetProductosMasVendidos([FromQuery] string desde, [FromQuery] string hasta)
+    public async Task<IActionResult> GetProductosMasVendidos([FromQuery] string desde, [FromQuery] string hasta, [FromQuery] string? cajero = null)
     {
-        var resultado = await _service.ReporteProductosMasVendidosAsync(desde, hasta);
+        var resultado = await _service.ReporteProductosMasVendidosAsync(desde, hasta, cajero);
         return Ok(resultado);
     }
 
@@ -107,11 +117,11 @@ public class ReportesController : ControllerBase
     }
 
     /// <summary>Acumulado cobrado por Yape/Plin (incluye la porción QR de pagos Mixto)
-    /// en un rango de fechas arbitrario. desde/hasta = "YYYY-MM-DD"</summary>
+    /// en un rango de fechas arbitrario. desde/hasta = "YYYY-MM-DD". cajero (opcional) filtra por vendedor.</summary>
     [HttpGet("pago-qr")]
-    public async Task<IActionResult> GetPagoQr([FromQuery] string desde, [FromQuery] string hasta)
+    public async Task<IActionResult> GetPagoQr([FromQuery] string desde, [FromQuery] string hasta, [FromQuery] string? cajero = null)
     {
-        var resultado = await _service.ReportePagoQrAsync(desde, hasta);
+        var resultado = await _service.ReportePagoQrAsync(desde, hasta, cajero);
         return Ok(resultado);
     }
 
@@ -132,14 +142,16 @@ public class ReportesController : ControllerBase
     }
 
     /// <summary>Resumen imprimible del día: todo lo vendido (con costo cuando se conoce) más el
-    /// cuadre de caja, sin importar la forma de pago. fecha = "YYYY-MM-DD"</summary>
+    /// cuadre de caja, sin importar la forma de pago. fecha = "YYYY-MM-DD". cajero (opcional)
+    /// filtra las ventas/ítems por vendedor — el cuadre físico (efectivo/yape/diferencia)
+    /// siempre es del día completo.</summary>
     [HttpGet("liquidacion-caja")]
-    public async Task<IActionResult> GetLiquidacionCaja([FromQuery] string fecha)
+    public async Task<IActionResult> GetLiquidacionCaja([FromQuery] string fecha, [FromQuery] string? cajero = null)
     {
         if (string.IsNullOrWhiteSpace(fecha))
             fecha = DateTime.UtcNow.AddHours(-5).ToString("yyyy-MM-dd");
 
-        var resultado = await _service.ReporteLiquidacionCajaAsync(fecha);
+        var resultado = await _service.ReporteLiquidacionCajaAsync(fecha, cajero);
         return Ok(resultado);
     }
 }

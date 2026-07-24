@@ -121,7 +121,7 @@ public class ReporteService : IReporteService
 
     // ── Reporte de Caja ──────────────────────────────────────────────────────
 
-    public async Task<ReporteCajaDto> ReporteCajaAsync(string desde, string hasta)
+    public async Task<ReporteCajaDto> ReporteCajaAsync(string desde, string hasta, string? cajero = null)
     {
         var inicio = ParseDia(desde).inicio;
         var fin    = ParseDia(hasta).fin;
@@ -129,6 +129,8 @@ public class ReporteService : IReporteService
         // AperturaCaja.Fecha y CierreCaja.Fecha son solo una "clave de día" (medianoche,
         // sin hora real) — a diferencia de egresos/comprobantes, comparar contra el rango
         // con el offset de ParseDia nunca calzaba y ningún día aparecía con apertura/cierre.
+        // Apertura, cierre y egresos NO se filtran por cajero: son un solo conteo físico de
+        // la caja por día, no algo que se pueda partir por vendedor.
         var aperturas = await _db.AperturasCaja.AsNoTracking()
             .Where(a => a.Fecha.Date >= inicio.Date && a.Fecha.Date < fin.Date)
             .ToListAsync();
@@ -143,7 +145,8 @@ public class ReporteService : IReporteService
 
         var ventasRaw = await _db.Comprobantes.AsNoTracking()
             .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin && c.Estado != "ANULADO" && c.Cobrado
-                        && c.TipoComprobante != "NC") // la NC anula una venta anterior, no es ingreso nuevo
+                        && c.TipoComprobante != "NC" // la NC anula una venta anterior, no es ingreso nuevo
+                        && (cajero == null || c.Cajero == cajero))
             .Select(c => new { c.FechaEmision, c.Total })
             .ToListAsync();
 
@@ -306,7 +309,7 @@ public class ReporteService : IReporteService
 
     // ── Productos más vendidos (todas las ambientes) ───────────────────────────
 
-    public async Task<ReporteProductosMasVendidosDto> ReporteProductosMasVendidosAsync(string desde, string hasta)
+    public async Task<ReporteProductosMasVendidosDto> ReporteProductosMasVendidosAsync(string desde, string hasta, string? cajero = null)
     {
         var inicio = ParseDia(desde).inicio;
         var fin    = ParseDia(hasta).fin;
@@ -315,14 +318,14 @@ public class ReporteService : IReporteService
             .Include(d => d.Comprobante)
             .Where(d => d.Comprobante!.FechaEmision >= inicio && d.Comprobante.FechaEmision < fin &&
                         d.Comprobante.Estado != "ANULADO" && d.Comprobante.TipoComprobante != "NC" &&
-                        d.Comprobante.Cobrado)
+                        d.Comprobante.Cobrado && (cajero == null || d.Comprobante.Cajero == cajero))
             .ToListAsync();
 
         // Aparte, para poder repartir cada ambiente en efectivo/Yape según la forma de
         // pago real de cada venta (igual que en Liquidación de Caja).
         var comprobantesRango = await _db.Comprobantes.AsNoTracking()
             .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin && c.Estado != "ANULADO"
-                        && c.Cobrado && c.TipoComprobante != "NC")
+                        && c.Cobrado && c.TipoComprobante != "NC" && (cajero == null || c.Cajero == cajero))
             .ToListAsync();
 
         var ambientes = detalles
@@ -388,14 +391,14 @@ public class ReporteService : IReporteService
 
     // ── Utilidad (Comedor + Tienda) ─────────────────────────────────────────────
 
-    private async Task<List<UtilidadDetalleDto>> ObtenerDetalleUtilidadAsync(DateTime inicio, DateTime fin)
+    private async Task<List<UtilidadDetalleDto>> ObtenerDetalleUtilidadAsync(DateTime inicio, DateTime fin, string? cajero = null)
     {
         var detallesComedor = await _db.OrdenDetalles.AsNoTracking()
             .Include(d => d.ItemMenu).ThenInclude(i => i!.Receta).ThenInclude(r => r.Insumo)
             .Include(d => d.Comprobante)
             .Where(d => d.ComprobanteId != null && d.ItemMenuId != null &&
                         d.Comprobante!.FechaEmision >= inicio && d.Comprobante.FechaEmision < fin &&
-                        d.Comprobante.Estado != "ANULADO")
+                        d.Comprobante.Estado != "ANULADO" && (cajero == null || d.Comprobante.Cajero == cajero))
             .ToListAsync();
 
         var filasComedor = detallesComedor.Select(d =>
@@ -413,6 +416,7 @@ public class ReporteService : IReporteService
                 Utilidad          = Math.Round(d.Subtotal - costoTotal, 2),
                 NumeroComprobante = $"{d.Comprobante!.Serie}-{d.Comprobante.Numero:D5}",
                 TipoComprobante   = d.Comprobante.TipoComprobante,
+                Cajero            = d.Comprobante.Cajero,
             };
         }).ToList();
 
@@ -432,7 +436,8 @@ public class ReporteService : IReporteService
             .Include(d => d.Comprobante)
             .Where(d => d.Comprobante!.TipoAmbiente == "tienda" &&
                         d.Comprobante.FechaEmision >= inicio && d.Comprobante.FechaEmision < fin &&
-                        d.Comprobante.Estado != "ANULADO" && d.Comprobante.TipoComprobante != "NC")
+                        d.Comprobante.Estado != "ANULADO" && d.Comprobante.TipoComprobante != "NC" &&
+                        (cajero == null || d.Comprobante.Cajero == cajero))
             .ToListAsync();
 
         var filasTienda = detallesTienda.Select(d =>
@@ -449,6 +454,7 @@ public class ReporteService : IReporteService
                 Utilidad          = Math.Round(d.Subtotal - costoTotal, 2),
                 NumeroComprobante = $"{d.Comprobante!.Serie}-{d.Comprobante.Numero:D5}",
                 TipoComprobante   = d.Comprobante.TipoComprobante,
+                Cajero            = d.Comprobante.Cajero,
             };
         }).ToList();
 
@@ -474,11 +480,11 @@ public class ReporteService : IReporteService
 
     // ── Liquidación de Caja (resumen imprimible de un día específico) ───────────
 
-    public async Task<LiquidacionCajaDto> ReporteLiquidacionCajaAsync(string fecha)
+    public async Task<LiquidacionCajaDto> ReporteLiquidacionCajaAsync(string fecha, string? cajero = null)
     {
         var (inicio, fin) = ParseDia(fecha);
 
-        var itemsConCosto = await ObtenerDetalleUtilidadAsync(inicio, fin);
+        var itemsConCosto = await ObtenerDetalleUtilidadAsync(inicio, fin, cajero);
 
         // Baños y Habitaciones no tienen concepto de costo en el modelo, pero igual
         // cuentan para "todo lo que se vendió hoy" — aparecen con costo/utilidad en null.
@@ -486,7 +492,8 @@ public class ReporteService : IReporteService
             .Include(d => d.Comprobante)
             .Where(d => (d.Comprobante!.TipoAmbiente == "banio" || d.Comprobante.TipoAmbiente == "habitacion") &&
                         d.Comprobante.FechaEmision >= inicio && d.Comprobante.FechaEmision < fin &&
-                        d.Comprobante.Estado != "ANULADO" && d.Comprobante.TipoComprobante != "NC")
+                        d.Comprobante.Estado != "ANULADO" && d.Comprobante.TipoComprobante != "NC" &&
+                        (cajero == null || d.Comprobante.Cajero == cajero))
             .ToListAsync();
 
         var itemsSinCosto = detallesOtros.Select(d => new LiquidacionItemDto
@@ -499,6 +506,7 @@ public class ReporteService : IReporteService
             Utilidad          = null,
             NumeroComprobante = $"{d.Comprobante.Serie}-{d.Comprobante.Numero:D5}",
             TipoComprobante   = d.Comprobante.TipoComprobante,
+            Cajero            = d.Comprobante.Cajero,
         });
 
         var items = itemsConCosto
@@ -507,6 +515,7 @@ public class ReporteService : IReporteService
                 Nombre = i.Nombre, Ambiente = i.Ambiente, CantidadVendida = i.CantidadVendida,
                 Ingreso = i.Ingreso, Costo = i.Costo, Utilidad = i.Utilidad,
                 NumeroComprobante = i.NumeroComprobante, TipoComprobante = i.TipoComprobante,
+                Cajero = i.Cajero,
             })
             .Concat(itemsSinCosto)
             .OrderByDescending(i => i.Ingreso)
@@ -517,6 +526,8 @@ public class ReporteService : IReporteService
         // son solo una "clave de día" (medianoche, sin la hora de apertura/cierre real)
         // — compararlas contra el rango con offset de ParseDia nunca calzaba, así que
         // la apertura/cierre del día jamás se encontraba y todo el cuadre salía en 0.
+        // Apertura, cierre y egresos NO se filtran por cajero: es un solo conteo físico
+        // de la caja, no algo que se pueda partir por vendedor.
         var apertura = await _db.AperturasCaja.AsNoTracking().FirstOrDefaultAsync(a => a.Fecha.Date == inicio.Date);
         var cierre   = await _db.CierresCaja.AsNoTracking().FirstOrDefaultAsync(c => c.Fecha.Date == inicio.Date);
         var egresosLista = await _db.EgresosCajaChica.AsNoTracking()
@@ -529,7 +540,7 @@ public class ReporteService : IReporteService
         // desgloses distintos: por forma de pago, por ambiente y por tipo de comprobante.
         var comprobantesDia = await _db.Comprobantes.AsNoTracking()
             .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin && c.Estado != "ANULADO" && c.Cobrado
-                        && c.TipoComprobante != "NC")
+                        && c.TipoComprobante != "NC" && (cajero == null || c.Cajero == cajero))
             .ToListAsync();
         var ventasSistema = comprobantesDia.Sum(c => c.Total);
 
@@ -568,9 +579,11 @@ public class ReporteService : IReporteService
 
         var montoAnulado = await _db.Comprobantes.AsNoTracking()
             .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin && c.Estado == "ANULADO"
-                        && c.TipoComprobante != "NC")
+                        && c.TipoComprobante != "NC" && (cajero == null || c.Cajero == cajero))
             .SumAsync(c => c.Total);
 
+        // Efectivo/Yape/Transferencia contado y Diferencia vienen del cierre físico del
+        // día — NO se filtran por cajero, siempre es el total del día completo.
         var efectivo      = cierre?.EfectivoFisico ?? 0;
         var yape          = cierre?.YapeFisico ?? 0;
         var transferencia = cierre?.TransferenciaFisico ?? 0;
@@ -642,6 +655,19 @@ public class ReporteService : IReporteService
         };
     }
 
+    /// <summary>Nombres completos de usuarios activos, para poblar el selector de "cajero" en
+    /// los reportes. Mismo formato que Comprobante.Cajero (Empleado.Nombres + Apellidos).</summary>
+    public async Task<List<string>> ObtenerCajerosAsync()
+    {
+        return await _db.Usuarios.AsNoTracking()
+            .Include(u => u.Empleado)
+            .Where(u => u.Activo)
+            .Select(u => u.Empleado.Nombres + " " + u.Empleado.Apellidos)
+            .Distinct()
+            .OrderBy(n => n)
+            .ToListAsync();
+    }
+
     // ── Catálogo de precios vigentes ─────────────────────────────────────────
 
     public async Task<CatalogoDto> ObtenerCatalogoAsync()
@@ -687,7 +713,7 @@ public class ReporteService : IReporteService
     /// Incluye tanto comprobantes 100% QR como la porción QR de pagos Mixto — el reporte
     /// anterior (mensual, solo MetodoPago == YapePlin) subestimaba el total real porque
     /// ignoraba los pagos divididos efectivo + Yape.</summary>
-    public async Task<ReportePagoQrDto> ReportePagoQrAsync(string desde, string hasta)
+    public async Task<ReportePagoQrDto> ReportePagoQrAsync(string desde, string hasta, string? cajero = null)
     {
         var inicio = ParseDia(desde).inicio;
         var fin    = ParseDia(hasta).fin;
@@ -695,7 +721,8 @@ public class ReporteService : IReporteService
         var comprobantes = await _db.Comprobantes.AsNoTracking()
             .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin &&
                         c.Estado != "ANULADO" && c.Cobrado && c.TipoComprobante != "NC" &&
-                        (c.MetodoPago == MetodoPago.YapePlin || c.MetodoPago == MetodoPago.Mixto))
+                        (c.MetodoPago == MetodoPago.YapePlin || c.MetodoPago == MetodoPago.Mixto) &&
+                        (cajero == null || c.Cajero == cajero))
             .OrderBy(c => c.FechaEmision)
             .ToListAsync();
 
@@ -708,6 +735,7 @@ public class ReporteService : IReporteService
             MontoYape        = c.MetodoPago == MetodoPago.Mixto ? c.Total - (c.MontoEfectivoMixto ?? 0) : c.Total,
             EsMixto          = c.MetodoPago == MetodoPago.Mixto,
             FechaEmision     = c.FechaEmision,
+            Cajero           = c.Cajero,
         }).ToList();
 
         return new ReportePagoQrDto

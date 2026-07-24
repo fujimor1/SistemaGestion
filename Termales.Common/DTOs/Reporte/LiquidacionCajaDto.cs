@@ -58,6 +58,7 @@ public class LiquidacionItemDto
     public string NumeroComprobante { get; set; } = string.Empty;
     /// <summary>NV | BI | FI</summary>
     public string TipoComprobante { get; set; } = string.Empty;
+    public string? Cajero { get; set; }
 }
 
 public class VentaAmbienteDto

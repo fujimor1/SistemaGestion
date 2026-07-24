@@ -15,6 +15,7 @@ public class DetallePagoQrDto
     public string   TipoComprobante  { get; set; } = string.Empty;
     public string   TipoAmbiente     { get; set; } = string.Empty;
     public string?  ClienteNombre    { get; set; }
+    public string?  Cajero           { get; set; }
     /// <summary>Monto realmente cobrado por Yape/Plin: el total si el pago fue
     /// 100% QR, o solo la porción QR si fue Mixto (Total - MontoEfectivoMixto).</summary>
     public decimal  MontoYape        { get; set; }
