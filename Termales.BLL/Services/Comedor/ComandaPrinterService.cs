@@ -122,7 +122,7 @@ public class ComandaPrinterService : IComandaPrinterService
         Escribir(ms, "Cant.".PadRight(7) + "Producto");
         foreach (var d in detalles)
         {
-            ms.WriteByte(GS); ms.WriteByte(0x21); ms.WriteByte(0x01);   // GS ! 1 — doble alto
+            ms.WriteByte(GS); ms.WriteByte(0x21); ms.WriteByte(0x02);   // GS ! 2 — triple alto (ancho normal, para no cortar nombres largos)
             ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x01);  // negrita on
             ms.Write(Encoding.ASCII.GetBytes(QuitarTildes($"{d.Cantidad}  {d.ItemMenu?.Nombre ?? $"Item {d.ItemMenuId}"}") + "\n"));
             ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x00);  // negrita off
@@ -159,13 +159,15 @@ public class ComandaPrinterService : IComandaPrinterService
         ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x00); // negrita off
     }
 
-    // Doble alto y doble ancho, en negrita y centrado — para las líneas que
-    // hay que leer a distancia (mesa, hora, mesero, ambiente).
+    // Triple alto y doble ancho, en negrita y centrado — para las líneas que
+    // hay que leer a distancia (orden, hora-mesero, mesa, ambiente). El ancho
+    // se queda en x2 (no x3) para que "AMBIENTE: COMEDOR" y una hora con
+    // nombre de mesero largo no se corten a la mitad de la línea.
     private static void EscribirGrande(MemoryStream ms, string texto)
     {
         Alinear(ms, centrado: true);
         ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x01); // negrita on
-        ms.WriteByte(GS);  ms.WriteByte(0x21); ms.WriteByte(0x11); // GS ! 0x11 — doble alto y doble ancho
+        ms.WriteByte(GS);  ms.WriteByte(0x21); ms.WriteByte(0x12); // GS ! 0x12 — triple alto, doble ancho
         ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(texto) + "\n"));
         ms.WriteByte(GS);  ms.WriteByte(0x21); ms.WriteByte(0x00); // tamaño normal
         ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x00); // negrita off
