@@ -57,6 +57,12 @@ public class ComprobanteService : IComprobanteService
     private string ObtenerCajero() =>
         _accessor.HttpContext?.User?.FindFirst(JwtRegisteredClaimNames.Name)?.Value ?? "---";
 
+    // El dispositivo que emite la venta puede manejar su propia impresión (ej. tablet con
+    // RawBT) — en ese caso manda este header para que el servidor no dispare también la
+    // impresora física de caja vía el puente SignalR, y no salga duplicado.
+    private bool DebeImprimirEnCaja() =>
+        _accessor.HttpContext?.Request.Headers["X-Skip-Print-Caja"].ToString() != "1";
+
     // ── Comedor ───────────────────────────────────────────────────────
     public async Task<ApiResponse<ComprobanteResultadoDto>> GenerarComprobanteComedor(int ordenId, GenerarComprobanteComedorDto dto)
     {
@@ -254,7 +260,7 @@ public class ComprobanteService : IComprobanteService
         // Cuando la venta cubre un combo (más de un área), la boleta trae un
         // solo ítem por combo — se imprime un ticket aparte de referencia para
         // poder controlar el ingreso a cada área por separado.
-        if (resultado.Exito)
+        if (resultado.Exito && DebeImprimirEnCaja())
         {
             foreach (var (nombresAreas, cantidad) in ticketsControl)
             {
@@ -387,7 +393,8 @@ public class ComprobanteService : IComprobanteService
                 Total          = i.Total,
             });
 
-            await _reciboPrinter.ImprimirAsync(resultado.Data!, itemsRecibo, clienteLabel, dto.MetodoPago, dto.MontoEfectivoMixto);
+            if (DebeImprimirEnCaja())
+                await _reciboPrinter.ImprimirAsync(resultado.Data!, itemsRecibo, clienteLabel, dto.MetodoPago, dto.MontoEfectivoMixto);
         }
 
         return resultado;
