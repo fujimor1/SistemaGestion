@@ -96,103 +96,67 @@ public class ComandaPrinterService : IComandaPrinterService
     private byte[] ConstruirTicket(Orden orden, IEnumerable<OrdenDetalle> detalles, string titulo)
     {
         var ancho = _cfg.AnchoTicket;
-        var lineaFina   = new string('-', ancho);
-        var lineaGruesa = new string('=', ancho);
-        var ahora = AhoraLima();
+        var linea = new string('-', ancho);
+
+        var cabecera = new StringBuilder();
+        cabecera.AppendLine($"Mesero: {NombreMesero(orden)}");
+        cabecera.AppendLine($"Orden #{orden.OrdenId}  {AhoraLima():dd/MM HH:mm}  — {titulo}");
+        cabecera.AppendLine(linea);
+
+        var pie = new StringBuilder();
+        pie.AppendLine(linea);
+        if (!string.IsNullOrWhiteSpace(orden.Observaciones))
+        {
+            pie.AppendLine($"Obs. orden: {orden.Observaciones}");
+            pie.AppendLine(linea);
+        }
+        pie.AppendLine();
+        pie.AppendLine();
+        pie.AppendLine();
 
         using var ms = new MemoryStream();
-        ms.WriteByte(ESC); ms.WriteByte(0x40); // ESC @ — reset/inicializar
+        ms.WriteByte(ESC); ms.WriteByte(0x40);                       // ESC @  — reset/inicializar
 
-        // ── Encabezado pequeño: a qué impresora va y qué tipo de aviso es ──
-        Alinear(ms, centrado: true);
-        EscribirNegrita(ms, $"Impresora COCINA - {titulo}");
-        Escribir(ms, lineaGruesa);
+        // Encabezado: la mesa (o "para llevar"), en el tamaño más grande
+        // posible, para que se lea a distancia en la cocina.
+        ms.WriteByte(ESC); ms.WriteByte(0x61); ms.WriteByte(0x01);   // ESC a 1 — centrar
+        ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x01);   // ESC E 1 — negrita on
+        ms.WriteByte(GS);  ms.WriteByte(0x21); ms.WriteByte(0x11);   // GS ! 0x11 — doble alto y doble ancho
+        ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(EtiquetaMesa(orden)) + "\n"));
+        ms.WriteByte(GS);  ms.WriteByte(0x21); ms.WriteByte(0x00);   // GS ! 0 — tamaño normal
+        ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x00);   // negrita off
+        ms.WriteByte(ESC); ms.WriteByte(0x61); ms.WriteByte(0x00);   // alinear izquierda
+        ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(cabecera.ToString())));
 
-        // ── Bloque grande y centrado: orden, hora-mesero, mesa, ambiente —
-        // todo en el tamaño más grande posible para que se lea a distancia
-        // en la cocina, igual que el resto de la comanda. ──
-        EscribirGrande(ms, $"Orden #{orden.OrdenId}");
-        EscribirGrande(ms, $"{ahora:HH:mm:ss}- {NombreMesero(orden)}");
-        EscribirGrande(ms, $"{EtiquetaMesa(orden)}:");
-        EscribirGrande(ms, "AMBIENTE: COMEDOR");
-        Alinear(ms, centrado: false);
-        Escribir(ms, lineaGruesa);
-
-        // ── Detalle: cabecera de columnas + cada plato en doble alto ──
-        Escribir(ms, "Cant.".PadRight(7) + "Producto");
+        // Pedido: cada plato en doble alto (más grande que el resto del
+        // ticket) para que se lea fácil desde la plancha/cocina.
         foreach (var d in detalles)
         {
-            ms.WriteByte(GS); ms.WriteByte(0x21); ms.WriteByte(0x02);   // GS ! 2 — triple alto (ancho normal, para no cortar nombres largos)
+            ms.WriteByte(GS); ms.WriteByte(0x21); ms.WriteByte(0x01);   // GS ! 1 — doble alto
             ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x01);  // negrita on
-            ms.Write(Encoding.ASCII.GetBytes(QuitarTildes($"{d.Cantidad}  {d.ItemMenu?.Nombre ?? $"Item {d.ItemMenuId}"}") + "\n"));
+            ms.Write(Encoding.ASCII.GetBytes(QuitarTildes($"x{d.Cantidad} {d.ItemMenu?.Nombre ?? $"Item {d.ItemMenuId}"}") + "\n"));
             ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x00);  // negrita off
             ms.WriteByte(GS); ms.WriteByte(0x21); ms.WriteByte(0x00);   // tamaño normal
             if (!string.IsNullOrWhiteSpace(d.Observaciones))
-                Escribir(ms, $"    obs: {d.Observaciones}");
-        }
-        Escribir(ms, lineaFina);
-
-        if (!string.IsNullOrWhiteSpace(orden.Observaciones))
-        {
-            Escribir(ms, $"Obs. orden: {orden.Observaciones}");
-            Escribir(ms, lineaFina);
+                ms.Write(Encoding.ASCII.GetBytes(QuitarTildes($"    obs: {d.Observaciones}") + "\n"));
         }
 
-        // ── Pie: fecha completa en español ──
-        Alinear(ms, centrado: true);
-        Escribir(ms, FechaLarga(ahora));
-        Escribir(ms, "");
-        Escribir(ms, "");
+        ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(pie.ToString())));
 
-        ms.WriteByte(GS); ms.WriteByte(0x56); ms.WriteByte(0x01); // GS V 1 — corte parcial
+        ms.WriteByte(GS); ms.WriteByte(0x56); ms.WriteByte(0x01);    // GS V 1 — corte parcial
 
         return ms.ToArray();
     }
 
-    private static void Escribir(MemoryStream ms, string texto) =>
-        ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(texto) + "\n"));
-
-    private static void EscribirNegrita(MemoryStream ms, string texto)
-    {
-        ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x01); // ESC E 1 — negrita on
-        Escribir(ms, texto);
-        ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x00); // negrita off
-    }
-
-    // Triple alto y doble ancho, en negrita y centrado — para las líneas que
-    // hay que leer a distancia (orden, hora-mesero, mesa, ambiente). El ancho
-    // se queda en x2 (no x3) para que "AMBIENTE: COMEDOR" y una hora con
-    // nombre de mesero largo no se corten a la mitad de la línea.
-    private static void EscribirGrande(MemoryStream ms, string texto)
-    {
-        Alinear(ms, centrado: true);
-        ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x01); // negrita on
-        ms.WriteByte(GS);  ms.WriteByte(0x21); ms.WriteByte(0x12); // GS ! 0x12 — triple alto, doble ancho
-        ms.Write(Encoding.ASCII.GetBytes(QuitarTildes(texto) + "\n"));
-        ms.WriteByte(GS);  ms.WriteByte(0x21); ms.WriteByte(0x00); // tamaño normal
-        ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x00); // negrita off
-    }
-
-    private static void Alinear(MemoryStream ms, bool centrado)
-    {
-        ms.WriteByte(ESC); ms.WriteByte(0x61); ms.WriteByte(centrado ? (byte)0x01 : (byte)0x00); // ESC a
-    }
-
-    // Ej. "Domingo 19 de Julio del 2026". Nombres fijos en vez de CultureInfo
-    // "es-PE": el servidor Linux de producción puede no tener los datos de
-    // globalización (ICU) instalados, y pedir esa cultura lanzaría una
-    // excepción que el try/catch de ImprimirAsync atraparía en silencio —
-    // dejando de imprimir el ticket entero sin ningún aviso visible.
-    private static readonly string[] DiasSemana =
-        { "Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado" };
-    private static readonly string[] Meses =
-        { "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre" };
-
-    private static string FechaLarga(DateTime fecha) =>
-        $"{DiasSemana[(int)fecha.DayOfWeek]} {fecha.Day} de {Meses[fecha.Month - 1]} del {fecha.Year}";
-
     private static string NombreMesero(Orden orden) =>
         orden.Usuario?.Empleado is not null ? $"{orden.Usuario.Empleado.Nombres} {orden.Usuario.Empleado.Apellidos}".Trim() : "-";
+
+    private static string CentrarTexto(string texto, int ancho)
+    {
+        if (texto.Length >= ancho) return texto;
+        var espacios = (ancho - texto.Length) / 2;
+        return new string(' ', espacios) + texto;
+    }
 
     // Los ESC/POS de red suelen venir configurados en codepages tipo CP437/850
     // que no siempre coinciden con lo que manda el server; en vez de negociar
