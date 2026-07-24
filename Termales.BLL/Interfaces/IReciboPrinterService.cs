@@ -1,4 +1,5 @@
 using Termales.Common.DTOs.Comprobante;
+using Termales.Entities.Enums;
 
 namespace Termales.BLL.Interfaces;
 
@@ -10,7 +11,9 @@ public interface IReciboPrinterService
     /// deshabilitada por configuración, solo registra el error — el
     /// comprobante ya se emitió y no debe fallar por esto.
     /// </summary>
-    Task ImprimirAsync(ComprobanteResultadoDto resultado, IEnumerable<ItemReciboDto> items, string clienteLabel);
+    Task ImprimirAsync(
+        ComprobanteResultadoDto resultado, IEnumerable<ItemReciboDto> items, string clienteLabel,
+        MetodoPago metodoPago, decimal? montoEfectivoMixto);
 
     /// <summary>
     /// Imprime un ticket simple de referencia (sin abrir el cajón), usado

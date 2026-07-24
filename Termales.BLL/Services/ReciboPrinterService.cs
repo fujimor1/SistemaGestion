@@ -7,6 +7,8 @@ using Termales.BLL.Interfaces;
 using Termales.BLL.Services.Comedor;
 using Termales.Common.DTOs.Comprobante;
 using Termales.Common.Settings;
+using Termales.Common.Utils;
+using Termales.Entities.Enums;
 
 namespace Termales.BLL.Services;
 
@@ -30,13 +32,15 @@ public class ReciboPrinterService : IReciboPrinterService
         _hub = hub;
     }
 
-    public async Task ImprimirAsync(ComprobanteResultadoDto resultado, IEnumerable<ItemReciboDto> items, string clienteLabel)
+    public async Task ImprimirAsync(
+        ComprobanteResultadoDto resultado, IEnumerable<ItemReciboDto> items, string clienteLabel,
+        MetodoPago metodoPago, decimal? montoEfectivoMixto)
     {
         if (!_cfg.Activa) return;
 
         try
         {
-            var bytes = ConstruirTicket(resultado, items, clienteLabel);
+            var bytes = ConstruirTicket(resultado, items, clienteLabel, metodoPago, montoEfectivoMixto);
 
             if (string.Equals(_cfg.Modo, "bridge", StringComparison.OrdinalIgnoreCase))
                 await ImprimirBridgeAsync(bytes);
@@ -110,7 +114,9 @@ public class ReciboPrinterService : IReciboPrinterService
     private Task ImprimirUsbAsync(byte[] bytes) =>
         Task.Run(() => RawPrinterHelper.SendBytesToPrinter(_cfg.NombreImpresora, bytes));
 
-    private byte[] ConstruirTicket(ComprobanteResultadoDto resultado, IEnumerable<ItemReciboDto> items, string clienteLabel)
+    private byte[] ConstruirTicket(
+        ComprobanteResultadoDto resultado, IEnumerable<ItemReciboDto> items, string clienteLabel,
+        MetodoPago metodoPago, decimal? montoEfectivoMixto)
     {
         var ancho = _cfg.AnchoTicket;
         var lineaFina   = new string('-', ancho);
@@ -137,6 +143,8 @@ public class ReciboPrinterService : IReciboPrinterService
             Escribir(ms, $"RUC {_empresa.Ruc}");
         if (!string.IsNullOrWhiteSpace(_empresa.Direccion))
             Escribir(ms, _empresa.Direccion);
+        if (!string.IsNullOrWhiteSpace(_empresa.Telefono))
+            Escribir(ms, $"Telf: {_empresa.Telefono}");
         Escribir(ms, "");
 
         // ── Tipo y número de comprobante, destacado entre líneas dobles ──
@@ -147,16 +155,15 @@ public class ReciboPrinterService : IReciboPrinterService
         Escribir(ms, lineaGruesa);
 
         // ── Datos de la venta (etiquetas alineadas) ──
-        Escribir(ms, $"{"Fecha".PadRight(7)}: {AhoraLima():dd/MM/yyyy HH:mm}");
-        Escribir(ms, $"{"Cliente".PadRight(7)}: {clienteLabel}");
-        Escribir(ms, $"{"Cajero".PadRight(7)}: {resultado.Cajero ?? "-"}");
+        Escribir(ms, $"{"Cliente".PadRight(8)}: {clienteLabel}");
+        Escribir(ms, $"{"Fecha".PadRight(8)}: {AhoraLima():dd/MM/yyyy HH:mm}");
         Escribir(ms, lineaFina);
 
         // ── Detalle de ítems ──
         Escribir(ms, FormatearCabeceraItems(ancho));
         Escribir(ms, lineaFina);
         foreach (var i in items)
-            Escribir(ms, FormatearLineaItem(i.Cantidad, i.Descripcion, i.Total, ancho));
+            Escribir(ms, FormatearLineaItem(i.Cantidad, i.Descripcion, i.PrecioUnitario, i.Total, ancho));
         Escribir(ms, lineaGruesa);
 
         // ── Totales (el total final destacado en negrita) ──
@@ -167,8 +174,14 @@ public class ReciboPrinterService : IReciboPrinterService
             Escribir(ms, FormatearLineaMonto("Subtotal s/IGV", resultado.TotalGravada, ancho));
             Escribir(ms, FormatearLineaMonto("IGV (18%)", resultado.Impuesto, ancho));
         }
-        EscribirNegrita(ms, FormatearLineaMonto("TOTAL", resultado.Total, ancho));
+        EscribirNegrita(ms, FormatearLineaMonto("TOTAL A PAGAR", resultado.Total, ancho));
         Escribir(ms, lineaGruesa);
+
+        // ── Monto en letras y forma de pago ──
+        Escribir(ms, $"SON: {TicketFormato.MontoEnLetras(resultado.Total)}");
+        Escribir(ms, TicketFormato.FormaDePagoTexto(metodoPago, resultado.Total, montoEfectivoMixto));
+        Escribir(ms, $"{"Vendedor".PadRight(8)}: {resultado.Cajero ?? "-"}");
+        Escribir(ms, lineaFina);
 
         // ── Pie ──
         Escribir(ms, "");
@@ -198,29 +211,33 @@ public class ReciboPrinterService : IReciboPrinterService
         ms.WriteByte(ESC); ms.WriteByte(0x61); ms.WriteByte(centrado ? (byte)0x01 : (byte)0x00); // ESC a
     }
 
-    // Columnas: cantidad (4) + descripción (resto) + total alineado a la derecha
-    // (ancho fijo, ~11 caracteres para "S/ 9999.99").
-    private const int ColCantidad = 4;
-    private const int ColTotal    = 11;
+    // Columnas: cantidad + descripción (resto) + precio unitario + total,
+    // ambos alineados a la derecha (ancho fijo, ~9-10 caracteres para "S/ 9999.99").
+    // ColCantidad va 1 más que "CAN" (3 letras) para que quede un espacio visible
+    // antes de "DESCRIPCION" — antes no lo tenía y salían pegados ("CANTDESCRIPCION").
+    private const int ColCantidad = 5;
+    private const int ColPrecioUnitario = 9;
+    private const int ColTotal    = 10;
 
     private static string FormatearCabeceraItems(int ancho)
     {
-        var anchoDesc = Math.Max(ancho - ColCantidad - ColTotal, 4);
-        return "CANT".PadRight(ColCantidad) + "DESCRIPCION".PadRight(anchoDesc) + "TOTAL".PadLeft(ColTotal);
+        var anchoDesc = Math.Max(ancho - ColCantidad - ColPrecioUnitario - ColTotal, 4);
+        return "CAN".PadRight(ColCantidad) + "DESCRIPCION".PadRight(anchoDesc) + "P.U.".PadLeft(ColPrecioUnitario) + "TOTAL".PadLeft(ColTotal);
     }
 
-    private static string FormatearLineaItem(decimal cantidad, string descripcion, decimal total, int ancho)
+    private static string FormatearLineaItem(decimal cantidad, string descripcion, decimal precioUnitario, decimal total, int ancho)
     {
-        var anchoDesc = Math.Max(ancho - ColCantidad - ColTotal, 4);
+        var anchoDesc = Math.Max(ancho - ColCantidad - ColPrecioUnitario - ColTotal, 4);
         var desc = descripcion.Length > anchoDesc ? descripcion[..(anchoDesc - 1)] + "." : descripcion;
-        var totalTxt = $"S/{total:F2}";
-        var cantTxt = cantidad == Math.Truncate(cantidad) ? cantidad.ToString("0") : cantidad.ToString("0.##");
-        return cantTxt.PadRight(ColCantidad) + desc.PadRight(anchoDesc) + totalTxt.PadLeft(ColTotal);
+        var puTxt = $"S/{precioUnitario.ToString("F2", CultureInfo.InvariantCulture)}";
+        var totalTxt = $"S/{total.ToString("F2", CultureInfo.InvariantCulture)}";
+        var cantTxt = cantidad == Math.Truncate(cantidad) ? cantidad.ToString("0", CultureInfo.InvariantCulture) : cantidad.ToString("0.##", CultureInfo.InvariantCulture);
+        return cantTxt.PadRight(ColCantidad) + desc.PadRight(anchoDesc) + puTxt.PadLeft(ColPrecioUnitario) + totalTxt.PadLeft(ColTotal);
     }
 
     private static string FormatearLineaMonto(string label, decimal valor, int ancho)
     {
-        var totalTxt = $"S/ {valor:F2}";
+        var totalTxt = $"S/ {valor.ToString("F2", CultureInfo.InvariantCulture)}";
         return label.PadRight(ancho - totalTxt.Length) + totalTxt;
     }
 

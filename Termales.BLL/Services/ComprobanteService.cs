@@ -387,7 +387,7 @@ public class ComprobanteService : IComprobanteService
                 Total          = i.Total,
             });
 
-            await _reciboPrinter.ImprimirAsync(resultado.Data!, itemsRecibo, clienteLabel);
+            await _reciboPrinter.ImprimirAsync(resultado.Data!, itemsRecibo, clienteLabel, dto.MetodoPago, dto.MontoEfectivoMixto);
         }
 
         return resultado;
