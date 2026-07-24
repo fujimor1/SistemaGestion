@@ -10,5 +10,5 @@ public class HabitacionRepository : GenericRepository<Habitacion>, IHabitacionRe
     public HabitacionRepository(TermalesDbContext context) : base(context) { }
 
     public async Task<IEnumerable<Habitacion>> ObtenerActivasAsync() =>
-        await _dbSet.Where(h => h.Activo).OrderBy(h => h.Nombre).ToListAsync();
+        await _dbSet.Where(h => h.Activo).OrderBy(h => h.Orden).ThenBy(h => h.HabitacionId).ToListAsync();
 }

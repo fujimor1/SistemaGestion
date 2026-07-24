@@ -11,6 +11,7 @@ public class HabitacionDto
     public decimal Precio { get; set; }
     public bool Ocupado { get; set; }
     public bool Activo { get; set; }
+    public int Orden { get; set; }
     public int EstadoLimpieza { get; set; }
     public string EstadoLimpiezaDescripcion { get; set; } = string.Empty;
     public DateTime? FechaCheckIn { get; set; }
@@ -35,6 +36,13 @@ public class CrearHabitacionDto
 public class ActualizarHabitacionDto : CrearHabitacionDto
 {
     public int HabitacionId { get; set; }
+}
+
+/// <summary>El orden de los IDs en la lista define el nuevo orden manual (0, 1, 2...).</summary>
+public class ReordenarHabitacionesDto
+{
+    [Required]
+    public List<int> HabitacionIds { get; set; } = new();
 }
 
 public class HabitacionItemDto

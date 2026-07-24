@@ -69,6 +69,13 @@ public class HabitacionesController : ControllerBase
         return resultado.Exito ? Ok(resultado) : NotFound(resultado);
     }
 
+    [HttpPatch("reordenar")]
+    public async Task<IActionResult> Reordenar([FromBody] ReordenarHabitacionesDto dto)
+    {
+        var resultado = await _service.ReordenarAsync(dto);
+        return Ok(resultado);
+    }
+
     [HttpGet("{id:int}/items")]
     public async Task<IActionResult> ObtenerItems(int id)
     {

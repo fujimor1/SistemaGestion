@@ -18,6 +18,7 @@ public class HabitacionConfiguration : IEntityTypeConfiguration<Habitacion>
         builder.Property(h => h.Precio).HasColumnName("precio").HasPrecision(10, 2).HasDefaultValue(0m);
         builder.Property(h => h.Ocupado).HasColumnName("ocupado").HasDefaultValue(false);
         builder.Property(h => h.Activo).HasColumnName("activo").HasDefaultValue(true);
+        builder.Property(h => h.Orden).HasColumnName("orden").HasDefaultValue(0);
         builder.Property(h => h.EstadoLimpieza).HasColumnName("estado_limpieza").HasConversion<int>()
             .HasDefaultValue(EstadoLimpieza.Limpia).HasSentinel(default(EstadoLimpieza));
         builder.Property(h => h.FechaCheckIn).HasColumnName("fecha_check_in");

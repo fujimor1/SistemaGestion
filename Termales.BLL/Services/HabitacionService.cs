@@ -29,6 +29,11 @@ public class HabitacionService : IHabitacionService
 
     public async Task<ApiResponse<HabitacionDto>> CrearAsync(CrearHabitacionDto dto)
     {
+        // Las nuevas van al final del orden manual — se calcula sobre TODAS (incluidas
+        // inactivas) para no repetir un Orden ya usado si se reactivara alguna.
+        var todas = await _uow.Habitaciones.BuscarAsync(_ => true);
+        var siguienteOrden = todas.Any() ? todas.Max(h => h.Orden) + 1 : 0;
+
         var habitacion = new Habitacion
         {
             Nombre = dto.Nombre,
@@ -37,7 +42,8 @@ public class HabitacionService : IHabitacionService
             Precio = dto.Precio,
             Ocupado = false,
             EstadoLimpieza = EstadoLimpieza.Limpia,
-            Activo = true
+            Activo = true,
+            Orden = siguienteOrden,
         };
 
         await _uow.Habitaciones.AgregarAsync(habitacion);
@@ -97,6 +103,19 @@ public class HabitacionService : IHabitacionService
         await _uow.Habitaciones.ActualizarAsync(h);
         await _uow.GuardarCambiosAsync();
         return ApiResponse.Exitoso("Habitación marcada como limpia — ya se puede asignar");
+    }
+
+    public async Task<ApiResponse> ReordenarAsync(ReordenarHabitacionesDto dto)
+    {
+        for (var i = 0; i < dto.HabitacionIds.Count; i++)
+        {
+            var h = await _uow.Habitaciones.ObtenerPorIdAsync(dto.HabitacionIds[i]);
+            if (h is null) continue;
+            h.Orden = i;
+            await _uow.Habitaciones.ActualizarAsync(h);
+        }
+        await _uow.GuardarCambiosAsync();
+        return ApiResponse.Exitoso("Orden actualizado");
     }
 
     public async Task<ApiResponse> EliminarAsync(int id)
@@ -162,6 +181,7 @@ public class HabitacionService : IHabitacionService
         Precio = h.Precio,
         Ocupado = h.Ocupado,
         Activo = h.Activo,
+        Orden = h.Orden,
         EstadoLimpieza = (int)h.EstadoLimpieza,
         EstadoLimpiezaDescripcion = h.EstadoLimpieza == EstadoLimpieza.PorLimpiar ? "Por limpiar" : "Limpia",
         FechaCheckIn = h.FechaCheckIn,

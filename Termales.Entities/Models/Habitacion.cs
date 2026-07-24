@@ -12,6 +12,9 @@ public class Habitacion
     public bool Ocupado { get; set; } = false;
     public bool Activo { get; set; } = true;
 
+    /// <summary>Posición para el orden manual (drag&amp;drop) en la lista de habitaciones.</summary>
+    public int Orden { get; set; }
+
     /// <summary>Al liberar (checkout) queda en PorLimpiar automáticamente — el personal de
     /// limpieza la marca como Limpia antes de poder asignarla a un cliente nuevo.</summary>
     public EstadoLimpieza EstadoLimpieza { get; set; } = EstadoLimpieza.Limpia;

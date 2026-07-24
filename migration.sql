@@ -2259,3 +2259,37 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260724002139_AgregarOrdenHabitacion') THEN
+    ALTER TABLE public.habitaciones ADD orden integer NOT NULL DEFAULT 0;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260724002139_AgregarOrdenHabitacion') THEN
+
+                    UPDATE public.habitaciones h
+                    SET orden = sub.rn
+                    FROM (
+                        SELECT habitacion_id, ROW_NUMBER() OVER (ORDER BY nombre) - 1 AS rn
+                        FROM public.habitaciones
+                    ) sub
+                    WHERE h.habitacion_id = sub.habitacion_id;
+                
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260724002139_AgregarOrdenHabitacion') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260724002139_AgregarOrdenHabitacion', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
