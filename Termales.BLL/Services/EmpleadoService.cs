@@ -62,6 +62,7 @@ public class EmpleadoService : IEmpleadoService
             Nombres = dto.Nombres,
             Apellidos = dto.Apellidos,
             Dni = dto.Dni,
+            Telefono = dto.Telefono,
             Activo = true
         };
 
@@ -82,6 +83,7 @@ public class EmpleadoService : IEmpleadoService
         empleado.Nombres = dto.Nombres;
         empleado.Apellidos = dto.Apellidos;
         empleado.Dni = dto.Dni;
+        empleado.Telefono = dto.Telefono;
 
         await _uow.Empleados.ActualizarAsync(empleado);
         await _uow.GuardarCambiosAsync();
@@ -107,6 +109,7 @@ public class EmpleadoService : IEmpleadoService
         Nombres = e.Nombres,
         Apellidos = e.Apellidos,
         Dni = e.Dni,
+        Telefono = e.Telefono,
         Activo = e.Activo,
         TieneUsuario = tieneUsuario
     };

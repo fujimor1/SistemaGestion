@@ -9,6 +9,7 @@ public class EmpleadoDto
     public string Apellidos { get; set; } = string.Empty;
     public string NombreCompleto => $"{Nombres} {Apellidos}";
     public string Dni { get; set; } = string.Empty;
+    public string? Telefono { get; set; }
     public bool Activo { get; set; }
 
     /// <summary>Indica si este empleado ya tiene una cuenta de usuario del sistema vinculada.</summary>
@@ -29,6 +30,9 @@ public class CrearEmpleadoDto
     [StringLength(8, MinimumLength = 8, ErrorMessage = "El DNI debe tener 8 dígitos")]
     [RegularExpression(@"^\d{8}$", ErrorMessage = "El DNI solo debe contener números")]
     public string Dni { get; set; } = string.Empty;
+
+    [StringLength(15)]
+    public string? Telefono { get; set; }
 }
 
 public class ActualizarEmpleadoDto
@@ -47,4 +51,7 @@ public class ActualizarEmpleadoDto
     [StringLength(8, MinimumLength = 8, ErrorMessage = "El DNI debe tener 8 dígitos")]
     [RegularExpression(@"^\d{8}$", ErrorMessage = "El DNI solo debe contener números")]
     public string Dni { get; set; } = string.Empty;
+
+    [StringLength(15)]
+    public string? Telefono { get; set; }
 }

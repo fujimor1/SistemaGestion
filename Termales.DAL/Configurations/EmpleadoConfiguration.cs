@@ -14,6 +14,7 @@ public class EmpleadoConfiguration : IEntityTypeConfiguration<Empleado>
         builder.Property(e => e.Nombres).HasColumnName("nombres").HasMaxLength(100).IsRequired();
         builder.Property(e => e.Apellidos).HasColumnName("apellidos").HasMaxLength(100).IsRequired();
         builder.Property(e => e.Dni).HasColumnName("dni").HasMaxLength(8).IsRequired();
+        builder.Property(e => e.Telefono).HasColumnName("telefono").HasMaxLength(15);
         builder.Property(e => e.Activo).HasColumnName("activo").HasDefaultValue(true);
         builder.HasIndex(e => e.Dni).IsUnique();
     }
