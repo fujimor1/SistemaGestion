@@ -178,15 +178,18 @@ public class ComandaPrinterService : IComandaPrinterService
         ms.WriteByte(ESC); ms.WriteByte(0x61); ms.WriteByte(centrado ? (byte)0x01 : (byte)0x00); // ESC a
     }
 
-    // Ej. "Domingo 19 de Julio del 2026" — el día/mes en español los da la
-    // cultura es-PE; se capitaliza a mano porque .NET los devuelve en minúscula.
-    private static string FechaLarga(DateTime fecha)
-    {
-        var cultura = CultureInfo.GetCultureInfo("es-PE");
-        var diaSemana = cultura.TextInfo.ToTitleCase(fecha.ToString("dddd", cultura));
-        var mes = cultura.TextInfo.ToTitleCase(fecha.ToString("MMMM", cultura));
-        return $"{diaSemana} {fecha.Day} de {mes} del {fecha.Year}";
-    }
+    // Ej. "Domingo 19 de Julio del 2026". Nombres fijos en vez de CultureInfo
+    // "es-PE": el servidor Linux de producción puede no tener los datos de
+    // globalización (ICU) instalados, y pedir esa cultura lanzaría una
+    // excepción que el try/catch de ImprimirAsync atraparía en silencio —
+    // dejando de imprimir el ticket entero sin ningún aviso visible.
+    private static readonly string[] DiasSemana =
+        { "Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado" };
+    private static readonly string[] Meses =
+        { "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre" };
+
+    private static string FechaLarga(DateTime fecha) =>
+        $"{DiasSemana[(int)fecha.DayOfWeek]} {fecha.Day} de {Meses[fecha.Month - 1]} del {fecha.Year}";
 
     private static string NombreMesero(Orden orden) =>
         orden.Usuario?.Empleado is not null ? $"{orden.Usuario.Empleado.Nombres} {orden.Usuario.Empleado.Apellidos}".Trim() : "-";
