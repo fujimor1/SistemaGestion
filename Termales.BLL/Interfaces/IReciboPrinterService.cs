@@ -22,4 +22,11 @@ public interface IReciboPrinterService
     /// controlar el ingreso a cada una. Nunca lanza, igual que ImprimirAsync.
     /// </summary>
     Task ImprimirTicketControlAsync(string titulo, string detalle);
+
+    /// <summary>
+    /// Imprime la pre-cuenta de una orden de comedor (sin abrir el cajón — no
+    /// es un cobro, solo referencia de lo pendiente). Nunca lanza, igual que
+    /// ImprimirAsync.
+    /// </summary>
+    Task ImprimirPreCuentaAsync(string mesaLabel, string? mesero, IEnumerable<ItemReciboDto> items, decimal total);
 }

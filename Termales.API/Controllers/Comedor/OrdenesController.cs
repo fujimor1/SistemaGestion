@@ -83,6 +83,13 @@ public class OrdenesController : ControllerBase
         return resultado.Exito ? Ok(resultado) : NotFound(resultado);
     }
 
+    [HttpPost("{id:int}/imprimir-precuenta")]
+    public async Task<IActionResult> ImprimirPreCuenta(int id)
+    {
+        var resultado = await _service.ImprimirPreCuentaAsync(id);
+        return resultado.Exito ? Ok(resultado) : BadRequest(resultado);
+    }
+
     [HttpPost("{id:int}/marcar-lista")]
     public async Task<IActionResult> MarcarLista(int id)
     {

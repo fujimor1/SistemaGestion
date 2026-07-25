@@ -1,6 +1,9 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
+using Termales.BLL.Interfaces;
 using Termales.BLL.Interfaces.Comedor;
 using Termales.Common.DTOs.Comedor;
+using Termales.Common.DTOs.Comprobante;
 using Termales.Common.Helpers;
 using Termales.Common.Wrappers;
 using Termales.DAL.UnitOfWork;
@@ -14,12 +17,18 @@ public class OrdenService : IOrdenService
     private readonly IUnitOfWork _uow;
     private readonly IHubContext<ComandaHub> _hub;
     private readonly IComandaPrinterService _printer;
+    private readonly IReciboPrinterService _reciboPrinter;
+    private readonly IHttpContextAccessor _accessor;
 
-    public OrdenService(IUnitOfWork uow, IHubContext<ComandaHub> hub, IComandaPrinterService printer)
+    public OrdenService(
+        IUnitOfWork uow, IHubContext<ComandaHub> hub, IComandaPrinterService printer,
+        IReciboPrinterService reciboPrinter, IHttpContextAccessor accessor)
     {
         _uow = uow;
         _hub = hub;
         _printer = printer;
+        _reciboPrinter = reciboPrinter;
+        _accessor = accessor;
     }
 
     public async Task<ApiResponse<OrdenDto>> ObtenerPorIdAsync(int id)
@@ -425,6 +434,44 @@ public class OrdenService : IOrdenService
         await _hub.Clients.Group($"mesero-{orden.UsuarioId}").SendAsync("ItemActualizado", MapearDetalleDto(detalle));
 
         return ApiResponse<OrdenDto>.Exitoso(ordenDto, "Ítem eliminado de la orden");
+    }
+
+    // El dispositivo que pide la pre-cuenta puede manejar su propia impresión (ej. tablet
+    // con RawBT) — en ese caso manda este header para que el servidor no dispare también
+    // la impresora física de caja vía el puente SignalR, y no salga duplicado. Mismo
+    // criterio que ComprobanteService.DebeImprimirEnCaja().
+    private bool DebeImprimirEnCaja() =>
+        _accessor.HttpContext?.Request.Headers["X-Skip-Print-Caja"].ToString() != "1";
+
+    public async Task<ApiResponse> ImprimirPreCuentaAsync(int ordenId)
+    {
+        var orden = await _uow.Ordenes.ObtenerConDetallesAsync(ordenId);
+        if (orden is null)
+            return ApiResponse.Fallido("Orden no encontrada");
+
+        var ordenDto = MapearDto(orden);
+        var pendientes = ordenDto.Detalles
+            .Where(d => d.Estado != EstadoOrdenDetalle.Cancelado && d.ComprobanteId is null)
+            .ToList();
+        if (pendientes.Count == 0)
+            return ApiResponse.Fallido("No hay platos pendientes de cobro en esta orden");
+
+        if (DebeImprimirEnCaja())
+        {
+            var mesaLabel = ordenDto.MesaId is null ? "Para llevar" : $"Mesa {ordenDto.MesasLabel ?? ordenDto.NumeroMesa?.ToString()}";
+            var items = pendientes.Select(d => new ItemReciboDto
+            {
+                Descripcion    = d.NombreItem,
+                Cantidad       = d.Cantidad,
+                PrecioUnitario = d.PrecioUnitario,
+                Total          = d.Subtotal,
+            });
+            var total = pendientes.Sum(d => d.Subtotal);
+
+            await _reciboPrinter.ImprimirPreCuentaAsync(mesaLabel, ordenDto.NombreMesero, items, total);
+        }
+
+        return ApiResponse.Exitoso("Pre-cuenta enviada a imprimir");
     }
 
     // Descuenta el stock de cada insumo de la receta de `itemMenu`, según la

@@ -91,6 +91,33 @@ public class ReciboPrinterService : IReciboPrinterService
         }
     }
 
+    public async Task ImprimirPreCuentaAsync(string mesaLabel, string? mesero, IEnumerable<ItemReciboDto> items, decimal total)
+    {
+        if (!_cfg.Activa) return;
+
+        try
+        {
+            var bytes = ConstruirTicketPreCuenta(mesaLabel, mesero, items, total);
+
+            if (string.Equals(_cfg.Modo, "bridge", StringComparison.OrdinalIgnoreCase))
+                await ImprimirBridgeAsync(bytes);
+            else if (string.Equals(_cfg.Modo, "usb", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!OperatingSystem.IsWindows())
+                    throw new PlatformNotSupportedException("El modo de impresión \"usb\" solo está disponible cuando el API corre en Windows");
+                await ImprimirUsbAsync(bytes);
+            }
+            else
+                await ImprimirRedAsync(bytes);
+        }
+        catch (Exception ex)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"[ReciboPrinter] No se pudo imprimir la pre-cuenta de \"{mesaLabel}\": {ex.Message}");
+            Console.ResetColor();
+        }
+    }
+
     // Igual que ComandaPrinterService: la API (en la nube) no tiene acceso
     // directo a la impresora física de caja; transmite el ticket por
     // SignalR al puente local, que la tiene conectada (USB/red) y además
@@ -261,6 +288,51 @@ public class ReciboPrinterService : IReciboPrinterService
         Alinear(ms, centrado: false);
         Escribir(ms, detalle);
         Escribir(ms, $"{AhoraLima():dd/MM/yyyy HH:mm}");
+        Escribir(ms, "");
+        Escribir(ms, "");
+
+        ms.WriteByte(GS); ms.WriteByte(0x56); ms.WriteByte(0x01); // GS V 1 — corte parcial
+
+        return ms.ToArray();
+    }
+
+    // Vista previa de lo pendiente de cobro en una orden de comedor — sin
+    // abrir el cajón (no es un cobro) y sin desglose de IGV/forma de pago,
+    // ya que todavía no se ha emitido ningún comprobante.
+    private byte[] ConstruirTicketPreCuenta(string mesaLabel, string? mesero, IEnumerable<ItemReciboDto> items, decimal total)
+    {
+        var ancho = _cfg.AnchoTicket;
+        var lineaFina   = new string('-', ancho);
+        var lineaGruesa = new string('=', ancho);
+
+        using var ms = new MemoryStream();
+        ms.WriteByte(ESC); ms.WriteByte(0x40); // ESC @ — reset/inicializar
+
+        Alinear(ms, centrado: true);
+        Escribir(ms, lineaGruesa);
+        EscribirNegrita(ms, CentrarTexto("PRE-CUENTA", ancho));
+        Escribir(ms, lineaGruesa);
+
+        Alinear(ms, centrado: false);
+        Escribir(ms, $"{"Mesa".PadRight(8)}: {mesaLabel}");
+        if (!string.IsNullOrWhiteSpace(mesero))
+            Escribir(ms, $"{"Mesero".PadRight(8)}: {mesero}");
+        Escribir(ms, $"{"Fecha".PadRight(8)}: {AhoraLima():dd/MM/yyyy HH:mm}");
+        Escribir(ms, lineaFina);
+
+        Escribir(ms, FormatearCabeceraItems(ancho));
+        Escribir(ms, lineaFina);
+        foreach (var i in items)
+            Escribir(ms, FormatearLineaItem(i.Cantidad, i.Descripcion, i.PrecioUnitario, i.Total, ancho));
+        Escribir(ms, lineaGruesa);
+
+        EscribirNegrita(ms, FormatearLineaMonto("TOTAL", total, ancho));
+        Escribir(ms, lineaGruesa);
+
+        Alinear(ms, centrado: true);
+        Escribir(ms, "");
+        Escribir(ms, "Este documento no es un");
+        Escribir(ms, "comprobante de pago");
         Escribir(ms, "");
         Escribir(ms, "");
 

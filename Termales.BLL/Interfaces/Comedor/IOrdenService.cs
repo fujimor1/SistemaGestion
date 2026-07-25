@@ -23,4 +23,5 @@ public interface IOrdenService
     Task<ApiResponse<OrdenDto>> CerrarOrdenAsync(int ordenId);
     Task<ApiResponse> CancelarAsync(int ordenId, string motivo);
     Task<ApiResponse<OrdenDto>> EliminarDetalleAsync(int detalleId);
+    Task<ApiResponse> ImprimirPreCuentaAsync(int ordenId);
 }
