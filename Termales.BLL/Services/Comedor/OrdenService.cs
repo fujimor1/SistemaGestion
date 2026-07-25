@@ -148,11 +148,12 @@ public class OrdenService : IOrdenService
         var ordenDto = MapearDto(ordenCompleta!);
 
         await _hub.Clients.Group("cocina").SendAsync("NuevaPedido", ordenDto);
-        // Solo los platos de cocina van al ticket impreso — un producto de
-        // tienda (gaseosa, snack, etc.) no necesita prepararse.
-        var paraCocina = ordenCompleta!.Detalles.Where(d => d.ItemMenuId.HasValue).ToList();
-        if (paraCocina.Count > 0)
-            await _printer.ImprimirAsync(ordenCompleta, paraCocina, "COMANDA NUEVA");
+        // Van al ticket impreso todos los ítems de la orden, no solo los platos de
+        // cocina — el mesero necesita ver también los productos de tienda (gaseosa,
+        // snack, etc.) que pidió la mesa, aunque la cocina no los prepare.
+        var itemsComanda = ordenCompleta!.Detalles.ToList();
+        if (itemsComanda.Count > 0)
+            await _printer.ImprimirAsync(ordenCompleta, itemsComanda, "COMANDA NUEVA");
 
         return ApiResponse<OrdenDto>.Exitoso(ordenDto, "Orden creada exitosamente");
     }
@@ -190,9 +191,8 @@ public class OrdenService : IOrdenService
 
         var ordenDto = MapearDto(orden);
         await _hub.Clients.Group("cocina").SendAsync("NuevaPedido", ordenDto);
-        var paraCocina = nuevosDetalles.Where(d => d.ItemMenuId.HasValue).ToList();
-        if (paraCocina.Count > 0)
-            await _printer.ImprimirAsync(orden, paraCocina, "AGREGADO A COMANDA");
+        if (nuevosDetalles.Count > 0)
+            await _printer.ImprimirAsync(orden, nuevosDetalles, "AGREGADO A COMANDA");
 
         return ApiResponse<OrdenDto>.Exitoso(ordenDto, "Items agregados exitosamente");
     }

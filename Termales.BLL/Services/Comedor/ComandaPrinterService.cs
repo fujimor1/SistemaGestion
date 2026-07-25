@@ -118,13 +118,14 @@ public class ComandaPrinterService : IComandaPrinterService
         Alinear(ms, centrado: false);
         Escribir(ms, lineaGruesa);
 
-        // ── Detalle: cabecera de columnas + cada plato en doble alto ──
+        // ── Detalle: cabecera de columnas + cada línea (plato o producto de tienda) en cuádruple alto ──
         Escribir(ms, "Cant.".PadRight(7) + "Producto");
         foreach (var d in detalles)
         {
-            ms.WriteByte(GS); ms.WriteByte(0x21); ms.WriteByte(0x02);   // GS ! 2 — triple alto (ancho normal, para no cortar nombres largos)
+            ms.WriteByte(GS); ms.WriteByte(0x21); ms.WriteByte(0x03);   // GS ! 3 — cuádruple alto (ancho normal, para no cortar nombres largos)
             ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x01);  // negrita on
-            ms.Write(Encoding.ASCII.GetBytes(QuitarTildes($"{d.Cantidad}  {d.ItemMenu?.Nombre ?? $"Item {d.ItemMenuId}"}") + "\n"));
+            var nombre = d.ItemMenu?.Nombre ?? d.Producto?.Nombre ?? $"Item {d.ItemMenuId ?? d.ProductoId}";
+            ms.Write(Encoding.ASCII.GetBytes(QuitarTildes($"{d.Cantidad}  {nombre}") + "\n"));
             ms.WriteByte(ESC); ms.WriteByte(0x45); ms.WriteByte(0x00);  // negrita off
             ms.WriteByte(GS); ms.WriteByte(0x21); ms.WriteByte(0x00);   // tamaño normal
             if (!string.IsNullOrWhiteSpace(d.Observaciones))
