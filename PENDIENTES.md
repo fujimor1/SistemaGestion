@@ -188,12 +188,14 @@ emitiendo/probando localmente sin la impresora conectada, la cola va a volver a 
 
 ---
 
-## 4. Rediseño de la comanda de cocina — revertido, pendiente de reaplicar
+## 4. Rediseño de la comanda de cocina — reaplicado (2026-07-25)
 
-**Estado:** Revertido a como estaba antes (2026-07-24). El usuario después arregló el problema real
-de impresión por su cuenta (no era el código — confirma que el rediseño en sí no era la causa).
-Queda pendiente **reaplicar el rediseño** (el formato nuevo: encabezado grande, cabecera de
-columnas, fecha larga en español, letra más grande) más adelante.
+**Estado:** Reaplicado. Se había revertido el 2026-07-24 por sospecha de que causaba que dejara de
+imprimir en producción; luego se confirmó que la causa real era otra (el usuario la resolvió por su
+cuenta sin tocar este archivo), así que el 2026-07-25 se reaplicó sin cambios adicionales.
+`ComandaPrinterService.cs` quedó restaurado exactamente a la versión del commit `9d6a13e` (la que ya
+incluye el fix de fecha sin `CultureInfo`, para evitar el problema de ICU en Linux). Ojo al desplegar:
+vigilar que las comandas sí impriman en producción tras este cambio.
 
 ### Qué pasó
 
