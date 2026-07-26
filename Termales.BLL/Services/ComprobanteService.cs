@@ -385,19 +385,29 @@ public class ComprobanteService : IComprobanteService
                 ? dto.ClienteRazonSocial ?? dto.ClienteRuc ?? "Empresa"
                 : dto.ClienteNombre ?? dto.ClienteDni ?? "CLIENTES VARIOS";
 
-            var itemsRecibo = items.Select(i => new ItemReciboDto
-            {
-                Descripcion    = i.Descripcion,
-                Cantidad       = i.Cantidad,
-                PrecioUnitario = i.PrecioUnitario,
-                Total          = i.Total,
-            });
-
-            if (DebeImprimirEnCaja())
-                await _reciboPrinter.ImprimirAsync(resultado.Data!, itemsRecibo, clienteLabel, dto.MetodoPago, dto.MontoEfectivoMixto);
+            await ImprimirTicketSiCorrespondeAsync(resultado.Data!, items, clienteLabel, dto.MetodoPago, dto.MontoEfectivoMixto);
         }
 
         return resultado;
+    }
+
+    // El ticket de la impresora física de caja (distinto del PDF SUNAT) se imprime igual
+    // para NV/BI/FI, tanto en una emisión normal como en un canje — se comparte entre ambas.
+    private async Task ImprimirTicketSiCorrespondeAsync(
+        ComprobanteResultadoDto data, List<ItemComprobante> items, string clienteLabel,
+        MetodoPago metodoPago, decimal? montoEfectivoMixto)
+    {
+        if (!DebeImprimirEnCaja()) return;
+
+        var itemsRecibo = items.Select(i => new ItemReciboDto
+        {
+            Descripcion    = i.Descripcion,
+            Cantidad       = i.Cantidad,
+            PrecioUnitario = i.PrecioUnitario,
+            Total          = i.Total,
+        });
+
+        await _reciboPrinter.ImprimirAsync(data, itemsRecibo, clienteLabel, metodoPago, montoEfectivoMixto);
     }
 
     // ── Nota de Venta (local, sin SUNAT) ─────────────────────────────
@@ -457,7 +467,7 @@ public class ComprobanteService : IComprobanteService
     private async Task<ApiResponse<ComprobanteResultadoDto>> EmitirConNubefact(
         GenerarComprobanteDto dto, decimal total,
         List<ItemComprobante> items, string tipoAmbiente, int referenciaId,
-        int tipoDoc, string serie)
+        int tipoDoc, string serie, int? comprobanteOrigenId = null)
     {
         var totalGravada = Math.Round(total / 1.18m, 2);
         var totalIgv     = Math.Round(total - totalGravada, 2);
@@ -566,6 +576,7 @@ public class ComprobanteService : IComprobanteService
             MontoEfectivoMixto = dto.MetodoPago == MetodoPago.Mixto ? dto.MontoEfectivoMixto : null,
             Cobrado            = dto.MetodoPago != MetodoPago.Fiado,
             ClienteId          = dto.ClienteId,
+            ComprobanteOrigenId = comprobanteOrigenId,
             Detalles           = MapearDetalles(items),
         };
         await _uow.Comprobantes.AgregarAsync(comprobante);
@@ -593,7 +604,7 @@ public class ComprobanteService : IComprobanteService
     private async Task<ApiResponse<ComprobanteResultadoDto>> EmitirDirectoSunat(
         GenerarComprobanteDto dto, decimal total,
         List<ItemComprobante> items, string tipoAmbiente, int referenciaId,
-        string tipoComprobante, string serie)
+        string tipoComprobante, string serie, int? comprobanteOrigenId = null)
     {
         var esFactura = tipoComprobante == "FI";
         if (esFactura && string.IsNullOrWhiteSpace(dto.ClienteRuc))
@@ -625,6 +636,7 @@ public class ComprobanteService : IComprobanteService
             MontoEfectivoMixto = dto.MetodoPago == MetodoPago.Mixto ? dto.MontoEfectivoMixto : null,
             Cobrado            = dto.MetodoPago != MetodoPago.Fiado,
             ClienteId          = dto.ClienteId,
+            ComprobanteOrigenId = comprobanteOrigenId,
             Detalles           = MapearDetalles(items),
         };
         await _uow.Comprobantes.AgregarAsync(comprobante);
@@ -899,6 +911,85 @@ public class ComprobanteService : IComprobanteService
     public Task<ApiResponse<ComprobanteResultadoDto>> EmitirNotaCreditoAsync(
         int comprobanteOrigenId, EmitirNotaCreditoDto dto) =>
         _notaCredito.EmitirAsync(comprobanteOrigenId, dto, ObtenerCajero());
+
+    // ── Canje: Nota de Venta → Boleta/Factura ──────────────────────────
+    // A diferencia de la Nota de Crédito (que anula una Boleta/Factura ya enviada a SUNAT), la
+    // NV original nunca fue a SUNAT y el dinero ya está contado — el canje no genera una venta
+    // nueva, reemplaza el papel: mismos ítems, mismo total, mismo método de pago. La NV
+    // original se marca ANULADO (con el motivo del canje) para que quede excluida de los
+    // mismos filtros de caja/dashboard/reportes que ya excluyen cualquier comprobante anulado,
+    // sin tener que tocar esos ~15 sitios para un estado nuevo.
+    public async Task<ApiResponse<ComprobanteResultadoDto>> CanjearAsync(int comprobanteOrigenId, CanjearComprobanteDto dto)
+    {
+        if (dto.TipoComprobante is not ("BI" or "FI"))
+            return ApiResponse<ComprobanteResultadoDto>.Fallido("Solo se puede canjear una Nota de Venta por Boleta o Factura");
+
+        var origen = await _uow.Comprobantes.ObtenerConDetalleAsync(comprobanteOrigenId);
+        if (origen is null)
+            return ApiResponse<ComprobanteResultadoDto>.Fallido("Comprobante no encontrado");
+        if (origen.TipoComprobante != "NV")
+            return ApiResponse<ComprobanteResultadoDto>.Fallido("Solo se puede canjear una Nota de Venta");
+        if (origen.Estado != "EMITIDO")
+            return ApiResponse<ComprobanteResultadoDto>.Fallido($"La Nota de Venta no está en un estado canjeable (estado actual: {origen.Estado})");
+
+        var esFactura = dto.TipoComprobante == "FI";
+
+        // Mismos ítems que la NV original — se recalcula el desglose de IGV a partir del
+        // precio unitario, igual que en toda emisión (Subtotal ya guarda el bruto de la línea).
+        var items = origen.Detalles.Select(d =>
+        {
+            var valorUnit    = Math.Round(d.PrecioUnitario / 1.18m, 2);
+            var subtotalNeto = Math.Round(valorUnit * d.Cantidad, 2);
+            return new ItemComprobante
+            {
+                Descripcion    = d.Descripcion,
+                Cantidad       = d.Cantidad,
+                ValorUnitario  = valorUnit,
+                PrecioUnitario = d.PrecioUnitario,
+                Subtotal       = subtotalNeto,
+                Igv            = Math.Round(d.Subtotal - subtotalNeto, 2),
+                Total          = d.Subtotal,
+            };
+        }).ToList();
+
+        // Mismo método de pago/cliente que la NV original — el canje no vuelve a cobrar.
+        var dtoEmision = new GenerarComprobanteDto
+        {
+            TipoComprobante    = dto.TipoComprobante,
+            ClienteDni         = dto.ClienteDni,
+            ClienteNombre      = dto.ClienteNombre,
+            ClienteRuc         = dto.ClienteRuc,
+            ClienteRazonSocial = dto.ClienteRazonSocial,
+            MetodoPago         = origen.MetodoPago,
+            MontoEfectivoMixto = origen.MontoEfectivoMixto,
+            ClienteId          = origen.ClienteId,
+        };
+
+        var serieDestino = esFactura
+            ? (_sunatCfg.Habilitado ? _sunatCfg.SerieFactura : _cfg.SerieFactura)
+            : (_sunatCfg.Habilitado ? _sunatCfg.SerieBoleta : _cfg.SerieBoleta);
+
+        var resultado = _sunatCfg.Habilitado
+            ? await EmitirDirectoSunat(dtoEmision, origen.Total, items, origen.TipoAmbiente, origen.ReferenciaId ?? 0,
+                esFactura ? "FI" : "BI", serieDestino, origen.ComprobanteId)
+            : await EmitirConNubefact(dtoEmision, origen.Total, items, origen.TipoAmbiente, origen.ReferenciaId ?? 0,
+                tipoDoc: esFactura ? 1 : 2, serie: serieDestino, comprobanteOrigenId: origen.ComprobanteId);
+
+        if (!resultado.Exito) return resultado;
+
+        origen.Estado          = "ANULADO";
+        origen.MotivoAnulacion = $"Canjeado por {resultado.Data!.NumeroFormateado}";
+        origen.AutorizadoPor   = ObtenerCajero();
+        await _uow.Comprobantes.ActualizarAsync(origen);
+        await _uow.GuardarCambiosAsync();
+
+        var clienteLabel = esFactura
+            ? dto.ClienteRazonSocial ?? dto.ClienteRuc ?? "Empresa"
+            : dto.ClienteNombre ?? dto.ClienteDni ?? "CLIENTES VARIOS";
+        await ImprimirTicketSiCorrespondeAsync(resultado.Data!, items, clienteLabel, origen.MetodoPago, origen.MontoEfectivoMixto);
+
+        return resultado;
+    }
 
     private static List<ComprobanteDetalle> MapearDetalles(List<ItemComprobante> items) =>
         items.Select(i => new ComprobanteDetalle

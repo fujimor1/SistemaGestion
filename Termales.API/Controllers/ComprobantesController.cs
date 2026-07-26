@@ -189,4 +189,18 @@ public class ComprobantesController : ControllerBase
             return StatusCode(500, new { mensaje = $"Error interno: {ex.Message}" });
         }
     }
+
+    [HttpPost("{id:int}/canjear")]
+    public async Task<IActionResult> Canjear(int id, [FromBody] CanjearComprobanteDto dto)
+    {
+        try
+        {
+            var resultado = await _service.CanjearAsync(id, dto);
+            return resultado.Exito ? Ok(resultado) : BadRequest(resultado);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { mensaje = $"Error interno: {ex.Message}" });
+        }
+    }
 }

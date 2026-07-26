@@ -17,6 +17,7 @@ public interface IComprobanteService
     Task<ApiResponse> ActualizarMetodoPagoAsync(int comprobanteId, ActualizarMetodoPagoDto dto);
     Task<ApiResponse> SolicitarAnulacionAsync(int id, string motivo, string cajero);
     Task<ApiResponse<ComprobanteResultadoDto>> EmitirNotaCreditoAsync(int comprobanteOrigenId, EmitirNotaCreditoDto dto);
+    Task<ApiResponse<ComprobanteResultadoDto>> CanjearAsync(int comprobanteOrigenId, CanjearComprobanteDto dto);
     Task<IEnumerable<AnulacionListadoDto>> ObtenerAnulacionesAsync(string? desde, string? hasta);
     Task<ApiResponse<ComprobanteDetalleCompletoDto>> ObtenerDetalleAsync(int comprobanteId);
     Task<ApiResponse<ResultadoEmisionSunatDto>> ReenviarSunatAsync(int comprobanteId);
