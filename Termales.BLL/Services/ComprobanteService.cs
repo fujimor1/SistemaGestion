@@ -981,6 +981,21 @@ public class ComprobanteService : IComprobanteService
         origen.MotivoAnulacion = $"Canjeado por {resultado.Data!.NumeroFormateado}";
         origen.AutorizadoPor   = ObtenerCajero();
         await _uow.Comprobantes.ActualizarAsync(origen);
+
+        // Las líneas de comedor cobradas con la NV original quedaron con su ComprobanteId —
+        // hay que reapuntarlas al comprobante nuevo para no dejarlas referenciando uno anulado.
+        if (origen.TipoAmbiente == "comedor" && origen.ReferenciaId is int ordenId)
+        {
+            var orden = await _uow.Ordenes.ObtenerConDetallesAsync(ordenId);
+            if (orden is not null)
+            {
+                var detallesDeLaNv = orden.Detalles.Where(d => d.ComprobanteId == origen.ComprobanteId);
+                foreach (var detalle in detallesDeLaNv)
+                    detalle.ComprobanteId = resultado.Data!.ComprobanteId;
+                await _uow.Ordenes.ActualizarAsync(orden);
+            }
+        }
+
         await _uow.GuardarCambiosAsync();
 
         var clienteLabel = esFactura
