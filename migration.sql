@@ -2312,3 +2312,37 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260729020503_AgregarFechaVentaComprobante') THEN
+    ALTER TABLE public.comprobantes ADD fecha_venta timestamp without time zone NOT NULL DEFAULT TIMESTAMP '-infinity';
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260729020503_AgregarFechaVentaComprobante') THEN
+
+                    UPDATE comprobantes SET fecha_venta = fecha_emision;
+
+                    UPDATE comprobantes c
+                    SET fecha_venta = o.fecha_emision
+                    FROM comprobantes o
+                    WHERE c.comprobante_origen_id = o.comprobante_id
+                      AND o.tipo_comprobante = 'NV';
+                
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260729020503_AgregarFechaVentaComprobante') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260729020503_AgregarFechaVentaComprobante', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+

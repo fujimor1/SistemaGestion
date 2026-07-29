@@ -36,7 +36,7 @@ public class CajaService : ICajaService
     private static DateTime HoyPeru() => (DateTime.UtcNow - OffsetPeru).Date;
 
     // Rango [inicio, fin) en UTC de un día de negocio en Perú, para filtrar
-    // timestamps reales (ej. EgresoCajaChica.Fecha, Comprobante.FechaEmision) en vez
+    // timestamps reales (ej. EgresoCajaChica.Fecha, Comprobante.FechaVenta) en vez
     // de compararlos por fecha directa.
     private static (DateTime inicio, DateTime fin) RangoDiaPeru(DateTime dia)
     {
@@ -130,18 +130,21 @@ public class CajaService : ICajaService
     // ── Cierre ────────────────────────────────────────────────────────────────
 
     // Una venta cuenta para el día en que el dinero realmente entró a caja: para un
-    // cobro directo (Efectivo/Yape/Mixto) eso es FechaEmision, pero para una deuda a
+    // cobro directo (Efectivo/Yape/Mixto) eso es FechaVenta, pero para una deuda a
     // Crédito que se cobra después, es FechaCobro (el día de la venta original puede
-    // ser otro). El total general se reparte entre Efectivo y Yape/Plin según el método
-    // real de cada comprobante (Mixto se divide según MontoEfectivoMixto); Transferencia
-    // (ya no seleccionable, solo dato histórico) no cae en ninguno de los dos, pero sí
-    // suma al total general.
+    // ser otro). FechaVenta (no FechaEmision) porque un canje de NV por Boleta/Factura
+    // crea el documento nuevo "hoy" por requisito legal de SUNAT, pero el dinero de esa
+    // venta ya había entrado a caja el día de la NV original — usar FechaEmision aquí
+    // inflaría el cuadre de hoy con dinero que nunca llegó a caja hoy. El total general
+    // se reparte entre Efectivo y Yape/Plin según el método real de cada comprobante
+    // (Mixto se divide según MontoEfectivoMixto); Transferencia (ya no seleccionable,
+    // solo dato histórico) no cae en ninguno de los dos, pero sí suma al total general.
     private async Task<(decimal Efectivo, decimal YapePlin, decimal TotalGeneral)> ObtenerTotalesPorMetodoAsync(DateTime dia)
     {
         var (inicio, fin) = RangoDiaPeru(dia);
         var comprobantes = await _db.Comprobantes.AsNoTracking()
             .Where(c => c.Estado != "ANULADO" && c.Cobrado && c.TipoComprobante != "NC"
-                        && (c.FechaCobro ?? c.FechaEmision) >= inicio && (c.FechaCobro ?? c.FechaEmision) < fin)
+                        && (c.FechaCobro ?? c.FechaVenta) >= inicio && (c.FechaCobro ?? c.FechaVenta) < fin)
             .Select(c => new { c.MetodoPago, c.Total, c.MontoEfectivoMixto })
             .ToListAsync();
 
@@ -182,7 +185,7 @@ public class CajaService : ICajaService
             .SumAsync(e => (decimal?)e.Monto) ?? 0;
 
         var resumenRaw = await _db.Comprobantes.AsNoTracking()
-            .Where(c => (c.FechaCobro ?? c.FechaEmision) >= inicio && (c.FechaCobro ?? c.FechaEmision) < fin
+            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= inicio && (c.FechaCobro ?? c.FechaVenta) < fin
                         && c.Estado != "ANULADO" && c.Cobrado && c.TipoComprobante != "NC")
             .GroupBy(c => c.TipoAmbiente)
             .Select(g => new { Ambiente = g.Key, Cantidad = g.Count(), Total = g.Sum(c => c.Total) })

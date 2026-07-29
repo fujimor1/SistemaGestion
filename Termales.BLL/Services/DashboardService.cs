@@ -113,7 +113,7 @@ public class DashboardService : IDashboardService
             .SumAsync(a => (int?)a.OcupacionActual) ?? 0;
 
         var ingresoHoy = await comprobantes
-            .Where(c => c.FechaEmision.Date == hoy)
+            .Where(c => c.FechaVenta.Date == hoy)
             .SumAsync(c => (decimal?)c.Total) ?? 0;
 
         var personasMes = await aforos
@@ -121,7 +121,7 @@ public class DashboardService : IDashboardService
             .SumAsync(a => (int?)a.OcupacionActual) ?? 0;
 
         var ingresoMes = await comprobantes
-            .Where(c => c.FechaEmision >= mes)
+            .Where(c => c.FechaVenta >= mes)
             .SumAsync(c => (decimal?)c.Total) ?? 0;
 
         var personasDiaRaw = await aforos
@@ -131,8 +131,8 @@ public class DashboardService : IDashboardService
             .ToListAsync();
 
         var horasRaw = await comprobantes
-            .Where(c => c.FechaEmision.Date >= hace30)
-            .GroupBy(c => c.FechaEmision.Hour)
+            .Where(c => c.FechaVenta.Date >= hace30)
+            .GroupBy(c => c.FechaVenta.Hour)
             .Select(g => new { Hora = g.Key, Total = g.Count() })
             .ToListAsync();
 
@@ -186,31 +186,31 @@ public class DashboardService : IDashboardService
             .Where(c => c.TipoAmbiente == "habitacion" && c.Estado != "ANULADO" && c.Cobrado
                         && c.TipoComprobante != "NC"); // la NC anula una venta anterior, no es ingreso nuevo
 
-        var reservasHoy = await comprobantes.CountAsync(c => c.FechaEmision.Date == hoy);
-        var reservasMes = await comprobantes.CountAsync(c => c.FechaEmision >= mes);
+        var reservasHoy = await comprobantes.CountAsync(c => c.FechaVenta.Date == hoy);
+        var reservasMes = await comprobantes.CountAsync(c => c.FechaVenta >= mes);
 
         var ingresoMes = await comprobantes
-            .Where(c => c.FechaEmision >= mes)
+            .Where(c => c.FechaVenta >= mes)
             .SumAsync(c => (decimal?)c.Total) ?? 0;
 
         var totalHabs = await _db.Habitaciones.AsNoTracking().CountAsync(h => h.Activo);
         var ocupadasHoy = await _db.Habitaciones.AsNoTracking().CountAsync(h => h.Activo && h.Ocupado);
 
         var reservasDiaRaw = await comprobantes
-            .Where(c => c.FechaEmision.Date >= hace30)
-            .GroupBy(c => c.FechaEmision.Date)
+            .Where(c => c.FechaVenta.Date >= hace30)
+            .GroupBy(c => c.FechaVenta.Date)
             .Select(g => new { Fecha = g.Key, Valor = (decimal)g.Count() })
             .ToListAsync();
 
         var ingresosDiaRaw = await comprobantes
-            .Where(c => c.FechaEmision.Date >= hace30)
-            .GroupBy(c => c.FechaEmision.Date)
+            .Where(c => c.FechaVenta.Date >= hace30)
+            .GroupBy(c => c.FechaVenta.Date)
             .Select(g => new { Fecha = g.Key, Valor = g.Sum(c => c.Total) })
             .ToListAsync();
 
         var semanaRaw = await comprobantes
-            .Where(c => c.FechaEmision.Date >= hace90)
-            .GroupBy(c => c.FechaEmision.DayOfWeek)
+            .Where(c => c.FechaVenta.Date >= hace90)
+            .GroupBy(c => c.FechaVenta.DayOfWeek)
             .Select(g => new { Dia = (int)g.Key, Total = (decimal)g.Count() })
             .ToListAsync();
 
@@ -251,29 +251,29 @@ public class DashboardService : IDashboardService
             .Where(c => c.TipoAmbiente == "tienda" && c.Estado != "ANULADO" && c.Cobrado && c.TipoComprobante != "NC");
 
         var ingresoHoy = await comprobantes
-            .Where(c => c.FechaEmision.Date == hoy)
+            .Where(c => c.FechaVenta.Date == hoy)
             .SumAsync(c => (decimal?)c.Total) ?? 0;
 
         var ingresoSemana = await comprobantes
-            .Where(c => c.FechaEmision >= semana)
+            .Where(c => c.FechaVenta >= semana)
             .SumAsync(c => (decimal?)c.Total) ?? 0;
 
         var ingresoMes = await comprobantes
-            .Where(c => c.FechaEmision >= mes)
+            .Where(c => c.FechaVenta >= mes)
             .SumAsync(c => (decimal?)c.Total) ?? 0;
 
-        var ventasHoy = await comprobantes.CountAsync(c => c.FechaEmision.Date == hoy);
+        var ventasHoy = await comprobantes.CountAsync(c => c.FechaVenta.Date == hoy);
         var productosTotales = await _db.Productos.AsNoTracking().CountAsync(p => p.Activo);
 
         var ingresosDiaRaw = await comprobantes
-            .Where(c => c.FechaEmision.Date >= hace30)
-            .GroupBy(c => c.FechaEmision.Date)
+            .Where(c => c.FechaVenta.Date >= hace30)
+            .GroupBy(c => c.FechaVenta.Date)
             .Select(g => new { Fecha = g.Key, Valor = g.Sum(c => c.Total) })
             .ToListAsync();
 
         var horasRaw = await comprobantes
-            .Where(c => c.FechaEmision.Date >= hace30)
-            .GroupBy(c => c.FechaEmision.Hour)
+            .Where(c => c.FechaVenta.Date >= hace30)
+            .GroupBy(c => c.FechaVenta.Hour)
             .Select(g => new { Hora = g.Key, Total = g.Count() })
             .ToListAsync();
 

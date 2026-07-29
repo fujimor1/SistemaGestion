@@ -21,6 +21,7 @@ public class ComprobanteConfiguration : IEntityTypeConfiguration<Comprobante>
         builder.Property(c => c.Total).HasColumnName("total").HasPrecision(10, 2).IsRequired();
         builder.Property(c => c.EnlacePdf).HasColumnName("enlace_pdf").HasMaxLength(500).IsRequired();
         builder.Property(c => c.FechaEmision).HasColumnName("fecha_emision");
+        builder.Property(c => c.FechaVenta).HasColumnName("fecha_venta");
         builder.Property(c => c.ComprobanteOrigenId).HasColumnName("comprobante_origen_id");
         builder.Property(c => c.MotivoAnulacion).HasColumnName("motivo_anulacion").HasMaxLength(500);
         builder.Property(c => c.AutorizadoPor).HasColumnName("autorizado_por").HasMaxLength(150);

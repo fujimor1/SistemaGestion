@@ -30,9 +30,10 @@ public class ReporteService : IReporteService
 
     // ── Reporte de Comprobantes ──────────────────────────────────────────────
 
-    private static List<ResumenDiarioComprobanteDto> AgruparPorDia(List<Termales.Entities.Models.Comprobante> comprobantes) =>
+    private static List<ResumenDiarioComprobanteDto> AgruparPorDia(
+        List<Termales.Entities.Models.Comprobante> comprobantes, Func<Termales.Entities.Models.Comprobante, DateTime> fecha) =>
         comprobantes
-            .GroupBy(c => DateOnly.FromDateTime(c.FechaEmision))
+            .GroupBy(c => DateOnly.FromDateTime(fecha(c)))
             .OrderBy(g => g.Key)
             .Select(g =>
             {
@@ -71,7 +72,7 @@ public class ReporteService : IReporteService
         var emitidos = vigentes.Where(c => c.TipoComprobante != "NC").ToList();
         var anulados = comprobantes.Where(c => c.Estado == "ANULADO").ToList();
 
-        var porDia = AgruparPorDia(comprobantes);
+        var porDia = AgruparPorDia(comprobantes, c => c.FechaEmision);
 
         var detalle = comprobantes.Select(c => new DetalleComprobanteReporteDto
         {
@@ -112,11 +113,11 @@ public class ReporteService : IReporteService
         var fin    = ParseDia(hasta).fin;
 
         var comprobantes = await _db.Comprobantes.AsNoTracking()
-            .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin)
-            .OrderBy(c => c.FechaEmision)
+            .Where(c => c.FechaVenta >= inicio && c.FechaVenta < fin)
+            .OrderBy(c => c.FechaVenta)
             .ToListAsync();
 
-        return AgruparPorDia(comprobantes);
+        return AgruparPorDia(comprobantes, c => c.FechaVenta);
     }
 
     // ── Reporte de Caja ──────────────────────────────────────────────────────
@@ -144,17 +145,17 @@ public class ReporteService : IReporteService
             .ToListAsync();
 
         var ventasRaw = await _db.Comprobantes.AsNoTracking()
-            .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin && c.Estado != "ANULADO" && c.Cobrado
+            .Where(c => c.FechaVenta >= inicio && c.FechaVenta < fin && c.Estado != "ANULADO" && c.Cobrado
                         && c.TipoComprobante != "NC" // la NC anula una venta anterior, no es ingreso nuevo
                         && (cajero == null || c.Cajero == cajero))
-            .Select(c => new { c.FechaEmision, c.Total })
+            .Select(c => new { c.FechaVenta, c.Total })
             .ToListAsync();
 
         var diasConDatos = new SortedSet<DateOnly>(
             aperturas.Select(a => DateOnly.FromDateTime(a.Fecha))
             .Concat(cierres.Select(c => DateOnly.FromDateTime(c.Fecha)))
             .Concat(egresos.Select(e => DateOnly.FromDateTime(e.Fecha)))
-            .Concat(ventasRaw.Select(c => DateOnly.FromDateTime(c.FechaEmision)))
+            .Concat(ventasRaw.Select(c => DateOnly.FromDateTime(c.FechaVenta)))
         );
 
         var porDia = diasConDatos.Select(fecha =>
@@ -162,7 +163,7 @@ public class ReporteService : IReporteService
             var apertura    = aperturas.FirstOrDefault(a => DateOnly.FromDateTime(a.Fecha) == fecha);
             var cierre      = cierres.FirstOrDefault(c => DateOnly.FromDateTime(c.Fecha) == fecha);
             var egresosDia  = egresos.Where(e => DateOnly.FromDateTime(e.Fecha) == fecha).Sum(e => e.Monto);
-            var ventas      = ventasRaw.Where(c => DateOnly.FromDateTime(c.FechaEmision) == fecha).Sum(c => c.Total);
+            var ventas      = ventasRaw.Where(c => DateOnly.FromDateTime(c.FechaVenta) == fecha).Sum(c => c.Total);
 
             var efectivo      = cierre?.EfectivoFisico ?? 0;
             var yape          = cierre?.YapeFisico ?? 0;
@@ -283,7 +284,7 @@ public class ReporteService : IReporteService
             .Include(d => d.ItemMenu).ThenInclude(i => i!.Categoria)
             .Include(d => d.Comprobante)
             .Where(d => d.ComprobanteId != null && d.ItemMenuId != null &&
-                        d.Comprobante!.FechaEmision >= inicio && d.Comprobante.FechaEmision < fin &&
+                        d.Comprobante!.FechaVenta >= inicio && d.Comprobante.FechaVenta < fin &&
                         d.Comprobante.Estado != "ANULADO")
             .ToListAsync();
 
@@ -316,7 +317,7 @@ public class ReporteService : IReporteService
 
         var detalles = await _db.ComprobanteDetalles.AsNoTracking()
             .Include(d => d.Comprobante)
-            .Where(d => d.Comprobante!.FechaEmision >= inicio && d.Comprobante.FechaEmision < fin &&
+            .Where(d => d.Comprobante!.FechaVenta >= inicio && d.Comprobante.FechaVenta < fin &&
                         d.Comprobante.Estado != "ANULADO" && d.Comprobante.TipoComprobante != "NC" &&
                         d.Comprobante.Cobrado && (cajero == null || d.Comprobante.Cajero == cajero))
             .ToListAsync();
@@ -324,7 +325,7 @@ public class ReporteService : IReporteService
         // Aparte, para poder repartir cada ambiente en efectivo/Yape según la forma de
         // pago real de cada venta (igual que en Liquidación de Caja).
         var comprobantesRango = await _db.Comprobantes.AsNoTracking()
-            .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin && c.Estado != "ANULADO"
+            .Where(c => c.FechaVenta >= inicio && c.FechaVenta < fin && c.Estado != "ANULADO"
                         && c.Cobrado && c.TipoComprobante != "NC" && (cajero == null || c.Cajero == cajero))
             .ToListAsync();
 
@@ -397,7 +398,7 @@ public class ReporteService : IReporteService
             .Include(d => d.ItemMenu).ThenInclude(i => i!.Receta).ThenInclude(r => r.Insumo)
             .Include(d => d.Comprobante)
             .Where(d => d.ComprobanteId != null && d.ItemMenuId != null &&
-                        d.Comprobante!.FechaEmision >= inicio && d.Comprobante.FechaEmision < fin &&
+                        d.Comprobante!.FechaVenta >= inicio && d.Comprobante.FechaVenta < fin &&
                         d.Comprobante.Estado != "ANULADO" && (cajero == null || d.Comprobante.Cajero == cajero))
             .ToListAsync();
 
@@ -435,7 +436,7 @@ public class ReporteService : IReporteService
         var detallesTienda = await _db.ComprobanteDetalles.AsNoTracking()
             .Include(d => d.Comprobante)
             .Where(d => d.Comprobante!.TipoAmbiente == "tienda" &&
-                        d.Comprobante.FechaEmision >= inicio && d.Comprobante.FechaEmision < fin &&
+                        d.Comprobante.FechaVenta >= inicio && d.Comprobante.FechaVenta < fin &&
                         d.Comprobante.Estado != "ANULADO" && d.Comprobante.TipoComprobante != "NC" &&
                         (cajero == null || d.Comprobante.Cajero == cajero))
             .ToListAsync();
@@ -491,7 +492,7 @@ public class ReporteService : IReporteService
         var detallesOtros = await _db.ComprobanteDetalles.AsNoTracking()
             .Include(d => d.Comprobante)
             .Where(d => (d.Comprobante!.TipoAmbiente == "banio" || d.Comprobante.TipoAmbiente == "habitacion") &&
-                        d.Comprobante.FechaEmision >= inicio && d.Comprobante.FechaEmision < fin &&
+                        d.Comprobante.FechaVenta >= inicio && d.Comprobante.FechaVenta < fin &&
                         d.Comprobante.Estado != "ANULADO" && d.Comprobante.TipoComprobante != "NC" &&
                         (cajero == null || d.Comprobante.Cajero == cajero))
             .ToListAsync();
@@ -539,7 +540,7 @@ public class ReporteService : IReporteService
         // Se materializa la lista (y no un simple SumAsync) porque de acá salen varios
         // desgloses distintos: por forma de pago, por ambiente y por tipo de comprobante.
         var comprobantesDia = await _db.Comprobantes.AsNoTracking()
-            .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin && c.Estado != "ANULADO" && c.Cobrado
+            .Where(c => c.FechaVenta >= inicio && c.FechaVenta < fin && c.Estado != "ANULADO" && c.Cobrado
                         && c.TipoComprobante != "NC" && (cajero == null || c.Cajero == cajero))
             .ToListAsync();
         var ventasSistema = comprobantesDia.Sum(c => c.Total);
@@ -630,7 +631,7 @@ public class ReporteService : IReporteService
         var fin    = ParseDia(hasta).fin;
 
         var comprobantes = await _db.Comprobantes.AsNoTracking()
-            .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin && c.Estado != "ANULADO"
+            .Where(c => c.FechaVenta >= inicio && c.FechaVenta < fin && c.Estado != "ANULADO"
                         && c.TipoComprobante != "NC")
             .Select(c => new { c.Cajero, c.Total })
             .ToListAsync();
@@ -719,11 +720,11 @@ public class ReporteService : IReporteService
         var fin    = ParseDia(hasta).fin;
 
         var comprobantes = await _db.Comprobantes.AsNoTracking()
-            .Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin &&
+            .Where(c => c.FechaVenta >= inicio && c.FechaVenta < fin &&
                         c.Estado != "ANULADO" && c.Cobrado && c.TipoComprobante != "NC" &&
                         (c.MetodoPago == MetodoPago.YapePlin || c.MetodoPago == MetodoPago.Mixto) &&
                         (cajero == null || c.Cajero == cajero))
-            .OrderBy(c => c.FechaEmision)
+            .OrderBy(c => c.FechaVenta)
             .ToListAsync();
 
         var detalle = comprobantes.Select(c => new DetallePagoQrDto

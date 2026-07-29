@@ -467,7 +467,7 @@ public class ComprobanteService : IComprobanteService
     private async Task<ApiResponse<ComprobanteResultadoDto>> EmitirConNubefact(
         GenerarComprobanteDto dto, decimal total,
         List<ItemComprobante> items, string tipoAmbiente, int referenciaId,
-        int tipoDoc, string serie, int? comprobanteOrigenId = null)
+        int tipoDoc, string serie, int? comprobanteOrigenId = null, DateTime? fechaVentaOrigen = null)
     {
         var totalGravada = Math.Round(total / 1.18m, 2);
         var totalIgv     = Math.Round(total - totalGravada, 2);
@@ -577,6 +577,7 @@ public class ComprobanteService : IComprobanteService
             Cobrado            = dto.MetodoPago != MetodoPago.Fiado,
             ClienteId          = dto.ClienteId,
             ComprobanteOrigenId = comprobanteOrigenId,
+            FechaVenta         = fechaVentaOrigen ?? DateTime.UtcNow,
             Detalles           = MapearDetalles(items),
         };
         await _uow.Comprobantes.AgregarAsync(comprobante);
@@ -604,7 +605,7 @@ public class ComprobanteService : IComprobanteService
     private async Task<ApiResponse<ComprobanteResultadoDto>> EmitirDirectoSunat(
         GenerarComprobanteDto dto, decimal total,
         List<ItemComprobante> items, string tipoAmbiente, int referenciaId,
-        string tipoComprobante, string serie, int? comprobanteOrigenId = null)
+        string tipoComprobante, string serie, int? comprobanteOrigenId = null, DateTime? fechaVentaOrigen = null)
     {
         var esFactura = tipoComprobante == "FI";
         if (esFactura && string.IsNullOrWhiteSpace(dto.ClienteRuc))
@@ -637,6 +638,7 @@ public class ComprobanteService : IComprobanteService
             Cobrado            = dto.MetodoPago != MetodoPago.Fiado,
             ClienteId          = dto.ClienteId,
             ComprobanteOrigenId = comprobanteOrigenId,
+            FechaVenta         = fechaVentaOrigen ?? DateTime.UtcNow,
             Detalles           = MapearDetalles(items),
         };
         await _uow.Comprobantes.AgregarAsync(comprobante);
@@ -971,9 +973,10 @@ public class ComprobanteService : IComprobanteService
 
         var resultado = _sunatCfg.Habilitado
             ? await EmitirDirectoSunat(dtoEmision, origen.Total, items, origen.TipoAmbiente, origen.ReferenciaId ?? 0,
-                esFactura ? "FI" : "BI", serieDestino, origen.ComprobanteId)
+                esFactura ? "FI" : "BI", serieDestino, origen.ComprobanteId, origen.FechaVenta)
             : await EmitirConNubefact(dtoEmision, origen.Total, items, origen.TipoAmbiente, origen.ReferenciaId ?? 0,
-                tipoDoc: esFactura ? 1 : 2, serie: serieDestino, comprobanteOrigenId: origen.ComprobanteId);
+                tipoDoc: esFactura ? 1 : 2, serie: serieDestino, comprobanteOrigenId: origen.ComprobanteId,
+                fechaVentaOrigen: origen.FechaVenta);
 
         if (!resultado.Exito) return resultado;
 

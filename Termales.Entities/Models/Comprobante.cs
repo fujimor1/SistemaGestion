@@ -60,5 +60,12 @@ public class Comprobante
 
     public DateTime FechaEmision { get; set; } = DateTime.UtcNow;
 
+    // Día en que la venta realmente ocurrió, para reportes operativos (caja, dashboards,
+    // utilidad) — normalmente igual a FechaEmision, salvo en un canje NV→BI/FI, donde el
+    // documento nuevo nace "hoy" (fecha legal correcta para SUNAT) pero el dinero ya había
+    // entrado a caja el día de la NV original, así que hereda esa fecha para no inflar el
+    // cuadre de caja de hoy con una venta que no se cobró hoy.
+    public DateTime FechaVenta { get; set; } = DateTime.UtcNow;
+
     public ICollection<ComprobanteDetalle> Detalles { get; set; } = new List<ComprobanteDetalle>();
 }
