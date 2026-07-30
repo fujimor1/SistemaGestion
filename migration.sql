@@ -2332,7 +2332,7 @@ BEGIN
                     SET fecha_venta = o.fecha_emision
                     FROM comprobantes o
                     WHERE c.comprobante_origen_id = o.comprobante_id
-                      AND o.tipo_comprobante = 'NV';
+                      AND o."TipoComprobante" = 'NV';
                 
     END IF;
 END $EF$;

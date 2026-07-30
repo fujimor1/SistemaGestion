@@ -144,18 +144,24 @@ public class ReporteService : IReporteService
             .Where(e => e.Fecha >= inicio && e.Fecha < fin)
             .ToListAsync();
 
+        // (FechaCobro ?? FechaVenta): una venta al contado cuenta el día de la venta, pero un
+        // fiado que se cobra después cuenta el día real en que entró el dinero — igual que ya
+        // hace CajaService para el cuadre de "hoy". Sin esto, un fiado cobrado hoy pero vendido
+        // días atrás seguía apareciendo bajo el día de la venta cada vez que se reabría este
+        // reporte, aunque el cierre de ese día ya se hubiera cuadrado sin esa plata.
         var ventasRaw = await _db.Comprobantes.AsNoTracking()
-            .Where(c => c.FechaVenta >= inicio && c.FechaVenta < fin && c.Estado != "ANULADO" && c.Cobrado
+            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= inicio && (c.FechaCobro ?? c.FechaVenta) < fin
+                        && c.Estado != "ANULADO" && c.Cobrado
                         && c.TipoComprobante != "NC" // la NC anula una venta anterior, no es ingreso nuevo
                         && (cajero == null || c.Cajero == cajero))
-            .Select(c => new { c.FechaVenta, c.Total })
+            .Select(c => new { Fecha = c.FechaCobro ?? c.FechaVenta, c.Total })
             .ToListAsync();
 
         var diasConDatos = new SortedSet<DateOnly>(
             aperturas.Select(a => DateOnly.FromDateTime(a.Fecha))
             .Concat(cierres.Select(c => DateOnly.FromDateTime(c.Fecha)))
             .Concat(egresos.Select(e => DateOnly.FromDateTime(e.Fecha)))
-            .Concat(ventasRaw.Select(c => DateOnly.FromDateTime(c.FechaVenta)))
+            .Concat(ventasRaw.Select(c => DateOnly.FromDateTime(c.Fecha)))
         );
 
         var porDia = diasConDatos.Select(fecha =>
@@ -163,7 +169,7 @@ public class ReporteService : IReporteService
             var apertura    = aperturas.FirstOrDefault(a => DateOnly.FromDateTime(a.Fecha) == fecha);
             var cierre      = cierres.FirstOrDefault(c => DateOnly.FromDateTime(c.Fecha) == fecha);
             var egresosDia  = egresos.Where(e => DateOnly.FromDateTime(e.Fecha) == fecha).Sum(e => e.Monto);
-            var ventas      = ventasRaw.Where(c => DateOnly.FromDateTime(c.FechaVenta) == fecha).Sum(c => c.Total);
+            var ventas      = ventasRaw.Where(c => DateOnly.FromDateTime(c.Fecha) == fecha).Sum(c => c.Total);
 
             var efectivo      = cierre?.EfectivoFisico ?? 0;
             var yape          = cierre?.YapeFisico ?? 0;
@@ -317,7 +323,8 @@ public class ReporteService : IReporteService
 
         var detalles = await _db.ComprobanteDetalles.AsNoTracking()
             .Include(d => d.Comprobante)
-            .Where(d => d.Comprobante!.FechaVenta >= inicio && d.Comprobante.FechaVenta < fin &&
+            .Where(d => (d.Comprobante!.FechaCobro ?? d.Comprobante.FechaVenta) >= inicio &&
+                        (d.Comprobante.FechaCobro ?? d.Comprobante.FechaVenta) < fin &&
                         d.Comprobante.Estado != "ANULADO" && d.Comprobante.TipoComprobante != "NC" &&
                         d.Comprobante.Cobrado && (cajero == null || d.Comprobante.Cajero == cajero))
             .ToListAsync();
@@ -325,7 +332,8 @@ public class ReporteService : IReporteService
         // Aparte, para poder repartir cada ambiente en efectivo/Yape según la forma de
         // pago real de cada venta (igual que en Liquidación de Caja).
         var comprobantesRango = await _db.Comprobantes.AsNoTracking()
-            .Where(c => c.FechaVenta >= inicio && c.FechaVenta < fin && c.Estado != "ANULADO"
+            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= inicio && (c.FechaCobro ?? c.FechaVenta) < fin
+                        && c.Estado != "ANULADO"
                         && c.Cobrado && c.TipoComprobante != "NC" && (cajero == null || c.Cajero == cajero))
             .ToListAsync();
 
@@ -540,7 +548,8 @@ public class ReporteService : IReporteService
         // Se materializa la lista (y no un simple SumAsync) porque de acá salen varios
         // desgloses distintos: por forma de pago, por ambiente y por tipo de comprobante.
         var comprobantesDia = await _db.Comprobantes.AsNoTracking()
-            .Where(c => c.FechaVenta >= inicio && c.FechaVenta < fin && c.Estado != "ANULADO" && c.Cobrado
+            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= inicio && (c.FechaCobro ?? c.FechaVenta) < fin
+                        && c.Estado != "ANULADO" && c.Cobrado
                         && c.TipoComprobante != "NC" && (cajero == null || c.Cajero == cajero))
             .ToListAsync();
         var ventasSistema = comprobantesDia.Sum(c => c.Total);
@@ -720,11 +729,11 @@ public class ReporteService : IReporteService
         var fin    = ParseDia(hasta).fin;
 
         var comprobantes = await _db.Comprobantes.AsNoTracking()
-            .Where(c => c.FechaVenta >= inicio && c.FechaVenta < fin &&
+            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= inicio && (c.FechaCobro ?? c.FechaVenta) < fin &&
                         c.Estado != "ANULADO" && c.Cobrado && c.TipoComprobante != "NC" &&
                         (c.MetodoPago == MetodoPago.YapePlin || c.MetodoPago == MetodoPago.Mixto) &&
                         (cajero == null || c.Cajero == cajero))
-            .OrderBy(c => c.FechaVenta)
+            .OrderBy(c => c.FechaCobro ?? c.FechaVenta)
             .ToListAsync();
 
         var detalle = comprobantes.Select(c => new DetallePagoQrDto
