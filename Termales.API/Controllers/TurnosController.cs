@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Termales.API.Authorization;
 using Termales.BLL.Interfaces;
 using Termales.Common.DTOs;
+using Termales.Common.Utils;
 
 namespace Termales.API.Controllers;
 
@@ -49,7 +50,7 @@ public class TurnosController : ControllerBase
     [HttpGet("aforo")]
     public async Task<IActionResult> ObtenerAforoDelDia([FromQuery] DateTime? fecha)
     {
-        var resultado = await _service.ObtenerAforoDelDiaAsync(fecha ?? DateTime.Today);
+        var resultado = await _service.ObtenerAforoDelDiaAsync(fecha ?? PeruTime.Today());
         return Ok(resultado);
     }
 

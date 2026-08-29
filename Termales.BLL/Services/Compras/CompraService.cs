@@ -5,6 +5,7 @@ using Termales.BLL.Interfaces.Compras;
 using Termales.Common.DTOs.Caja;
 using Termales.Common.DTOs.Compras;
 using Termales.Common.Settings;
+using Termales.Common.Utils;
 using Termales.DAL.UnitOfWork;
 using Termales.Entities.Models.Compras;
 using Termales.Entities.Models.Inventario;
@@ -253,9 +254,13 @@ public class CompraService : ICompraService
 
     public async Task<ResumenComprasDto> ObtenerResumenMesActualAsync()
     {
-        var hoy = DateTime.UtcNow;
-        var desde = new DateTime(hoy.Year, hoy.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var hasta = desde.AddMonths(1);
+        // "Mes actual" es el mes de negocio en Perú, no el mes UTC — sin esto, el
+        // resumen del 1ro del mes se calculaba mal entre las 7pm y medianoche hora
+        // Perú del último día del mes anterior (UTC ya había cruzado al día 1).
+        var hoy = PeruTime.Today();
+        var inicioMesDia = new DateTime(hoy.Year, hoy.Month, 1);
+        var (desde, _) = PeruTime.DayRange(inicioMesDia);
+        var (hasta, _) = PeruTime.DayRange(inicioMesDia.AddMonths(1));
         var (total, cantidad) = await _uow.Compras.ObtenerResumenAsync(desde, hasta);
         return new ResumenComprasDto
         {

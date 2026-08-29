@@ -1,5 +1,6 @@
 using Termales.BLL.Interfaces;
 using Termales.Common.DTOs.Comprobante;
+using Termales.Common.Utils;
 using Termales.Common.Wrappers;
 using Termales.DAL.UnitOfWork;
 using Termales.Entities.Models;
@@ -56,8 +57,8 @@ public class SolicitudAnulacionService : ISolicitudAnulacionService
 
     public async Task<IEnumerable<SolicitudAnulacionDto>> ObtenerHistorialAsync(string? desde, string? hasta)
     {
-        var desdeDate = DateOnly.TryParse(desde, out var d) ? d : DateOnly.FromDateTime(DateTime.UtcNow);
-        var hastaDate = DateOnly.TryParse(hasta, out var h) ? h : DateOnly.FromDateTime(DateTime.UtcNow);
+        var desdeDate = DateOnly.TryParse(desde, out var d) ? d : DateOnly.FromDateTime(PeruTime.Now());
+        var hastaDate = DateOnly.TryParse(hasta, out var h) ? h : DateOnly.FromDateTime(PeruTime.Now());
         var lista = await _uow.SolicitudesAnulacion.ObtenerHistorialAsync(desdeDate, hastaDate);
         return lista.Select(MapDto);
     }

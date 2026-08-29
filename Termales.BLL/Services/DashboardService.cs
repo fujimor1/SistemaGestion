@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Termales.BLL.Interfaces;
 using Termales.Common.DTOs;
+using Termales.Common.Utils;
 using Termales.DAL.Context;
 
 namespace Termales.BLL.Services;
@@ -26,39 +27,43 @@ public class DashboardService : IDashboardService
 
     public async Task<DashboardComedorDto> GetComedorAsync()
     {
-        var ahora = DateTime.UtcNow;
-        var hoy = ahora.Date;
-        var semana = hoy.AddDays(-7);
-        var mes = new DateTime(ahora.Year, ahora.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var hace30 = hoy.AddDays(-29);
+        var hoy = PeruTime.Today();
+        var (inicioHoy, finHoy) = PeruTime.DayRange(hoy);
+        var (inicioSemana, _) = PeruTime.DayRange(hoy.AddDays(-7));
+        var (inicioMes, _) = PeruTime.DayRange(new DateTime(hoy.Year, hoy.Month, 1));
+        var (inicioHace30, _) = PeruTime.DayRange(hoy.AddDays(-29));
 
         var ordenes = _db.Ordenes.AsNoTracking();
 
+        // FechaApertura es un instante real (UtcNow al abrir la mesa): se filtra por
+        // rango [inicio, fin) del día de negocio en Perú, y para agrupar "por día" o
+        // "por hora" se desplaza -5h antes de truncar, así el corte cae a medianoche
+        // Perú (no UTC) y la hora del gráfico es la hora local, no la UTC.
         var ingresoHoy = await ordenes
-            .Where(o => o.FechaApertura.Date == hoy && (int)o.Estado >= 3)
+            .Where(o => o.FechaApertura >= inicioHoy && o.FechaApertura < finHoy && (int)o.Estado >= 3)
             .SumAsync(o => (decimal?)o.Total) ?? 0;
 
         var ingresoSemana = await ordenes
-            .Where(o => o.FechaApertura >= semana && (int)o.Estado >= 3)
+            .Where(o => o.FechaApertura >= inicioSemana && (int)o.Estado >= 3)
             .SumAsync(o => (decimal?)o.Total) ?? 0;
 
         var ingresoMes = await ordenes
-            .Where(o => o.FechaApertura >= mes && (int)o.Estado >= 3)
+            .Where(o => o.FechaApertura >= inicioMes && (int)o.Estado >= 3)
             .SumAsync(o => (decimal?)o.Total) ?? 0;
 
-        var ordenesHoy = await ordenes.CountAsync(o => o.FechaApertura.Date == hoy);
+        var ordenesHoy = await ordenes.CountAsync(o => o.FechaApertura >= inicioHoy && o.FechaApertura < finHoy);
         var ordenesAbiertas = await ordenes.CountAsync(o => (int)o.Estado < 4);
 
         var ingresosDiaRaw = await ordenes
-            .Where(o => o.FechaApertura.Date >= hace30 && (int)o.Estado >= 3)
-            .GroupBy(o => o.FechaApertura.Date)
+            .Where(o => o.FechaApertura >= inicioHace30 && (int)o.Estado >= 3)
+            .GroupBy(o => o.FechaApertura.AddHours(-5).Date)
             .Select(g => new { Fecha = g.Key, Valor = g.Sum(o => o.Total) })
             .ToListAsync();
 
         // Solo platos de cocina (los productos de tienda agregados a una
         // orden no tienen ItemMenuId) — "más vendidos" es un ranking de menú.
         var platosRaw = await _db.OrdenDetalles.AsNoTracking()
-            .Where(od => od.Orden.FechaApertura.Date >= hace30 && od.ItemMenuId != null)
+            .Where(od => od.Orden.FechaApertura >= inicioHace30 && od.ItemMenuId != null)
             .GroupBy(od => od.ItemMenuId!.Value)
             .Select(g => new { Id = g.Key, Total = g.Sum(od => od.Cantidad) })
             .OrderByDescending(x => x.Total)
@@ -71,8 +76,8 @@ public class DashboardService : IDashboardService
             .ToDictionaryAsync(i => i.ItemMenuId, i => i.Nombre);
 
         var horasRaw = await ordenes
-            .Where(o => o.FechaApertura.Date >= hace30)
-            .GroupBy(o => o.FechaApertura.Hour)
+            .Where(o => o.FechaApertura >= inicioHace30)
+            .GroupBy(o => o.FechaApertura.AddHours(-5).Hour)
             .Select(g => new { Hora = g.Key, Total = g.Count() })
             .ToListAsync();
 
@@ -97,11 +102,16 @@ public class DashboardService : IDashboardService
 
     public async Task<DashboardBaniosDto> GetBaniosAsync()
     {
-        var ahora = DateTime.UtcNow;
-        var hoy = ahora.Date;
-        var mes = new DateTime(ahora.Year, ahora.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var hoy = PeruTime.Today();
+        var (inicioHoy, finHoy) = PeruTime.DayRange(hoy);
+        var mesInicioDia = DateTime.SpecifyKind(new DateTime(hoy.Year, hoy.Month, 1), DateTimeKind.Utc);
+        var (inicioMes, _) = PeruTime.DayRange(mesInicioDia);
         var hace30 = hoy.AddDays(-29);
+        var (inicioHace30, _) = PeruTime.DayRange(hace30);
 
+        // Aforo.Fecha es un day-key (se guarda ya truncado a .Date al crearse, ver
+        // AforoService.CrearAsync) — se compara directo contra el día de negocio en
+        // Perú, sin rango. Comprobante.FechaCobro/FechaVenta sí son instantes reales.
         var aforos = _db.Aforos.AsNoTracking();
         // Sin este filtro se sumaban comprobantes ANULADOS y Notas de Crédito como si
         // fueran ingreso — una NC anula/reduce una venta anterior, no es venta nueva.
@@ -113,31 +123,31 @@ public class DashboardService : IDashboardService
             .SumAsync(a => (int?)a.OcupacionActual) ?? 0;
 
         var ingresoHoy = await comprobantes
-            .Where(c => (c.FechaCobro ?? c.FechaVenta).Date == hoy)
+            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= inicioHoy && (c.FechaCobro ?? c.FechaVenta) < finHoy)
             .SumAsync(c => (decimal?)c.Total) ?? 0;
 
         var personasMes = await aforos
-            .Where(a => a.Fecha >= mes)
+            .Where(a => a.Fecha >= mesInicioDia)
             .SumAsync(a => (int?)a.OcupacionActual) ?? 0;
 
         var ingresoMes = await comprobantes
-            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= mes)
+            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= inicioMes)
             .SumAsync(c => (decimal?)c.Total) ?? 0;
 
         var personasDiaRaw = await aforos
-            .Where(a => a.Fecha.Date >= hace30)
+            .Where(a => a.Fecha >= hace30)
             .GroupBy(a => a.Fecha.Date)
             .Select(g => new { Fecha = g.Key, Valor = g.Max(a => a.OcupacionActual) })
             .ToListAsync();
 
         var horasRaw = await comprobantes
-            .Where(c => (c.FechaCobro ?? c.FechaVenta).Date >= hace30)
-            .GroupBy(c => (c.FechaCobro ?? c.FechaVenta).Hour)
+            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= inicioHace30)
+            .GroupBy(c => (c.FechaCobro ?? c.FechaVenta).AddHours(-5).Hour)
             .Select(g => new { Hora = g.Key, Total = g.Count() })
             .ToListAsync();
 
         var svcRaw = await aforos
-            .Where(a => a.Fecha.Date >= hace30)
+            .Where(a => a.Fecha >= hace30)
             .GroupBy(a => a.TipoServicioId)
             .Select(g => new { Id = g.Key, Valor = (decimal)g.Sum(a => a.OcupacionActual) })
             .ToListAsync();
@@ -169,11 +179,11 @@ public class DashboardService : IDashboardService
 
     public async Task<DashboardHabitacionesDto> GetHabitacionesAsync()
     {
-        var ahora = DateTime.UtcNow;
-        var hoy = ahora.Date;
-        var mes = new DateTime(ahora.Year, ahora.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var hace30 = hoy.AddDays(-29);
-        var hace90 = hoy.AddDays(-89);
+        var hoy = PeruTime.Today();
+        var (inicioHoy, finHoy) = PeruTime.DayRange(hoy);
+        var (inicioMes, _) = PeruTime.DayRange(new DateTime(hoy.Year, hoy.Month, 1));
+        var (inicioHace30, _) = PeruTime.DayRange(hoy.AddDays(-29));
+        var (inicioHace90, _) = PeruTime.DayRange(hoy.AddDays(-89));
 
         // Las habitaciones ya no se reservan con anticipación: se cobran al
         // asignarlas directo desde las cards de Caja (ver
@@ -186,31 +196,31 @@ public class DashboardService : IDashboardService
             .Where(c => c.TipoAmbiente == "habitacion" && c.Estado != "ANULADO" && c.Cobrado
                         && c.TipoComprobante != "NC"); // la NC anula una venta anterior, no es ingreso nuevo
 
-        var reservasHoy = await comprobantes.CountAsync(c => (c.FechaCobro ?? c.FechaVenta).Date == hoy);
-        var reservasMes = await comprobantes.CountAsync(c => (c.FechaCobro ?? c.FechaVenta) >= mes);
+        var reservasHoy = await comprobantes.CountAsync(c => (c.FechaCobro ?? c.FechaVenta) >= inicioHoy && (c.FechaCobro ?? c.FechaVenta) < finHoy);
+        var reservasMes = await comprobantes.CountAsync(c => (c.FechaCobro ?? c.FechaVenta) >= inicioMes);
 
         var ingresoMes = await comprobantes
-            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= mes)
+            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= inicioMes)
             .SumAsync(c => (decimal?)c.Total) ?? 0;
 
         var totalHabs = await _db.Habitaciones.AsNoTracking().CountAsync(h => h.Activo);
         var ocupadasHoy = await _db.Habitaciones.AsNoTracking().CountAsync(h => h.Activo && h.Ocupado);
 
         var reservasDiaRaw = await comprobantes
-            .Where(c => (c.FechaCobro ?? c.FechaVenta).Date >= hace30)
-            .GroupBy(c => (c.FechaCobro ?? c.FechaVenta).Date)
+            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= inicioHace30)
+            .GroupBy(c => (c.FechaCobro ?? c.FechaVenta).AddHours(-5).Date)
             .Select(g => new { Fecha = g.Key, Valor = (decimal)g.Count() })
             .ToListAsync();
 
         var ingresosDiaRaw = await comprobantes
-            .Where(c => (c.FechaCobro ?? c.FechaVenta).Date >= hace30)
-            .GroupBy(c => (c.FechaCobro ?? c.FechaVenta).Date)
+            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= inicioHace30)
+            .GroupBy(c => (c.FechaCobro ?? c.FechaVenta).AddHours(-5).Date)
             .Select(g => new { Fecha = g.Key, Valor = g.Sum(c => c.Total) })
             .ToListAsync();
 
         var semanaRaw = await comprobantes
-            .Where(c => (c.FechaCobro ?? c.FechaVenta).Date >= hace90)
-            .GroupBy(c => (c.FechaCobro ?? c.FechaVenta).DayOfWeek)
+            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= inicioHace90)
+            .GroupBy(c => (c.FechaCobro ?? c.FechaVenta).AddHours(-5).DayOfWeek)
             .Select(g => new { Dia = (int)g.Key, Total = (decimal)g.Count() })
             .ToListAsync();
 
@@ -239,11 +249,11 @@ public class DashboardService : IDashboardService
 
     public async Task<DashboardTiendaDto> GetTiendaAsync()
     {
-        var ahora = DateTime.UtcNow;
-        var hoy = ahora.Date;
-        var semana = hoy.AddDays(-7);
-        var mes = new DateTime(ahora.Year, ahora.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var hace30 = hoy.AddDays(-29);
+        var hoy = PeruTime.Today();
+        var (inicioHoy, finHoy) = PeruTime.DayRange(hoy);
+        var (inicioSemana, _) = PeruTime.DayRange(hoy.AddDays(-7));
+        var (inicioMes, _) = PeruTime.DayRange(new DateTime(hoy.Year, hoy.Month, 1));
+        var (inicioHace30, _) = PeruTime.DayRange(hoy.AddDays(-29));
 
         // Sin este filtro se sumaban comprobantes ANULADOS y Notas de Crédito como si
         // fueran ingreso — una NC anula/reduce una venta anterior, no es venta nueva.
@@ -251,29 +261,29 @@ public class DashboardService : IDashboardService
             .Where(c => c.TipoAmbiente == "tienda" && c.Estado != "ANULADO" && c.Cobrado && c.TipoComprobante != "NC");
 
         var ingresoHoy = await comprobantes
-            .Where(c => (c.FechaCobro ?? c.FechaVenta).Date == hoy)
+            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= inicioHoy && (c.FechaCobro ?? c.FechaVenta) < finHoy)
             .SumAsync(c => (decimal?)c.Total) ?? 0;
 
         var ingresoSemana = await comprobantes
-            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= semana)
+            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= inicioSemana)
             .SumAsync(c => (decimal?)c.Total) ?? 0;
 
         var ingresoMes = await comprobantes
-            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= mes)
+            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= inicioMes)
             .SumAsync(c => (decimal?)c.Total) ?? 0;
 
-        var ventasHoy = await comprobantes.CountAsync(c => (c.FechaCobro ?? c.FechaVenta).Date == hoy);
+        var ventasHoy = await comprobantes.CountAsync(c => (c.FechaCobro ?? c.FechaVenta) >= inicioHoy && (c.FechaCobro ?? c.FechaVenta) < finHoy);
         var productosTotales = await _db.Productos.AsNoTracking().CountAsync(p => p.Activo);
 
         var ingresosDiaRaw = await comprobantes
-            .Where(c => (c.FechaCobro ?? c.FechaVenta).Date >= hace30)
-            .GroupBy(c => (c.FechaCobro ?? c.FechaVenta).Date)
+            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= inicioHace30)
+            .GroupBy(c => (c.FechaCobro ?? c.FechaVenta).AddHours(-5).Date)
             .Select(g => new { Fecha = g.Key, Valor = g.Sum(c => c.Total) })
             .ToListAsync();
 
         var horasRaw = await comprobantes
-            .Where(c => (c.FechaCobro ?? c.FechaVenta).Date >= hace30)
-            .GroupBy(c => (c.FechaCobro ?? c.FechaVenta).Hour)
+            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= inicioHace30)
+            .GroupBy(c => (c.FechaCobro ?? c.FechaVenta).AddHours(-5).Hour)
             .Select(g => new { Hora = g.Key, Total = g.Count() })
             .ToListAsync();
 

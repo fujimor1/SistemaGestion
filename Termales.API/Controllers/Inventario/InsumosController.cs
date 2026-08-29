@@ -4,6 +4,7 @@ using Termales.API.Authorization;
 using Termales.BLL.Interfaces;
 using Termales.BLL.Interfaces.Inventario;
 using Termales.Common.DTOs.Inventario;
+using Termales.Common.Utils;
 
 namespace Termales.API.Controllers.Inventario;
 
@@ -108,7 +109,11 @@ public class InsumosController : ControllerBase
     [HttpGet("consumo-diario")]
     public async Task<IActionResult> ConsumoDiario([FromQuery] DateTime? fecha)
     {
-        var dia = fecha?.ToUniversalTime() ?? DateTime.UtcNow;
+        // Se pasa la fecha (o "hoy" en Perú) tal cual: el rango del día de negocio se
+        // calcula en el repositorio (PeruTime.DayRange). Ojo: `.ToUniversalTime()` sobre
+        // un DateTime sin zona lo convertía asumiendo la zona horaria del SERVIDOR, no
+        // la de Perú — podía correr el día si el servidor no está en UTC-5.
+        var dia = fecha ?? PeruTime.Today();
         var salidas = await _salidaService.ObtenerPorFechaAsync(dia);
         return Ok(salidas);
     }

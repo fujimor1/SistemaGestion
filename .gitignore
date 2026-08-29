@@ -30,3 +30,6 @@ publish_linux/
 *.tar.gz
 puente_win/
 *.zip
+
+## Backups locales de la base de datos (contienen datos reales del negocio)
+backups/

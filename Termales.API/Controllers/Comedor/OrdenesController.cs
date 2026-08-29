@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Termales.API.Authorization;
 using Termales.BLL.Interfaces.Comedor;
 using Termales.Common.DTOs.Comedor;
+using Termales.Common.Utils;
 using Termales.Entities.Enums;
 
 namespace Termales.API.Controllers.Comedor;
@@ -44,7 +45,7 @@ public class OrdenesController : ControllerBase
     [Authorize(Roles = Modulos.ComedorLectura)]
     public async Task<IActionResult> ObtenerPorFecha([FromQuery] DateTime? fecha)
     {
-        var resultado = await _service.ObtenerPorFechaAsync(fecha ?? DateTime.Today);
+        var resultado = await _service.ObtenerPorFechaAsync(fecha ?? PeruTime.Today());
         return Ok(resultado);
     }
 

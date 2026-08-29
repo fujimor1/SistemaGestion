@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Termales.Common.Utils;
 using Termales.DAL.Context;
 using Termales.DAL.Interfaces;
 using Termales.Entities.Models;
@@ -19,19 +20,11 @@ public class ComprobanteRepository : GenericRepository<Comprobante>, IComprobant
         return ultimo ?? 0;
     }
 
-    // Perú es UTC-5 fijo (sin horario de verano). FechaEmision se guarda en UTC,
-    // pero el "día" de negocio que filtra el cajero es el día calendario en Perú,
-    // así que el rango de un día Perú hay que expresarlo en UTC sumando 5 horas
-    // (00:00 Perú = 05:00 UTC del mismo día calendario).
-    private static readonly TimeSpan OffsetPeru = TimeSpan.FromHours(5);
-    private static DateOnly HoyPeru() => DateOnly.FromDateTime(DateTime.UtcNow - OffsetPeru);
-
     public async Task<IEnumerable<Comprobante>> ObtenerPorFechaAsync(DateOnly fecha, string? tipoAmbiente)
     {
-        var inicio = fecha.ToDateTime(TimeOnly.MinValue) + OffsetPeru;
-        var fin    = fecha.ToDateTime(TimeOnly.MaxValue) + OffsetPeru;
+        var (inicio, fin) = PeruTime.DayRange(fecha);
 
-        var query = _dbSet.Where(c => c.FechaEmision >= inicio && c.FechaEmision <= fin);
+        var query = _dbSet.Where(c => c.FechaEmision >= inicio && c.FechaEmision < fin);
         if (!string.IsNullOrWhiteSpace(tipoAmbiente))
             query = query.Where(c => c.TipoAmbiente == tipoAmbiente);
 
@@ -40,11 +33,12 @@ public class ComprobanteRepository : GenericRepository<Comprobante>, IComprobant
 
     public async Task<IEnumerable<Comprobante>> ObtenerAnulacionesAsync(DateOnly? desde, DateOnly? hasta)
     {
-        var inicio = (desde ?? HoyPeru()).ToDateTime(TimeOnly.MinValue) + OffsetPeru;
-        var fin    = (hasta ?? HoyPeru()).ToDateTime(TimeOnly.MaxValue) + OffsetPeru;
+        var hoy = DateOnly.FromDateTime(PeruTime.Today());
+        var (inicio, _) = PeruTime.DayRange(desde ?? hoy);
+        var (_, fin) = PeruTime.DayRange(hasta ?? hoy);
 
         return await _dbSet
-            .Where(c => c.Estado == "ANULADO" && c.FechaEmision >= inicio && c.FechaEmision <= fin)
+            .Where(c => c.Estado == "ANULADO" && c.FechaEmision >= inicio && c.FechaEmision < fin)
             .OrderByDescending(c => c.FechaEmision)
             .ToListAsync();
     }
@@ -65,25 +59,24 @@ public class ComprobanteRepository : GenericRepository<Comprobante>, IComprobant
 
     public async Task<IEnumerable<Comprobante>> ObtenerFacturasBoletasAsync(DateOnly fecha)
     {
-        var inicio = fecha.ToDateTime(TimeOnly.MinValue) + OffsetPeru;
-        var fin    = fecha.ToDateTime(TimeOnly.MaxValue) + OffsetPeru;
+        var (inicio, fin) = PeruTime.DayRange(fecha);
 
         return await _dbSet
             .Include(c => c.Detalles)
             .Where(c => (c.TipoComprobante == "FI" || c.TipoComprobante == "BI" || c.TipoComprobante == "NV")
-                        && c.FechaEmision >= inicio && c.FechaEmision <= fin)
+                        && c.FechaEmision >= inicio && c.FechaEmision < fin)
             .OrderByDescending(c => c.FechaEmision)
             .ToListAsync();
     }
 
     public async Task<IEnumerable<Comprobante>> ObtenerNotasCreditoAsync(DateOnly desde, DateOnly hasta)
     {
-        var inicio = desde.ToDateTime(TimeOnly.MinValue) + OffsetPeru;
-        var fin    = hasta.ToDateTime(TimeOnly.MaxValue) + OffsetPeru;
+        var (inicio, _) = PeruTime.DayRange(desde);
+        var (_, fin) = PeruTime.DayRange(hasta);
 
         return await _dbSet
             .Include(c => c.ComprobanteOrigen)
-            .Where(c => c.TipoComprobante == "NC" && c.FechaEmision >= inicio && c.FechaEmision <= fin)
+            .Where(c => c.TipoComprobante == "NC" && c.FechaEmision >= inicio && c.FechaEmision < fin)
             .OrderByDescending(c => c.FechaEmision)
             .ToListAsync();
     }

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Termales.Common.Utils;
 using Termales.DAL.Context;
 using Termales.DAL.Interfaces.Comedor;
 using Termales.Entities.Enums;
@@ -53,12 +54,19 @@ public class OrdenRepository : GenericRepository<Orden>, IOrdenRepository
             .OrderBy(o => o.FechaApertura)
             .ToListAsync();
 
-    public async Task<IEnumerable<Orden>> ObtenerPorFechaAsync(DateTime fecha) =>
-        await _dbSet
+    public async Task<IEnumerable<Orden>> ObtenerPorFechaAsync(DateTime fecha)
+    {
+        // FechaApertura es un instante real (UtcNow al abrir la mesa), no un day-key:
+        // compararlo con `.Date == fecha.Date` crudo lo hace fallar entre las 7pm y
+        // medianoche hora Perú (ver PeruTime). Se filtra por el rango [inicio, fin)
+        // del día de negocio en Perú en su lugar.
+        var (inicio, fin) = PeruTime.DayRange(fecha);
+        return await _dbSet
             .Include(o => o.Mesa).ThenInclude(m => m!.MesasSecundarias)
             .Include(o => o.Detalles.OrderBy(d => d.OrdenDetalleId)).ThenInclude(d => d.ItemMenu)
             .Include(o => o.Detalles.OrderBy(d => d.OrdenDetalleId)).ThenInclude(d => d.Producto)
-            .Where(o => o.FechaApertura.Date == fecha.Date)
+            .Where(o => o.FechaApertura >= inicio && o.FechaApertura < fin)
             .OrderByDescending(o => o.FechaApertura)
             .ToListAsync();
+    }
 }

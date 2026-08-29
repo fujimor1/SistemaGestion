@@ -9,6 +9,7 @@ using Termales.Common.DTOs.Comprobante;
 using Termales.Common.DTOs.Sunat;
 
 using Termales.Common.Settings;
+using Termales.Common.Utils;
 using Termales.Common.Wrappers;
 using Termales.DAL.UnitOfWork;
 using Termales.Entities.Enums;
@@ -711,7 +712,7 @@ public class ComprobanteService : IComprobanteService
 
     public async Task<IEnumerable<ComprobanteElectronicoDto>> ObtenerFacturasBoletasAsync(string? fecha)
     {
-        var dia = DateOnly.TryParse(fecha, out var d) ? d : DateOnly.FromDateTime(DateTime.UtcNow - TimeSpan.FromHours(5));
+        var dia = DateOnly.TryParse(fecha, out var d) ? d : DateOnly.FromDateTime(PeruTime.Now());
         var comprobantes = await _uow.Comprobantes.ObtenerFacturasBoletasAsync(dia);
         return comprobantes.Select(c => new ComprobanteElectronicoDto
         {
@@ -732,8 +733,8 @@ public class ComprobanteService : IComprobanteService
 
     public async Task<IEnumerable<NotaCreditoListadoDto>> ObtenerNotasCreditoAsync(string? desde, string? hasta)
     {
-        var desdeDate = DateOnly.TryParse(desde, out var d) ? d : DateOnly.FromDateTime(DateTime.UtcNow);
-        var hastaDate = DateOnly.TryParse(hasta, out var h) ? h : DateOnly.FromDateTime(DateTime.UtcNow);
+        var desdeDate = DateOnly.TryParse(desde, out var d) ? d : DateOnly.FromDateTime(PeruTime.Now());
+        var hastaDate = DateOnly.TryParse(hasta, out var h) ? h : DateOnly.FromDateTime(PeruTime.Now());
         var notasCredito = await _uow.Comprobantes.ObtenerNotasCreditoAsync(desdeDate, hastaDate);
         return notasCredito.Select(nc => new NotaCreditoListadoDto
         {
@@ -754,7 +755,7 @@ public class ComprobanteService : IComprobanteService
     // ── Listado y anulación ───────────────────────────────────────────
     public async Task<IEnumerable<ComprobanteListadoDto>> ObtenerPorFechaAsync(string? fecha, string? tipoAmbiente)
     {
-        var dia = DateOnly.TryParse(fecha, out var d) ? d : DateOnly.FromDateTime(DateTime.UtcNow - TimeSpan.FromHours(5));
+        var dia = DateOnly.TryParse(fecha, out var d) ? d : DateOnly.FromDateTime(PeruTime.Now());
         var comprobantes = await _uow.Comprobantes.ObtenerPorFechaAsync(dia, tipoAmbiente);
         return comprobantes.Select(c => new ComprobanteListadoDto
         {
@@ -851,8 +852,8 @@ public class ComprobanteService : IComprobanteService
     // ── Anulaciones (vista supervisor) ───────────────────────────────
     public async Task<IEnumerable<AnulacionListadoDto>> ObtenerAnulacionesAsync(string? desde, string? hasta)
     {
-        var desdeDate = DateOnly.TryParse(desde, out var d) ? d : DateOnly.FromDateTime(DateTime.UtcNow);
-        var hastaDate = DateOnly.TryParse(hasta, out var h) ? h : DateOnly.FromDateTime(DateTime.UtcNow);
+        var desdeDate = DateOnly.TryParse(desde, out var d) ? d : DateOnly.FromDateTime(PeruTime.Now());
+        var hastaDate = DateOnly.TryParse(hasta, out var h) ? h : DateOnly.FromDateTime(PeruTime.Now());
 
         var lista = await _uow.Comprobantes.ObtenerAnulacionesAsync(desdeDate, hastaDate);
         return lista.Select(c => new AnulacionListadoDto
