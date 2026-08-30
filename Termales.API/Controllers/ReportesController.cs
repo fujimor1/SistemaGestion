@@ -75,6 +75,17 @@ public class ReportesController : ControllerBase
         return Ok(resultado);
     }
 
+    /// <summary>
+    /// Línea de tiempo completa de inventario: altas de insumos/productos, entradas
+    /// (compras, con precio) y salidas (consumo) — Insumos y Tienda unificados.
+    /// </summary>
+    [HttpGet("inventario/movimientos")]
+    public async Task<IActionResult> GetMovimientosInventario()
+    {
+        var resultado = await _service.ReporteMovimientosInventarioAsync();
+        return Ok(resultado);
+    }
+
     /// <summary>Ventas por categoría de menú (solo Comedor), en un rango de fechas. desde/hasta = "YYYY-MM-DD"</summary>
     [HttpGet("ventas-categoria")]
     public async Task<IActionResult> GetVentasCategoria([FromQuery] string desde, [FromQuery] string hasta)

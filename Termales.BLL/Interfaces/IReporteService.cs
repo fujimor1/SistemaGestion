@@ -9,6 +9,7 @@ public interface IReporteService
     Task<ReporteCajaDto>         ReporteCajaAsync(string desde, string hasta, string? cajero = null);
     Task<RegistroComprasDto>     ReporteComprasAsync(string desde, string hasta);
     Task<ReporteInventarioDto>   ReporteInventarioAsync();
+    Task<List<MovimientoInventarioDto>> ReporteMovimientosInventarioAsync();
     Task<ReporteVentasCategoriaDto> ReporteVentasCategoriaAsync(string desde, string hasta);
     Task<ReporteProductosMasVendidosDto> ReporteProductosMasVendidosAsync(string desde, string hasta, string? cajero = null);
     Task<ReporteUtilidadDto>     ReporteUtilidadAsync(string desde, string hasta);

@@ -279,6 +279,91 @@ public class ReporteService : IReporteService
         };
     }
 
+    // ── Movimientos de inventario (altas, entradas, salidas) ─────────────────
+    // Une Insumos (Comedor/Baños/Hospedaje) y Productos (Tienda) en una sola línea de
+    // tiempo para el botón "Exportar a Excel" de Inventario. El "Alta" de un artículo
+    // muestra su stock ACTUAL (no hay una columna separada de "stock inicial": el campo
+    // se actualiza en el mismo lugar con cada entrada/salida), así que no representa el
+    // stock que tenía el día que se creó si ya se movió desde entonces — se deja
+    // explícito en la Observación para no inducir a error.
+    private const string NotaAltaStockActual = "Stock actual al momento de exportar (no es el stock con el que se dio de alta)";
+
+    public async Task<List<MovimientoInventarioDto>> ReporteMovimientosInventarioAsync()
+    {
+        var movimientos = new List<MovimientoInventarioDto>();
+
+        var insumos = await _db.Insumos.AsNoTracking().ToListAsync();
+        movimientos.AddRange(insumos.Select(i => new MovimientoInventarioDto
+        {
+            Fecha          = i.FechaRegistro,
+            Tipo           = "Alta",
+            Categoria      = i.TipoAmbiente,
+            TipoArticulo   = i.TipoArticulo,
+            Articulo       = i.Nombre,
+            Unidad         = i.Unidad,
+            Cantidad       = i.StockActual,
+            PrecioUnitario = i.PrecioReferencia,
+            Observacion    = NotaAltaStockActual,
+        }));
+
+        var productos = await _db.Productos.AsNoTracking().ToListAsync();
+        movimientos.AddRange(productos.Select(p => new MovimientoInventarioDto
+        {
+            Fecha          = p.FechaRegistro,
+            Tipo           = "Alta",
+            Categoria      = "tienda",
+            TipoArticulo   = "producto",
+            Articulo       = p.Nombre,
+            Cantidad       = p.Stock,
+            PrecioUnitario = p.PrecioCompra > 0 ? p.PrecioCompra : p.Precio,
+            Observacion    = NotaAltaStockActual,
+        }));
+
+        var entradasInsumo = await _db.EntradasInsumo.AsNoTracking().Include(e => e.Insumo).ToListAsync();
+        movimientos.AddRange(entradasInsumo.Select(e => new MovimientoInventarioDto
+        {
+            Fecha          = e.Fecha,
+            Tipo           = "Entrada",
+            Categoria      = e.Insumo.TipoAmbiente,
+            TipoArticulo   = e.Insumo.TipoArticulo,
+            Articulo       = e.Insumo.Nombre,
+            Unidad         = e.Insumo.Unidad,
+            Cantidad       = e.Cantidad,
+            PrecioUnitario = e.PrecioUnitario,
+            Total          = e.Total,
+            Observacion    = e.Observacion,
+        }));
+
+        var salidasInsumo = await _db.SalidasInsumo.AsNoTracking().Include(s => s.Insumo).ToListAsync();
+        movimientos.AddRange(salidasInsumo.Select(s => new MovimientoInventarioDto
+        {
+            Fecha        = s.Fecha,
+            Tipo         = "Salida",
+            Categoria    = s.Insumo.TipoAmbiente,
+            TipoArticulo = s.Insumo.TipoArticulo,
+            Articulo     = s.Insumo.Nombre,
+            Unidad       = s.Insumo.Unidad,
+            Cantidad     = s.Cantidad,
+            Observacion  = s.Observacion,
+        }));
+
+        var entradasProducto = await _db.EntradasProducto.AsNoTracking().Include(e => e.Producto).ToListAsync();
+        movimientos.AddRange(entradasProducto.Select(e => new MovimientoInventarioDto
+        {
+            Fecha          = e.Fecha,
+            Tipo           = "Entrada",
+            Categoria      = "tienda",
+            TipoArticulo   = "producto",
+            Articulo       = e.Producto.Nombre,
+            Cantidad       = e.Cantidad,
+            PrecioUnitario = e.PrecioUnitario,
+            Total          = e.Total,
+            Observacion    = e.Observacion,
+        }));
+
+        return movimientos.OrderByDescending(m => m.Fecha).ToList();
+    }
+
     // ── Ventas por categoría (Comedor) ────────────────────────────────────────
 
     public async Task<ReporteVentasCategoriaDto> ReporteVentasCategoriaAsync(string desde, string hasta)
