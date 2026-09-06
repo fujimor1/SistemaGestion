@@ -29,4 +29,13 @@ public static class PeruTime
 
     /// <summary>Rango [inicio, fin) en UTC de un día de negocio en Perú, a partir de un <see cref="DateOnly"/>.</summary>
     public static (DateTime inicio, DateTime fin) DayRange(DateOnly dia) => DayRange(dia.ToDateTime(TimeOnly.MinValue));
+
+    /// <summary>Día de negocio en Perú al que pertenece un instante real (ej. Comprobante.FechaVenta,
+    /// EgresoCajaChica.Fecha, ambos guardados como DateTime.UtcNow). Usar para AGRUPAR por día — un
+    /// simple <c>DateOnly.FromDateTime(instante)</c> toma la fecha calendario UTC cruda, que entre las
+    /// 7pm y medianoche hora Perú ya es "mañana" en UTC y mete la venta en el día equivocado.
+    /// NO usar sobre AperturaCaja.Fecha/CierreCaja.Fecha/Compra.FechaEmision: esas son una clave de
+    /// día (medianoche, sin hora real), no un instante — ya están en "día Perú" y no necesitan este
+    /// ajuste (aplicarlo las correría un día para atrás).</summary>
+    public static DateOnly BusinessDay(DateTime instante) => DateOnly.FromDateTime(instante - OffsetPeru);
 }

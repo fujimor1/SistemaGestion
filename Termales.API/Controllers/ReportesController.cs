@@ -165,4 +165,16 @@ public class ReportesController : ControllerBase
         var resultado = await _service.ReporteLiquidacionCajaAsync(fecha, cajero);
         return Ok(resultado);
     }
+
+    /// <summary>
+    /// Reporte desglosado (ingresos por rubro + cuadre de caja día por día, egresos
+    /// administrativos y compras facturadas por proveedor), en un rango de fechas.
+    /// desde/hasta = "YYYY-MM-DD".
+    /// </summary>
+    [HttpGet("desglosado")]
+    public async Task<IActionResult> GetDesglosado([FromQuery] string desde, [FromQuery] string hasta)
+    {
+        var resultado = await _service.ReporteDesglosadoAsync(desde, hasta);
+        return Ok(resultado);
+    }
 }

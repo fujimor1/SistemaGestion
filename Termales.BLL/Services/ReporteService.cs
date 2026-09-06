@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Termales.BLL.Interfaces;
 using Termales.Common.DTOs.Reporte;
 using Termales.Common.Helpers;
+using Termales.Common.Utils;
 using Termales.DAL.Context;
 using Termales.Entities.Enums;
 
@@ -28,12 +29,25 @@ public class ReporteService : IReporteService
         return (fallbackInicio, fallbackInicio.AddDays(1));
     }
 
+    /// <summary>Rango [desde, hasta) para comparar contra una columna que es una clave de día (ej.
+    /// Compra.FechaEmision, AperturaCaja.Fecha) — sin el offset +5h de ParseDia, que es solo para
+    /// instantes reales (Comprobante.FechaVenta, EgresoCajaChica.Fecha).</summary>
+    private static (DateTime desde, DateTime hasta) RangoClaveDia(string desde, string hasta)
+    {
+        var d = DateOnly.TryParse(desde, out var dd) ? dd : DateOnly.FromDateTime(DateTime.UtcNow - OffsetPeru);
+        var h = DateOnly.TryParse(hasta, out var hh) ? hh : DateOnly.FromDateTime(DateTime.UtcNow - OffsetPeru);
+        return (d.ToDateTime(TimeOnly.MinValue), h.ToDateTime(TimeOnly.MinValue).AddDays(1));
+    }
+
     // ── Reporte de Comprobantes ──────────────────────────────────────────────
 
     private static List<ResumenDiarioComprobanteDto> AgruparPorDia(
         List<Termales.Entities.Models.Comprobante> comprobantes, Func<Termales.Entities.Models.Comprobante, DateTime> fecha) =>
         comprobantes
-            .GroupBy(c => DateOnly.FromDateTime(fecha(c)))
+            // PeruTime.BusinessDay (no DateOnly.FromDateTime crudo): fecha(c) es un instante real
+            // (FechaEmision/FechaVenta = DateTime.UtcNow), y entre las 7pm y medianoche hora Perú
+            // UTC ya cruzó al día siguiente — sin el ajuste, esas ventas salían en el día equivocado.
+            .GroupBy(c => PeruTime.BusinessDay(fecha(c)))
             .OrderBy(g => g.Key)
             .Select(g =>
             {
@@ -157,19 +171,23 @@ public class ReporteService : IReporteService
             .Select(c => new { Fecha = c.FechaCobro ?? c.FechaVenta, c.Total })
             .ToListAsync();
 
+        // Apertura/Cierre.Fecha ya es una clave de día (HoyPeru(), sin hora real) — se agrupa tal
+        // cual. Egresos y ventas son instantes reales (DateTime.UtcNow): hay que pasarlos por
+        // PeruTime.BusinessDay, no DateOnly.FromDateTime crudo, o una venta de las 7pm-12am hora
+        // Perú (ya "mañana" en UTC) cae en el día siguiente.
         var diasConDatos = new SortedSet<DateOnly>(
             aperturas.Select(a => DateOnly.FromDateTime(a.Fecha))
             .Concat(cierres.Select(c => DateOnly.FromDateTime(c.Fecha)))
-            .Concat(egresos.Select(e => DateOnly.FromDateTime(e.Fecha)))
-            .Concat(ventasRaw.Select(c => DateOnly.FromDateTime(c.Fecha)))
+            .Concat(egresos.Select(e => PeruTime.BusinessDay(e.Fecha)))
+            .Concat(ventasRaw.Select(c => PeruTime.BusinessDay(c.Fecha)))
         );
 
         var porDia = diasConDatos.Select(fecha =>
         {
             var apertura    = aperturas.FirstOrDefault(a => DateOnly.FromDateTime(a.Fecha) == fecha);
             var cierre      = cierres.FirstOrDefault(c => DateOnly.FromDateTime(c.Fecha) == fecha);
-            var egresosDia  = egresos.Where(e => DateOnly.FromDateTime(e.Fecha) == fecha).Sum(e => e.Monto);
-            var ventas      = ventasRaw.Where(c => DateOnly.FromDateTime(c.Fecha) == fecha).Sum(c => c.Total);
+            var egresosDia  = egresos.Where(e => PeruTime.BusinessDay(e.Fecha) == fecha).Sum(e => e.Monto);
+            var ventas      = ventasRaw.Where(c => PeruTime.BusinessDay(c.Fecha) == fecha).Sum(c => c.Total);
 
             var efectivo      = cierre?.EfectivoFisico ?? 0;
             var yape          = cierre?.YapeFisico ?? 0;
@@ -217,8 +235,11 @@ public class ReporteService : IReporteService
 
     public async Task<RegistroComprasDto> ReporteComprasAsync(string desde, string hasta)
     {
-        var inicio = ParseDia(desde).inicio;
-        var fin    = ParseDia(hasta).fin;
+        // Compra.FechaEmision es la fecha impresa en la factura (el formulario solo manda
+        // "YYYY-MM-DD", sin hora) — una clave de día, no un instante real. Compararla contra
+        // el rango +5h de ParseDia (pensado para timestamps reales tipo Comprobante.FechaVenta)
+        // corría cada compra un día para atrás: una factura del 17 nunca aparecía en el 17.
+        var (inicio, fin) = RangoClaveDia(desde, hasta);
 
         var compras = await _db.Compras.AsNoTracking()
             .Include(c => c.Proveedor)
@@ -898,5 +919,164 @@ public class ReporteService : IReporteService
             .ToListAsync();
 
         return new ReporteStockMinimoDto { Insumos = insumos, Productos = productos };
+    }
+
+    // ── Reporte desglosado (mensual/semanal) ─────────────────────────────────
+    //
+    // Reproduce el Excel manual "REPORTE DESGLOSADO" que se armaba a mano cada mes, con lo
+    // que sí vive en el sistema:
+    //   - Ingresos por rubro y cuadre de caja, día por día (comprobantes + apertura/cierre).
+    //   - Egresos "administrativos" = EgresoCajaChica que no viene de pagar una Compra.
+    //   - Gastos a proveedor = solo Compras registradas como FACTURA (compras informales sin
+    //     factura, o sin proveedor/rubro claro, se quedan fuera para completarse a mano —
+    //     igual que "Servicios higiénicos" y "Tesorería", que no tienen ningún registro en el
+    //     sistema y el frontend los deja en blanco).
+    public async Task<ReporteDesglosadoDto> ReporteDesglosadoAsync(string desde, string hasta)
+    {
+        var inicio = ParseDia(desde).inicio;
+        var fin    = ParseDia(hasta).fin;
+
+        // Igual que ReporteCajaAsync: Apertura/Cierre.Fecha es solo una "clave de día"
+        // (medianoche, sin la hora real de apertura/cierre), por eso se comparan por Date.
+        var aperturas = await _db.AperturasCaja.AsNoTracking()
+            .Where(a => a.Fecha.Date >= inicio.Date && a.Fecha.Date < fin.Date)
+            .ToListAsync();
+        var cierres = await _db.CierresCaja.AsNoTracking()
+            .Where(c => c.Fecha.Date >= inicio.Date && c.Fecha.Date < fin.Date)
+            .ToListAsync();
+        var egresosCajaChica = await _db.EgresosCajaChica.AsNoTracking()
+            .Where(e => e.Fecha >= inicio && e.Fecha < fin)
+            .ToListAsync();
+        var ventasRaw = await _db.Comprobantes.AsNoTracking()
+            .Where(c => (c.FechaCobro ?? c.FechaVenta) >= inicio && (c.FechaCobro ?? c.FechaVenta) < fin
+                        && c.Estado != "ANULADO" && c.Cobrado && c.TipoComprobante != "NC")
+            .Select(c => new { Fecha = c.FechaCobro ?? c.FechaVenta, c.TipoAmbiente, c.Total })
+            .ToListAsync();
+
+        // Apertura/Cierre.Fecha ya es una clave de día — se agrupa tal cual. Egresos y ventas son
+        // instantes reales (DateTime.UtcNow): PeruTime.BusinessDay, no DateOnly.FromDateTime crudo,
+        // o una venta de las 7pm-12am hora Perú (ya "mañana" en UTC) cae en el día siguiente.
+        var diasConDatos = new SortedSet<DateOnly>(
+            aperturas.Select(a => DateOnly.FromDateTime(a.Fecha))
+            .Concat(cierres.Select(c => DateOnly.FromDateTime(c.Fecha)))
+            .Concat(egresosCajaChica.Select(e => PeruTime.BusinessDay(e.Fecha)))
+            .Concat(ventasRaw.Select(v => PeruTime.BusinessDay(v.Fecha))));
+
+        var ingresos = diasConDatos.Select(fecha =>
+        {
+            var apertura  = aperturas.FirstOrDefault(a => DateOnly.FromDateTime(a.Fecha) == fecha);
+            var cierre    = cierres.FirstOrDefault(c => DateOnly.FromDateTime(c.Fecha) == fecha);
+            var egresoDia = egresosCajaChica.Where(e => PeruTime.BusinessDay(e.Fecha) == fecha).Sum(e => e.Monto);
+            var ventasDia = ventasRaw.Where(v => PeruTime.BusinessDay(v.Fecha) == fecha).ToList();
+
+            decimal PorAmbiente(string ambiente) => ventasDia.Where(v => v.TipoAmbiente == ambiente).Sum(v => v.Total);
+            var restaurant = PorAmbiente("comedor");
+            var banios     = PorAmbiente("banio");
+            var tienda     = PorAmbiente("tienda");
+            var hospedaje  = PorAmbiente("habitacion");
+
+            var saldoInicial = apertura?.MontoInicial ?? 0;
+            var efectivo     = cierre?.EfectivoFisico ?? 0;
+            var yape         = cierre?.YapeFisico ?? 0;
+            var diferencia   = cierre?.Diferencia ?? 0;
+            // Efectivo contado, menos lo que ya estaba ahí antes de vender (saldo inicial) y lo
+            // que salió por caja chica, ajustado por la diferencia física (sobrante suma,
+            // faltante resta) — así se reproduce el "neto efectivo" del Excel original.
+            var netoEfectivo = efectivo + diferencia - saldoInicial - egresoDia;
+
+            return new IngresoDiarioDesglosadoDto
+            {
+                Fecha           = fecha,
+                Restaurant      = restaurant,
+                BaniosTermales  = banios,
+                Tienda          = tienda,
+                Hospedaje       = hospedaje,
+                TotalRegistrado = restaurant + banios + tienda + hospedaje,
+                TieneApertura   = apertura is not null,
+                SaldoInicial    = saldoInicial,
+                TieneCierre     = cierre is not null,
+                Efectivo        = efectivo,
+                Yape            = yape,
+                NetoYape        = yape,
+                Egreso          = egresoDia,
+                Faltante        = cierre is not null && diferencia < 0 ? Math.Abs(diferencia) : null,
+                Sobrante        = cierre is not null && diferencia > 0 ? diferencia : null,
+                NetoEfectivo    = netoEfectivo,
+                NetoTotal       = netoEfectivo + yape,
+            };
+        }).ToList();
+
+        // ── Egresos administrativos (caja chica que no paga una Compra) ─────────
+        var administrativos = egresosCajaChica
+            .Where(e => e.CompraId == null)
+            .OrderBy(e => e.Fecha)
+            .Select(e => new EgresoAdministrativoDesgloseDto
+            {
+                Fecha       = PeruTime.BusinessDay(e.Fecha),
+                Concepto    = e.Concepto,
+                Monto       = e.Monto,
+                Responsable = e.Responsable,
+            }).ToList();
+
+        // ── Compras facturadas, por rubro (según el insumo/producto de sus líneas) ──
+        // FechaEmision es la fecha de la factura (sin hora) — clave de día, no instante real;
+        // se compara con RangoClaveDia (sin el +5h de ParseDia) igual que en ReporteComprasAsync.
+        var (comprasInicio, comprasFin) = RangoClaveDia(desde, hasta);
+        var compras = await _db.Compras.AsNoTracking()
+            .Include(c => c.Proveedor)
+            .Include(c => c.Detalles).ThenInclude(d => d.Insumo)
+            .Where(c => c.FechaEmision >= comprasInicio && c.FechaEmision < comprasFin
+                        && c.Estado != "ANULADA" && c.TipoComprobante == "FACTURA")
+            .OrderBy(c => c.FechaEmision)
+            .ToListAsync();
+
+        var rubroLabel = new Dictionary<string, string>
+        {
+            ["tienda"] = "Tienda", ["comedor"] = "Restaurante", ["banio"] = "Pozas", ["habitacion"] = "Hospedaje",
+        };
+
+        // Una compra puede traer líneas de más de un rubro (raro, pero posible) — se le asigna
+        // el rubro con mayor monto entre sus líneas, no se parte la factura entre varios.
+        string RubroDeCompra(Entities.Models.Compras.Compra c) => c.Detalles
+            .GroupBy(d => d.ProductoId != null ? "tienda" : d.Insumo?.TipoAmbiente ?? "")
+            .Where(g => !string.IsNullOrEmpty(g.Key))
+            .Select(g => new { Rubro = g.Key, Monto = g.Sum(d => d.Total) })
+            .OrderByDescending(g => g.Monto)
+            .Select(g => g.Rubro)
+            .FirstOrDefault() ?? "";
+
+        var comprasFacturadas = compras
+            .Select(c => new { Compra = c, Rubro = RubroDeCompra(c) })
+            .Where(x => rubroLabel.ContainsKey(x.Rubro))
+            .Select(x => new GastoProveedorDesgloseDto
+            {
+                Rubro           = rubroLabel[x.Rubro],
+                Proveedor       = x.Compra.Proveedor?.RazonSocial ?? x.Compra.NombreProveedorManual ?? "Sin proveedor",
+                Fecha           = DateOnly.FromDateTime(x.Compra.FechaEmision),
+                TipoComprobante = x.Compra.TipoComprobante,
+                Serie           = x.Compra.Serie,
+                Numero          = x.Compra.Numero,
+                Total           = x.Compra.Total,
+            })
+            .OrderBy(g => g.Rubro).ThenBy(g => g.Proveedor).ThenBy(g => g.Fecha)
+            .ToList();
+
+        var totalIngresos        = ingresos.Sum(i => i.TotalRegistrado);
+        var totalAdministrativos = administrativos.Sum(a => a.Monto);
+        var totalCompras         = comprasFacturadas.Sum(g => g.Total);
+
+        return new ReporteDesglosadoDto
+        {
+            Desde                       = desde,
+            Hasta                       = hasta,
+            Ingresos                    = ingresos,
+            EgresosAdministrativos      = administrativos,
+            TotalEgresosAdministrativos = totalAdministrativos,
+            ComprasFacturadas           = comprasFacturadas,
+            TotalComprasFacturadas      = totalCompras,
+            TotalIngresos               = totalIngresos,
+            TotalEgresos                = totalAdministrativos + totalCompras,
+            Utilidad                    = totalIngresos - totalAdministrativos - totalCompras,
+        };
     }
 }

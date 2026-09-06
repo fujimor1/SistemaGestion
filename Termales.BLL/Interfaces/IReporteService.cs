@@ -20,4 +20,5 @@ public interface IReporteService
     Task<ReporteStockMinimoDto>  ReporteStockMinimoAsync();
     Task<LiquidacionCajaDto>     ReporteLiquidacionCajaAsync(string fecha, string? cajero = null);
     Task<List<string>>           ObtenerCajerosAsync();
+    Task<ReporteDesglosadoDto>   ReporteDesglosadoAsync(string desde, string hasta);
 }
