@@ -382,6 +382,18 @@ public class ReporteService : IReporteService
             Observacion    = e.Observacion,
         }));
 
+        var salidasProducto = await _db.SalidasProducto.AsNoTracking().Include(s => s.Producto).ToListAsync();
+        movimientos.AddRange(salidasProducto.Select(s => new MovimientoInventarioDto
+        {
+            Fecha        = s.Fecha,
+            Tipo         = "Salida",
+            Categoria    = "tienda",
+            TipoArticulo = "producto",
+            Articulo     = s.Producto.Nombre,
+            Cantidad     = s.Cantidad,
+            Observacion  = s.Observacion,
+        }));
+
         return movimientos.OrderByDescending(m => m.Fecha).ToList();
     }
 

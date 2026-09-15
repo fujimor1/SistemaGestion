@@ -32,6 +32,7 @@ public interface IUnitOfWork : IDisposable
     IEntradaInsumoRepository EntradasInsumo { get; }
     IEntradaProductoRepository EntradasProducto { get; }
     ISalidaInsumoRepository SalidasInsumo { get; }
+    ISalidaProductoRepository SalidasProducto { get; }
     IProveedorRepository Proveedores { get; }
     ICompraRepository Compras { get; }
     ICompraImagenRepository CompraImagenes { get; }

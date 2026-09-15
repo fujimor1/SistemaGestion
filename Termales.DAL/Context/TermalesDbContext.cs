@@ -50,6 +50,7 @@ public class TermalesDbContext : DbContext
     public DbSet<EntradaInsumo> EntradasInsumo => Set<EntradaInsumo>();
     public DbSet<EntradaProducto> EntradasProducto => Set<EntradaProducto>();
     public DbSet<SalidaInsumo> SalidasInsumo => Set<SalidaInsumo>();
+    public DbSet<SalidaProducto> SalidasProducto => Set<SalidaProducto>();
 
     // Comprobantes electrónicos
     public DbSet<Comprobante> Comprobantes => Set<Comprobante>();

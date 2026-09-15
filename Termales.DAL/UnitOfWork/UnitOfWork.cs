@@ -41,6 +41,7 @@ public class UnitOfWork : IUnitOfWork
     public IEntradaInsumoRepository EntradasInsumo { get; }
     public IEntradaProductoRepository EntradasProducto { get; }
     public ISalidaInsumoRepository SalidasInsumo { get; }
+    public ISalidaProductoRepository SalidasProducto { get; }
     public IProveedorRepository Proveedores { get; }
     public ICompraRepository Compras { get; }
     public ICompraImagenRepository CompraImagenes { get; }
@@ -73,6 +74,7 @@ public class UnitOfWork : IUnitOfWork
         EntradasInsumo = new EntradaInsumoRepository(context);
         EntradasProducto = new EntradaProductoRepository(context);
         SalidasInsumo = new SalidaInsumoRepository(context);
+        SalidasProducto = new SalidaProductoRepository(context);
         Proveedores = new ProveedorRepository(context);
         Compras = new CompraRepository(context);
         CompraImagenes = new CompraImagenRepository(context);
