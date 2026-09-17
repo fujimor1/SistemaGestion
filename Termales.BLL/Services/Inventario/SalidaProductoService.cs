@@ -26,6 +26,10 @@ public class SalidaProductoService : ISalidaProductoService
             throw new InvalidOperationException(
                 $"Stock insuficiente. Disponible: {producto.Stock}");
 
+        if (dto.Observacion?.Length > 500)
+            throw new InvalidOperationException(
+                "La observacion no puede superar los 500 caracteres.");
+
         var salida = new SalidaProducto
         {
             ProductoId = dto.ProductoId,

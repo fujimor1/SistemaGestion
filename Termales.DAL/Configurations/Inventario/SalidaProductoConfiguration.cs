@@ -14,7 +14,7 @@ public class SalidaProductoConfiguration : IEntityTypeConfiguration<SalidaProduc
         builder.Property(s => s.ProductoId).HasColumnName("producto_id");
         builder.Property(s => s.Cantidad).HasColumnName("cantidad");
         builder.Property(s => s.Fecha).HasColumnName("fecha").HasDefaultValueSql("now()");
-        builder.Property(s => s.Observacion).HasColumnName("observacion").HasMaxLength(300);
+        builder.Property(s => s.Observacion).HasColumnName("observacion").HasMaxLength(500);
 
         builder.HasOne(s => s.Producto)
             .WithMany()
