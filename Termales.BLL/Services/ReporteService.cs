@@ -544,6 +544,8 @@ public class ReporteService : IReporteService
                 NumeroComprobante = $"{d.Comprobante!.Serie}-{d.Comprobante.Numero:D5}",
                 TipoComprobante   = d.Comprobante.TipoComprobante,
                 Cajero            = d.Comprobante.Cajero,
+                MetodoPago        = d.Comprobante.MetodoPago.ToString(),
+                MontoEfectivoMixto = d.Comprobante.MontoEfectivoMixto,
             };
         }).ToList();
 
@@ -582,6 +584,8 @@ public class ReporteService : IReporteService
                 NumeroComprobante = $"{d.Comprobante!.Serie}-{d.Comprobante.Numero:D5}",
                 TipoComprobante   = d.Comprobante.TipoComprobante,
                 Cajero            = d.Comprobante.Cajero,
+                MetodoPago        = d.Comprobante.MetodoPago.ToString(),
+                MontoEfectivoMixto = d.Comprobante.MontoEfectivoMixto,
             };
         }).ToList();
 
@@ -634,6 +638,8 @@ public class ReporteService : IReporteService
             NumeroComprobante = $"{d.Comprobante.Serie}-{d.Comprobante.Numero:D5}",
             TipoComprobante   = d.Comprobante.TipoComprobante,
             Cajero            = d.Comprobante.Cajero,
+            MetodoPago        = d.Comprobante.MetodoPago.ToString(),
+            MontoEfectivoMixto = d.Comprobante.MontoEfectivoMixto,
         });
 
         var items = itemsConCosto
@@ -642,7 +648,8 @@ public class ReporteService : IReporteService
                 Nombre = i.Nombre, Ambiente = i.Ambiente, CantidadVendida = i.CantidadVendida,
                 Ingreso = i.Ingreso, Costo = i.Costo, Utilidad = i.Utilidad,
                 NumeroComprobante = i.NumeroComprobante, TipoComprobante = i.TipoComprobante,
-                Cajero = i.Cajero,
+                Cajero = i.Cajero, MetodoPago = i.MetodoPago,
+                MontoEfectivoMixto = i.MontoEfectivoMixto,
             })
             .Concat(itemsSinCosto)
             .OrderByDescending(i => i.Ingreso)
@@ -701,7 +708,28 @@ public class ReporteService : IReporteService
 
         var ventasPorAmbiente = comprobantesDia
             .GroupBy(c => c.TipoAmbiente)
-            .Select(g => new VentaAmbienteDto { Ambiente = g.Key, Total = g.Sum(c => c.Total) })
+            .Select(g =>
+            {
+                decimal ef = 0, yp = 0;
+                foreach (var c in g)
+                {
+                    switch (c.MetodoPago)
+                    {
+                        case MetodoPago.YapePlin:
+                            yp += c.Total;
+                            break;
+                        case MetodoPago.Mixto:
+                            var parteEf = c.MontoEfectivoMixto ?? 0;
+                            ef += parteEf;
+                            yp += c.Total - parteEf;
+                            break;
+                        default:
+                            ef += c.Total;
+                            break;
+                    }
+                }
+                return new VentaAmbienteDto { Ambiente = g.Key, Total = g.Sum(c => c.Total), TotalEfectivo = ef, TotalYape = yp };
+            })
             .OrderByDescending(v => v.Total)
             .ToList();
 

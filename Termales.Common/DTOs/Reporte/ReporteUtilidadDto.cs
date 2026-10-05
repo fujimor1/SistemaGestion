@@ -25,4 +25,8 @@ public class UtilidadDetalleDto
     /// <summary>NV | BI | FI</summary>
     public string TipoComprobante { get; set; } = string.Empty;
     public string? Cajero { get; set; }
+    /// <summary>Efectivo | YapePlin | Mixto | Transferencia | Fiado</summary>
+    public string MetodoPago { get; set; } = string.Empty;
+    /// <summary>Solo cuando MetodoPago == Mixto: cuánto del total fue en efectivo (el resto fue Yape/Plin).</summary>
+    public decimal? MontoEfectivoMixto { get; set; }
 }

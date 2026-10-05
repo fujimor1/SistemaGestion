@@ -59,12 +59,20 @@ public class LiquidacionItemDto
     /// <summary>NV | BI | FI</summary>
     public string TipoComprobante { get; set; } = string.Empty;
     public string? Cajero { get; set; }
+    /// <summary>Efectivo | YapePlin | Mixto | Transferencia | Fiado</summary>
+    public string MetodoPago { get; set; } = string.Empty;
+    /// <summary>Solo cuando MetodoPago == Mixto: cuánto del total fue en efectivo (el resto fue Yape/Plin).</summary>
+    public decimal? MontoEfectivoMixto { get; set; }
 }
 
 public class VentaAmbienteDto
 {
     public string Ambiente { get; set; } = string.Empty;
     public decimal Total { get; set; }
+    /// <summary>Porción del total cobrada en efectivo (incluye la parte efectivo de pagos Mixto).</summary>
+    public decimal TotalEfectivo { get; set; }
+    /// <summary>Porción del total cobrada en Yape/Plin (incluye la parte Yape de pagos Mixto).</summary>
+    public decimal TotalYape { get; set; }
 }
 
 public class EgresoLiquidacionDto
