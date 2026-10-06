@@ -944,6 +944,40 @@ public class ReporteService : IReporteService
         };
     }
 
+    // ── Cuentas por cobrar ────────────────────────────────────────────────────
+
+    public async Task<ReporteCuentasPorCobrarDto> ReporteCuentasPorCobrarAsync()
+    {
+        var hoyUtc = DateTime.UtcNow;
+
+        var comprobantes = await _db.Comprobantes.AsNoTracking()
+            .Where(c => !c.Cobrado && c.Estado != "ANULADO")
+            .OrderBy(c => c.FechaEmision)
+            .ToListAsync();
+
+        var detalle = comprobantes.Select(c => new CuentaPorCobrarDto
+        {
+            ComprobanteId    = c.ComprobanteId,
+            Numero           = $"{c.Serie}-{c.Numero:D8}",
+            TipoComprobante  = c.TipoComprobante,
+            TipoAmbiente     = c.TipoAmbiente,
+            ClienteNombre    = c.ClienteRazonSocial ?? c.ClienteNombre,
+            ClienteDocumento = c.ClienteRuc ?? c.ClienteDni,
+            Cajero           = c.Cajero,
+            Total            = c.Total,
+            FechaEmision     = c.FechaEmision,
+            DiasEnDeuda      = (int)(hoyUtc - c.FechaEmision).TotalDays,
+            Estado           = c.Estado,
+        }).ToList();
+
+        return new ReporteCuentasPorCobrarDto
+        {
+            TotalPendientes = detalle.Count,
+            MontoTotal      = detalle.Sum(d => d.Total),
+            Detalle         = detalle,
+        };
+    }
+
     // ── Stock mínimo ──────────────────────────────────────────────────────────
 
     public async Task<ReporteStockMinimoDto> ReporteStockMinimoAsync()
