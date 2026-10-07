@@ -18,6 +18,12 @@ public class PaqueteBanioService : IPaqueteBanioService
         return ApiResponse<IEnumerable<PaqueteBanioDto>>.Exitoso(paquetes.Select(MapearDto));
     }
 
+    public async Task<ApiResponse<IEnumerable<PaqueteBanioDto>>> ObtenerTodosAsync()
+    {
+        var paquetes = await _uow.PaquetesBanio.ObtenerTodosConTiposAsync();
+        return ApiResponse<IEnumerable<PaqueteBanioDto>>.Exitoso(paquetes.Select(MapearDto));
+    }
+
     public async Task<ApiResponse<PaqueteBanioDto>> CrearAsync(CrearPaqueteBanioDto dto)
     {
         var idsUnicos = dto.TipoServicioIds.Distinct().ToList();
@@ -76,6 +82,18 @@ public class PaqueteBanioService : IPaqueteBanioService
         await _uow.PaquetesBanio.ActualizarAsync(paquete);
         await _uow.GuardarCambiosAsync();
         return ApiResponse.Exitoso("Paquete desactivado exitosamente");
+    }
+
+    public async Task<ApiResponse> ActivarAsync(int id)
+    {
+        var paquete = await _uow.PaquetesBanio.ObtenerPorIdAsync(id);
+        if (paquete is null)
+            return ApiResponse.Fallido("Paquete no encontrado");
+
+        paquete.Activo = true;
+        await _uow.PaquetesBanio.ActualizarAsync(paquete);
+        await _uow.GuardarCambiosAsync();
+        return ApiResponse.Exitoso("Paquete activado exitosamente");
     }
 
     private static PaqueteBanioDto MapearDto(PaqueteBanio p) => new()

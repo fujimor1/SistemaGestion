@@ -22,6 +22,13 @@ public class PaquetesBanioController : ControllerBase
         return Ok(resultado);
     }
 
+    [HttpGet("todos")]
+    public async Task<IActionResult> ObtenerTodos()
+    {
+        var resultado = await _service.ObtenerTodosAsync();
+        return Ok(resultado);
+    }
+
     [HttpPost]
     public async Task<IActionResult> Crear([FromBody] CrearPaqueteBanioDto dto)
     {
@@ -43,6 +50,13 @@ public class PaquetesBanioController : ControllerBase
     public async Task<IActionResult> Desactivar(int id)
     {
         var resultado = await _service.DesactivarAsync(id);
+        return resultado.Exito ? Ok(resultado) : NotFound(resultado);
+    }
+
+    [HttpPatch("{id:int}/activar")]
+    public async Task<IActionResult> Activar(int id)
+    {
+        var resultado = await _service.ActivarAsync(id);
         return resultado.Exito ? Ok(resultado) : NotFound(resultado);
     }
 }

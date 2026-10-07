@@ -60,4 +60,11 @@ public class TipoServiciosController : ControllerBase
         var resultado = await _service.DesactivarAsync(id);
         return resultado.Exito ? Ok(resultado) : NotFound(resultado);
     }
+
+    [HttpPatch("{id:int}/activar")]
+    public async Task<IActionResult> Activar(int id)
+    {
+        var resultado = await _service.ActivarAsync(id);
+        return resultado.Exito ? Ok(resultado) : NotFound(resultado);
+    }
 }

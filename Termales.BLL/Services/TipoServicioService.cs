@@ -82,6 +82,18 @@ public class TipoServicioService : ITipoServicioService
         return ApiResponse.Exitoso("Tipo de servicio desactivado exitosamente");
     }
 
+    public async Task<ApiResponse> ActivarAsync(int id)
+    {
+        var ts = await _uow.TiposServicio.ObtenerPorIdAsync(id);
+        if (ts is null)
+            return ApiResponse.Fallido("Tipo de servicio no encontrado");
+
+        ts.Activo = true;
+        await _uow.TiposServicio.ActualizarAsync(ts);
+        await _uow.GuardarCambiosAsync();
+        return ApiResponse.Exitoso("Tipo de servicio activado exitosamente");
+    }
+
     private static TipoServicioDto MapearDto(TipoServicio t) => new()
     {
         TipoServicioId = t.TipoServicioId,

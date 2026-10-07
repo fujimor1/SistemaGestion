@@ -14,6 +14,10 @@ public class PaqueteBanioRepository : GenericRepository<PaqueteBanio>, IPaqueteB
             .Where(p => p.Activo)
             .ToListAsync();
 
+    public async Task<IEnumerable<PaqueteBanio>> ObtenerTodosConTiposAsync() =>
+        await _dbSet.Include(p => p.Tipos).ThenInclude(t => t.TipoServicio)
+            .ToListAsync();
+
     public async Task<PaqueteBanio?> ObtenerConTiposAsync(int id) =>
         await _dbSet.Include(p => p.Tipos).ThenInclude(t => t.TipoServicio)
             .FirstOrDefaultAsync(p => p.PaqueteBanioId == id);

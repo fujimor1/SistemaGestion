@@ -11,4 +11,5 @@ public interface ITipoServicioService
     Task<ApiResponse<TipoServicioDto>> CrearAsync(CrearTipoServicioDto dto);
     Task<ApiResponse<TipoServicioDto>> ActualizarAsync(ActualizarTipoServicioDto dto);
     Task<ApiResponse> DesactivarAsync(int id);
+    Task<ApiResponse> ActivarAsync(int id);
 }
