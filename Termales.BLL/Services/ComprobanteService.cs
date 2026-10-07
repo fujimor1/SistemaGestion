@@ -755,6 +755,21 @@ public class ComprobanteService : IComprobanteService
         });
     }
 
+    public async Task<ApiResponse> PatchOperacionQrAsync(int comprobanteId, PatchOperacionQrDto dto)
+    {
+        var comprobante = await _uow.Comprobantes.ObtenerPorIdAsync(comprobanteId);
+        if (comprobante is null)
+            return ApiResponse.Fallido("Comprobante no encontrado");
+        if (comprobante.Estado == "ANULADO")
+            return ApiResponse.Fallido("El comprobante está anulado");
+
+        comprobante.NumeroOperacionQr = dto.NumeroOperacionQr?.Trim() is { Length: > 0 } v ? v : null;
+        comprobante.ImagenQr          = dto.ImagenQr?.Trim() is { Length: > 0 } img ? img : null;
+        await _uow.Comprobantes.ActualizarAsync(comprobante);
+        await _uow.GuardarCambiosAsync();
+        return ApiResponse.Exitoso("Operación actualizada");
+    }
+
     // ── Listado y anulación ───────────────────────────────────────────
     public async Task<IEnumerable<ComprobanteListadoDto>> ObtenerPorFechaAsync(string? fecha, string? tipoAmbiente)
     {

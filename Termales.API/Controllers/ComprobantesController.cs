@@ -80,6 +80,13 @@ public class ComprobantesController : ControllerBase
         }
     }
 
+    [HttpPatch("{id:int}/operacion-qr")]
+    public async Task<IActionResult> PatchOperacionQr(int id, [FromBody] PatchOperacionQrDto dto)
+    {
+        var resultado = await _service.PatchOperacionQrAsync(id, dto);
+        return resultado.Exito ? Ok(resultado) : BadRequest(resultado);
+    }
+
     [HttpGet("anulaciones")]
     [Authorize(Roles = "Supervisor")]
     public async Task<IActionResult> ObtenerAnulaciones([FromQuery] string? desde, [FromQuery] string? hasta)

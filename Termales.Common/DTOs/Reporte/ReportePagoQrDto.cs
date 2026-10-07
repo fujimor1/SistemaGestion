@@ -11,6 +11,7 @@ public class ReportePagoQrDto
 
 public class DetallePagoQrDto
 {
+    public int      ComprobanteId    { get; set; }
     public string   NumeroFormateado { get; set; } = string.Empty;
     public string   TipoComprobante  { get; set; } = string.Empty;
     public string   TipoAmbiente     { get; set; } = string.Empty;
@@ -21,4 +22,6 @@ public class DetallePagoQrDto
     public decimal  MontoYape        { get; set; }
     public bool     EsMixto          { get; set; }
     public DateTime FechaEmision     { get; set; }
+    public string?  NumeroOperacionQr { get; set; }
+    public string?  ImagenQr          { get; set; }
 }

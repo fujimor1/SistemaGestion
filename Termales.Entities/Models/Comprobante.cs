@@ -56,6 +56,9 @@ public class Comprobante
     /// <summary>Número de operación Yape/Plin — opcional, solo aplica cuando MetodoPago es YapePlin o Mixto.</summary>
     public string? NumeroOperacionQr { get; set; }
 
+    /// <summary>Imagen del comprobante Yape/Plin en base64 — opcional, adjuntada desde el reporte.</summary>
+    public string? ImagenQr { get; set; }
+
     public bool Cobrado { get; set; } = true;
     public DateTime? FechaCobro { get; set; }
     public int? ClienteId { get; set; }

@@ -41,6 +41,12 @@ public class ItemComedorCobroDto
     public int Cantidad { get; set; }
 }
 
+public class PatchOperacionQrDto
+{
+    public string? NumeroOperacionQr { get; set; }
+    public string? ImagenQr { get; set; }
+}
+
 public class GenerarComprobanteComedorDto : GenerarComprobanteDto
 {
     /// <summary>Líneas (y cuántas unidades de cada una) a cobrar en este comprobante — permite

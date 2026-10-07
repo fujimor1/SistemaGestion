@@ -884,10 +884,13 @@ public class ReporteService : IReporteService
 
         var detalle = comprobantes.Select(c => new DetallePagoQrDto
         {
+            ComprobanteId    = c.ComprobanteId,
             NumeroFormateado = $"{c.Serie}-{c.Numero:D5}",
             TipoComprobante  = c.TipoComprobante,
             TipoAmbiente     = c.TipoAmbiente,
             ClienteNombre    = c.ClienteNombre ?? c.ClienteRazonSocial,
+            NumeroOperacionQr = c.NumeroOperacionQr,
+            ImagenQr          = c.ImagenQr,
             MontoYape        = c.MetodoPago == MetodoPago.Mixto ? c.Total - (c.MontoEfectivoMixto ?? 0) : c.Total,
             EsMixto          = c.MetodoPago == MetodoPago.Mixto,
             FechaEmision     = c.FechaEmision,
@@ -913,23 +916,50 @@ public class ReporteService : IReporteService
 
         var ordenes = await _db.Ordenes.AsNoTracking()
             .Include(o => o.Mesa)
+            .Include(o => o.Usuario).ThenInclude(u => u.Empleado)
             .Include(o => o.Detalles)
             .Where(o => o.FechaApertura >= inicio && o.FechaApertura < fin)
             .OrderByDescending(o => o.FechaApertura)
             .ToListAsync();
 
-        var detalle = ordenes.Select(o => new ComandaDetalleDto
+        // Cargar navegaciones de detalles por separado para evitar conflictos de múltiples ThenInclude
+        var ordenIds = ordenes.Select(o => o.OrdenId).ToList();
+        var detallesConNav = await _db.OrdenDetalles.AsNoTracking()
+            .Include(d => d.ItemMenu)
+            .Include(d => d.Producto)
+            .Include(d => d.Comprobante)
+            .Where(d => ordenIds.Contains(d.OrdenId))
+            .ToListAsync();
+
+        var detallesPorOrden = detallesConNav.GroupBy(d => d.OrdenId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var detalle = ordenes.Select(o =>
         {
-            OrdenId         = o.OrdenId,
-            NumeroMesa      = o.Mesa?.Numero ?? 0,
-            FechaApertura   = o.FechaApertura,
-            FechaCierre     = o.FechaCierre,
-            DuracionMinutos = o.FechaCierre.HasValue
-                ? Math.Round((decimal)(o.FechaCierre.Value - o.FechaApertura).TotalMinutes, 1)
-                : null,
-            CantidadItems   = o.Detalles.Sum(d => d.Cantidad),
-            Total           = o.Total,
-            Estado          = o.Estado.ToString(),
+            var dets = detallesPorOrden.TryGetValue(o.OrdenId, out var d) ? d : [];
+            return new ComandaDetalleDto
+            {
+                OrdenId          = o.OrdenId,
+                NumeroMesa       = o.Mesa?.Numero ?? 0,
+                Mozo             = $"{o.Usuario.Empleado.Nombres} {o.Usuario.Empleado.Apellidos}".Trim(),
+                Items            = dets
+                    .Where(d => d.ItemMenu != null || d.Producto != null)
+                    .GroupBy(d => d.ItemMenu != null ? (d.ItemMenu.Descripcion ?? d.ItemMenu.Nombre) : d.Producto!.Nombre)
+                    .Select(g => $"{g.Sum(d => d.Cantidad)}x {g.Key}")
+                    .ToList(),
+                NumeroComprobante = dets
+                    .Where(d => d.Comprobante != null)
+                    .Select(d => $"{d.Comprobante!.Serie}-{d.Comprobante.Numero:D8}")
+                    .FirstOrDefault(),
+                FechaApertura    = o.FechaApertura,
+                FechaCierre      = o.FechaCierre,
+                DuracionMinutos  = o.FechaCierre.HasValue
+                    ? Math.Round((decimal)(o.FechaCierre.Value - o.FechaApertura).TotalMinutes, 1)
+                    : null,
+                CantidadItems    = dets.Sum(d => d.Cantidad),
+                Total            = o.Total,
+                Estado           = o.Estado.ToString(),
+            };
         }).ToList();
 
         var duraciones = detalle.Where(d => d.DuracionMinutos.HasValue).Select(d => d.DuracionMinutos!.Value).ToList();
