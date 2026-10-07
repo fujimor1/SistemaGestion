@@ -26,6 +26,9 @@ public class GenerarComprobanteDto
     /// <summary>Solo si MetodoPago == Mixto: cuánto de ese pago fue en efectivo (el resto, hasta el
     /// total, se asume Yape/Plin).</summary>
     public decimal? MontoEfectivoMixto { get; set; }
+
+    /// <summary>Número de operación Yape/Plin — opcional, solo aplica cuando MetodoPago es YapePlin o Mixto.</summary>
+    public string? NumeroOperacionQr { get; set; }
 }
 
 public class ItemComedorCobroDto

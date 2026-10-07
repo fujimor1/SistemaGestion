@@ -53,6 +53,9 @@ public class Comprobante
     // Solo si MetodoPago == Mixto: cuánto de ese pago fue en efectivo (el resto es Yape/Plin).
     public decimal? MontoEfectivoMixto { get; set; }
 
+    /// <summary>Número de operación Yape/Plin — opcional, solo aplica cuando MetodoPago es YapePlin o Mixto.</summary>
+    public string? NumeroOperacionQr { get; set; }
+
     public bool Cobrado { get; set; } = true;
     public DateTime? FechaCobro { get; set; }
     public int? ClienteId { get; set; }
