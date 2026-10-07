@@ -140,8 +140,15 @@ public class ReportesController : ControllerBase
     [HttpGet("comandas")]
     public async Task<IActionResult> GetComandas([FromQuery] string desde, [FromQuery] string hasta)
     {
-        var resultado = await _service.ReporteComandasAsync(desde, hasta);
-        return Ok(resultado);
+        try
+        {
+            var resultado = await _service.ReporteComandasAsync(desde, hasta);
+            return Ok(resultado);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = ex.Message, detalle = ex.InnerException?.Message, stack = ex.StackTrace });
+        }
     }
 
     /// <summary>Comprobantes emitidos con Cobrado=false — cuentas por cobrar activas.</summary>
