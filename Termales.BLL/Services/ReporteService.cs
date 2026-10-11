@@ -524,7 +524,8 @@ public class ReporteService : IReporteService
             .Include(d => d.ItemMenu).ThenInclude(i => i!.Receta).ThenInclude(r => r.Insumo)
             .Include(d => d.Comprobante)
             .Where(d => d.ComprobanteId != null && d.ItemMenuId != null &&
-                        d.Comprobante!.FechaVenta >= inicio && d.Comprobante.FechaVenta < fin &&
+                        (d.Comprobante!.FechaCobro ?? d.Comprobante.FechaVenta) >= inicio &&
+                        (d.Comprobante.FechaCobro ?? d.Comprobante.FechaVenta) < fin &&
                         d.Comprobante.Estado != "ANULADO" && (cajero == null || d.Comprobante.Cajero == cajero))
             .ToListAsync();
 
@@ -564,7 +565,8 @@ public class ReporteService : IReporteService
         var detallesTienda = await _db.ComprobanteDetalles.AsNoTracking()
             .Include(d => d.Comprobante)
             .Where(d => d.Comprobante!.TipoAmbiente == "tienda" &&
-                        d.Comprobante.FechaVenta >= inicio && d.Comprobante.FechaVenta < fin &&
+                        (d.Comprobante.FechaCobro ?? d.Comprobante.FechaVenta) >= inicio &&
+                        (d.Comprobante.FechaCobro ?? d.Comprobante.FechaVenta) < fin &&
                         d.Comprobante.Estado != "ANULADO" && d.Comprobante.TipoComprobante != "NC" &&
                         (cajero == null || d.Comprobante.Cajero == cajero))
             .ToListAsync();
@@ -622,7 +624,8 @@ public class ReporteService : IReporteService
         var detallesOtros = await _db.ComprobanteDetalles.AsNoTracking()
             .Include(d => d.Comprobante)
             .Where(d => (d.Comprobante!.TipoAmbiente == "banio" || d.Comprobante.TipoAmbiente == "habitacion") &&
-                        d.Comprobante.FechaVenta >= inicio && d.Comprobante.FechaVenta < fin &&
+                        (d.Comprobante.FechaCobro ?? d.Comprobante.FechaVenta) >= inicio &&
+                        (d.Comprobante.FechaCobro ?? d.Comprobante.FechaVenta) < fin &&
                         d.Comprobante.Estado != "ANULADO" && d.Comprobante.TipoComprobante != "NC" &&
                         (cajero == null || d.Comprobante.Cajero == cajero))
             .ToListAsync();
