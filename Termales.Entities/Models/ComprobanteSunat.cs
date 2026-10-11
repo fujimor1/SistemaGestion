@@ -22,6 +22,7 @@ public class ComprobanteSunat
 
     public DateTime FechaLimiteEnvio { get; set; }
     public DateTime? FechaEnvioSunat { get; set; }
+    public DateTime? FechaUltimoIntento { get; set; }
 
     // Sin uso hasta que Boleta (resumen diario) se migre en una fase posterior — se agrega ya la
     // columna para no tener que volver a migrar la tabla en ese momento.

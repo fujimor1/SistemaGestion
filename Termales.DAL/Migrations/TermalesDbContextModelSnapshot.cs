@@ -1079,6 +1079,10 @@ namespace Termales.DAL.Migrations
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("fecha_limite_envio");
 
+                    b.Property<DateTime?>("FechaUltimoIntento")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("fecha_ultimo_intento");
+
                     b.Property<string>("HashDigestValue")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")

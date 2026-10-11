@@ -686,6 +686,17 @@ public class ComprobanteService : IComprobanteService
         if (comprobante.TipoComprobante is not ("FI" or "BI" or "NC"))
             return ApiResponse<ResultadoEmisionSunatDto>.Fallido("El reenvío solo aplica a Facturas, Boletas o Notas de Crédito emitidas directamente a SUNAT");
 
+        // Si el último intento resultó en error 0140 (SUNAT tiene el documento en cola), bloquear
+        // el reenvío hasta que pasen 15 minutos — como indica el propio mensaje de SUNAT.
+        var sunat = await _uow.ComprobantesSunat.ObtenerPorComprobanteIdAsync(comprobanteId);
+        if (sunat?.CdrDescripcion?.Contains("0140") == true && sunat.FechaUltimoIntento.HasValue)
+        {
+            var minutosRestantes = (int)Math.Ceiling(15 - (DateTime.UtcNow - sunat.FechaUltimoIntento.Value).TotalMinutes);
+            if (minutosRestantes > 0)
+                return ApiResponse<ResultadoEmisionSunatDto>.Fallido(
+                    $"SUNAT tiene este documento en proceso (error 0140). Espere {minutosRestantes} minuto(s) antes de reintentar.");
+        }
+
         var resultado = await _facturaElectronica.EmitirAsync(comprobante);
 
         comprobante.Estado = resultado.Exito

@@ -26,6 +26,7 @@ public class ComprobanteSunatConfiguration : IEntityTypeConfiguration<Comprobant
 
         builder.Property(c => c.FechaLimiteEnvio).HasColumnName("fecha_limite_envio");
         builder.Property(c => c.FechaEnvioSunat).HasColumnName("fecha_envio_sunat");
+        builder.Property(c => c.FechaUltimoIntento).HasColumnName("fecha_ultimo_intento");
         builder.Property(c => c.TicketResumen).HasColumnName("ticket_resumen").HasMaxLength(50);
 
         builder.HasOne(c => c.Comprobante)

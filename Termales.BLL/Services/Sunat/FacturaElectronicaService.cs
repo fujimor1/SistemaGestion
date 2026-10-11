@@ -85,6 +85,7 @@ public class FacturaElectronicaService : IFacturaElectronicaService
         comprobanteSunat.XmlFirmado = firma.XmlFirmado;
         comprobanteSunat.HashDigestValue = firma.DigestValueBase64;
         comprobanteSunat.IntentosEnvio += 1;
+        comprobanteSunat.FechaUltimoIntento = DateTime.UtcNow;
 
         try
         {
