@@ -1058,8 +1058,7 @@ namespace Termales.DAL.Migrations
                         .HasColumnName("cdr_codigo_respuesta");
 
                     b.Property<string>("CdrDescripcion")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
+                        .HasColumnType("text")
                         .HasColumnName("cdr_descripcion");
 
                     b.Property<string>("CdrXml")

@@ -18,7 +18,7 @@ public class ComprobanteSunatConfiguration : IEntityTypeConfiguration<Comprobant
 
         builder.Property(c => c.CdrXml).HasColumnName("cdr_xml");
         builder.Property(c => c.CdrCodigoRespuesta).HasColumnName("cdr_codigo_respuesta");
-        builder.Property(c => c.CdrDescripcion).HasColumnName("cdr_descripcion").HasMaxLength(500);
+        builder.Property(c => c.CdrDescripcion).HasColumnName("cdr_descripcion").HasColumnType("text");
         builder.Property(c => c.ObservacionesSunat).HasColumnName("observaciones_sunat");
 
         builder.Property(c => c.Estado).HasColumnName("estado").HasConversion<int>().HasDefaultValue(EstadoEnvioSunat.Pendiente);
