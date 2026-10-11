@@ -2437,3 +2437,22 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261011065725_FixCdrDescripcionText') THEN
+    ALTER TABLE public.comprobantes_sunat ALTER COLUMN cdr_descripcion TYPE text;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20261011065725_FixCdrDescripcionText') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20261011065725_FixCdrDescripcionText', '8.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+
