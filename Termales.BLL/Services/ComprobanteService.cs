@@ -700,7 +700,7 @@ public class ComprobanteService : IComprobanteService
     public async Task<IEnumerable<ComprobanteSunatPendienteDto>> ObtenerPendientesSunatAsync()
     {
         var pendientes = await _uow.ComprobantesSunat.ObtenerPendientesAsync();
-        return pendientes.Select(p => new ComprobanteSunatPendienteDto
+        var result = pendientes.Select(p => new ComprobanteSunatPendienteDto
         {
             ComprobanteId    = p.ComprobanteId,
             Serie            = p.Comprobante.Serie,
@@ -710,7 +710,26 @@ public class ComprobanteService : IComprobanteService
             IntentosEnvio    = p.IntentosEnvio,
             FechaLimiteEnvio = p.FechaLimiteEnvio,
             UltimoError      = p.CdrDescripcion,
-        });
+        }).ToList();
+
+        // Comprobantes sin fila en comprobantes_sunat (el error ocurrió antes del catch de red)
+        var huerfanos = await _uow.ComprobantesSunat.ObtenerHuerfanosAsync();
+        var idsYaIncluidos = result.Select(r => r.ComprobanteId).ToHashSet();
+        result.AddRange(huerfanos
+            .Where(c => !idsYaIncluidos.Contains(c.ComprobanteId))
+            .Select(c => new ComprobanteSunatPendienteDto
+            {
+                ComprobanteId    = c.ComprobanteId,
+                Serie            = c.Serie,
+                Numero           = c.Numero,
+                Total            = c.Total,
+                Estado           = "Pendiente",
+                IntentosEnvio    = 0,
+                FechaLimiteEnvio = c.FechaEmision.AddDays(3),
+                UltimoError      = "Sin registro de envío — error anterior a la comunicación con SUNAT",
+            }));
+
+        return result.OrderBy(r => r.FechaLimiteEnvio);
     }
 
     public async Task<IEnumerable<ComprobanteElectronicoDto>> ObtenerFacturasBoletasAsync(string? fecha)

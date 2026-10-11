@@ -97,7 +97,7 @@ public static class ServiceCollectionExtensions
 
         // Facturación electrónica directa con SUNAT (Factura, Boleta y Nota de Crédito)
         services.Configure<SunatSettings>(config.GetSection("Sunat"));
-        services.AddHttpClient<ISunatBillServiceClient, SunatBillServiceClient>(c => c.Timeout = TimeSpan.FromSeconds(60));
+        services.AddHttpClient<ISunatBillServiceClient, SunatBillServiceClient>(c => c.Timeout = TimeSpan.FromSeconds(120));
         services.AddScoped<IFacturaXmlBuilder, FacturaXmlBuilder>();
         services.AddScoped<INotaCreditoXmlBuilder, NotaCreditoXmlBuilder>();
         services.AddScoped<IXmlDsigSigner, XmlDsigSigner>();

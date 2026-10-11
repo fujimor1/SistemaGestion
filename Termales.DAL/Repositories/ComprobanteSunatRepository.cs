@@ -19,4 +19,13 @@ public class ComprobanteSunatRepository : GenericRepository<ComprobanteSunat>, I
             .Where(c => c.Estado == EstadoEnvioSunat.Pendiente || c.Estado == EstadoEnvioSunat.ErrorEnvio)
             .OrderBy(c => c.FechaLimiteEnvio)
             .ToListAsync();
+
+    public async Task<IEnumerable<Comprobante>> ObtenerHuerfanosAsync() =>
+        await _context.Set<Comprobante>()
+            .Where(c =>
+                (c.TipoComprobante == "BI" || c.TipoComprobante == "FI" || c.TipoComprobante == "NC") &&
+                c.Estado == "PENDIENTE DE ENVÍO A SUNAT" &&
+                !_context.Set<ComprobanteSunat>().Any(cs => cs.ComprobanteId == c.ComprobanteId))
+            .OrderBy(c => c.FechaEmision)
+            .ToListAsync();
 }
