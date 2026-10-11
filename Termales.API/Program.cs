@@ -38,6 +38,7 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddTermalesServices(builder.Configuration);
 builder.Services.AddTermalesJwt(builder.Configuration);
 builder.Services.AddSignalR();
+builder.Services.AddHostedService<Termales.API.BackgroundServices.SunatReintentadorService>();
 
 builder.Services.AddCors(options =>
 {
