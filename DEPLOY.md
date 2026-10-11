@@ -171,3 +171,15 @@ quiera esa mejora funcionando de verdad, hay que repetir estos 3 pasos a mano.
 - [ ] Migración de BD aplicada a mano, con backup (`pg_dump`) hecho antes (si hay cambios de schema)
 - [ ] Probar login real: `curl -X POST https://api.termalescollpa.cloud/api/auth/login -H "Content-Type: application/json" -d '{"email":"...","password":"..."}'` → debe dar `200 OK` con token
 - [ ] Probar frontend en el navegador (no solo `curl`, para pescar errores de JS/CORS/runtime)
+
+## 5. Mejoras pendientes (backlog técnico)
+
+### #4 — Alerta de salto correlativo en numeración SUNAT
+Detectar automáticamente cuando hay un salto en la numeración de boletas/facturas (ej. BI02-77 → BI02-78 sin el 77) y mostrarlo como advertencia en el panel de documentos pendientes o en el historial de envíos.
+
+**Contexto:** Los saltos ocurren cuando un comprobante local se anula antes de enviarse a SUNAT (timeout, error de red), generando un hueco que SUNAT acepta pero que puede llamar la atención en una auditoría. La alerta sería informativa, no bloqueante.
+
+**Sugerencia de implementación:**
+- Consulta en `ComprobanteSunatRepository` que detecte saltos: para cada serie/tipo, comparar numeración consecutiva y devolver los huecos.
+- Endpoint `GET /api/comprobantes/sunat/saltos-correlativos` que devuelva la lista de huecos detectados.
+- En el frontend, mostrar un badge/aviso en el panel de gestión SUNAT si existen saltos.
