@@ -550,6 +550,37 @@ public class ReporteService : IReporteService
             };
         }).ToList();
 
+        // Productos de tienda vendidos desde comedor (gaseosas, snacks, etc.) —
+        // tienen ProductoId en vez de ItemMenuId, así que la query anterior los omite.
+        var detallesCometorProducto = await _db.OrdenDetalles.AsNoTracking()
+            .Include(d => d.Producto)
+            .Include(d => d.Comprobante)
+            .Where(d => d.ComprobanteId != null && d.ProductoId != null &&
+                        d.Comprobante!.TipoAmbiente == "comedor" &&
+                        (d.Comprobante.FechaCobro ?? d.Comprobante.FechaVenta) >= inicio &&
+                        (d.Comprobante.FechaCobro ?? d.Comprobante.FechaVenta) < fin &&
+                        d.Comprobante.Estado != "ANULADO" && (cajero == null || d.Comprobante.Cajero == cajero))
+            .ToListAsync();
+
+        var filasComedorProducto = detallesCometorProducto.Select(d =>
+        {
+            var costoTotal = Math.Round((d.Producto?.PrecioCompra ?? 0) * d.Cantidad, 2);
+            return new UtilidadDetalleDto
+            {
+                Nombre            = d.Producto?.Nombre ?? "Producto",
+                Ambiente          = "comedor",
+                CantidadVendida   = d.Cantidad,
+                Ingreso           = d.Subtotal,
+                Costo             = costoTotal,
+                Utilidad          = Math.Round(d.Subtotal - costoTotal, 2),
+                NumeroComprobante = $"{d.Comprobante!.Serie}-{d.Comprobante.Numero:D5}",
+                TipoComprobante   = d.Comprobante.TipoComprobante,
+                Cajero            = d.Comprobante.Cajero,
+                MetodoPago        = d.Comprobante.MetodoPago.ToString(),
+                MontoEfectivoMixto = d.Comprobante.MontoEfectivoMixto,
+            };
+        }).ToList();
+
         // Tienda no tiene FK exacta de línea de venta a Producto (ComprobanteDetalle
         // solo guarda la descripción) — se empareja por nombre exacto, que es como
         // GenerarComprobanteTienda arma la descripción de cada línea. Se agrupa antes de
@@ -591,7 +622,7 @@ public class ReporteService : IReporteService
             };
         }).ToList();
 
-        return filasComedor.Concat(filasTienda).OrderByDescending(f => f.Utilidad).ToList();
+        return filasComedor.Concat(filasComedorProducto).Concat(filasTienda).OrderByDescending(f => f.Utilidad).ToList();
     }
 
     public async Task<ReporteUtilidadDto> ReporteUtilidadAsync(string desde, string hasta)
