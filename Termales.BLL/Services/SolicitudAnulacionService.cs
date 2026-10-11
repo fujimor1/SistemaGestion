@@ -3,6 +3,7 @@ using Termales.Common.DTOs.Comprobante;
 using Termales.Common.Utils;
 using Termales.Common.Wrappers;
 using Termales.DAL.UnitOfWork;
+using Termales.Entities.Enums;
 using Termales.Entities.Models;
 
 namespace Termales.BLL.Services;
@@ -72,16 +73,26 @@ public class SolicitudAnulacionService : ISolicitudAnulacionService
         var comprobante = await _uow.Comprobantes.ObtenerPorIdAsync(solicitud.ComprobanteId);
         if (comprobante is null) return ApiResponse.Fallido("Comprobante no encontrado.");
 
-        // La anulación de una Boleta/Factura ya aceptada por SUNAT no es un "borrado": se emite
-        // una Nota de Crédito por el total, con motivo "Anulación de la operación". Recién cuando
-        // el supervisor aprueba se dispara esto — la solicitud en sí no toca SUNAT para nada.
+        // La anulación de una Boleta/Factura aceptada por SUNAT no es un "borrado": se emite
+        // una Nota de Crédito por el total. Pero si el comprobante nunca llegó a SUNAT
+        // (pendiente de envío, timeout, sin registro) no hay nada que anular electrónicamente
+        // — emitir la NC causaría error 2119 porque SUNAT no conoce el documento origen.
         if (comprobante.TipoComprobante is "BI" or "FI")
         {
-            var dto = new EmitirNotaCreditoDto { Tipo = "total", CodigoMotivo = 1 };
-            var resultadoNc = await _notaCredito.EmitirAsync(comprobante.ComprobanteId, dto, supervisorNombre);
-            if (!resultadoNc.Exito)
-                return ApiResponse.Fallido($"No se pudo emitir la nota de crédito de anulación: {resultadoNc.Mensaje}");
-            solicitud.NotaCreditoComprobanteId = resultadoNc.Data!.ComprobanteId;
+            var sunat = await _uow.ComprobantesSunat.ObtenerPorComprobanteIdAsync(comprobante.ComprobanteId);
+            // Llegó a SUNAT si: fue aceptado en el flujo directo, O si no tiene fila en
+            // comprobantes_sunat pero el estado dice "ENVIADO A SUNAT" (flujo legado Nubefact).
+            var llegóASunat = sunat?.Estado == EstadoEnvioSunat.Aceptado
+                           || (sunat is null && comprobante.Estado == "ENVIADO A SUNAT");
+
+            if (llegóASunat)
+            {
+                var dto = new EmitirNotaCreditoDto { Tipo = "total", CodigoMotivo = 1 };
+                var resultadoNc = await _notaCredito.EmitirAsync(comprobante.ComprobanteId, dto, supervisorNombre);
+                if (!resultadoNc.Exito)
+                    return ApiResponse.Fallido($"No se pudo emitir la nota de crédito de anulación: {resultadoNc.Mensaje}");
+                solicitud.NotaCreditoComprobanteId = resultadoNc.Data!.ComprobanteId;
+            }
         }
 
         comprobante.Estado          = "ANULADO";
