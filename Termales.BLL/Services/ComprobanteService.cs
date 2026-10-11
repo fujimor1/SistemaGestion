@@ -692,9 +692,58 @@ public class ComprobanteService : IComprobanteService
             ? (resultado.Data!.Aceptado ? "ENVIADO A SUNAT" : "RECHAZADO POR SUNAT")
             : "PENDIENTE DE ENVÍO A SUNAT";
         await _uow.Comprobantes.ActualizarAsync(comprobante);
+
+        // Si SUNAT aceptó un comprobante de comedor, recuperar la mesa en caso de que el
+        // error original ocurriera antes de que GenerarComprobanteComedor pudiera hacerlo.
+        if (resultado.Exito && resultado.Data!.Aceptado &&
+            comprobante.TipoAmbiente == "comedor" && comprobante.ReferenciaId is int ordenId)
+        {
+            await LiberarMesaTrasReenvioAsync(ordenId, comprobante.ComprobanteId);
+        }
+
         await _uow.GuardarCambiosAsync();
 
         return resultado;
+    }
+
+    private async Task LiberarMesaTrasReenvioAsync(int ordenId, int comprobanteId)
+    {
+        var orden = await _uow.Ordenes.ObtenerConDetallesAsync(ordenId);
+        if (orden is null || orden.Estado == EstadoOrden.Pagada) return;
+
+        // Vincular detalles huérfanos (sin ComprobanteId) a este comprobante: ocurre cuando
+        // el error fue antes del catch de red en EmitirAsync (ej. Firmar lanzó excepción) y
+        // GenerarComprobanteComedor nunca llegó a asignar los ComprobanteId de esos detalles.
+        foreach (var d in orden.Detalles.Where(d =>
+            d.Estado != EstadoOrdenDetalle.Cancelado && d.ComprobanteId is null))
+        {
+            d.ComprobanteId = comprobanteId;
+        }
+        await _uow.Ordenes.ActualizarAsync(orden);
+
+        var quedanPendientes = orden.Detalles.Any(d =>
+            d.Estado != EstadoOrdenDetalle.Cancelado && d.ComprobanteId is null);
+        if (quedanPendientes) return;
+
+        orden.Estado = EstadoOrden.Pagada;
+        orden.FechaCierre = DateTime.UtcNow;
+        await _uow.Ordenes.ActualizarAsync(orden);
+
+        if (orden.MesaId is int mesaId)
+        {
+            var mesa = await _uow.Mesas.ObtenerConSecundariasAsync(mesaId);
+            if (mesa is not null)
+            {
+                mesa.Estado = EstadoMesa.Disponible;
+                await _uow.Mesas.ActualizarAsync(mesa);
+                foreach (var secundaria in mesa.MesasSecundarias)
+                {
+                    secundaria.MesaPrincipalId = null;
+                    secundaria.Estado = EstadoMesa.Disponible;
+                    await _uow.Mesas.ActualizarAsync(secundaria);
+                }
+            }
+        }
     }
 
     public async Task<IEnumerable<ComprobanteSunatPendienteDto>> ObtenerPendientesSunatAsync()
