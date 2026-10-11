@@ -110,6 +110,10 @@ public class RegistrarDetalleCompraDto
 
     [Required]
     public decimal PrecioUnitario { get; set; }
+
+    /// <summary>Total de esta línea tal como aparece en el comprobante del proveedor.
+    /// Si se envía, se usa como verdad; si no, se recalcula como Cantidad × PrecioUnitario.</summary>
+    public decimal? Total { get; set; }
 }
 
 public class PagarCompraDto

@@ -113,7 +113,7 @@ public class CompraService : ICompraService
             if (esProducto && linea.ProductoId is null && string.IsNullOrWhiteSpace(linea.NombreNuevo))
                 throw new InvalidOperationException("Selecciona un producto existente o escribe el nombre de uno nuevo");
 
-            var totalLinea = linea.Cantidad * linea.PrecioUnitario;
+            var totalLinea = linea.Total ?? Math.Round(linea.Cantidad * linea.PrecioUnitario, 2);
             totalCompra += totalLinea;
 
             var detalle = new DetalleCompra
