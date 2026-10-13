@@ -68,6 +68,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEntradaProductoService, EntradaProductoService>();
         services.AddScoped<ISalidaInsumoService, SalidaInsumoService>();
         services.AddScoped<ISalidaProductoService, SalidaProductoService>();
+        services.AddScoped<IKardexService, KardexService>();
 
         // Dashboard
         services.AddScoped<IDashboardService, DashboardService>();

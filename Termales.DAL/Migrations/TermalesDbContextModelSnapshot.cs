@@ -1452,10 +1452,20 @@ namespace Termales.DAL.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("insumo_id");
 
+                    b.Property<string>("Motivo")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("motivo");
+
                     b.Property<string>("Observacion")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)")
                         .HasColumnName("observacion");
+
+                    b.Property<string>("RegistradoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("registrado_por");
 
                     b.HasKey("SalidaInsumoId");
 

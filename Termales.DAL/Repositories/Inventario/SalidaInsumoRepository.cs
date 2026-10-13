@@ -18,9 +18,7 @@ public class SalidaInsumoRepository : GenericRepository<SalidaInsumo>, ISalidaIn
 
     public async Task<IEnumerable<SalidaInsumo>> ObtenerPorFechaAsync(DateTime fecha)
     {
-        // Fecha es un instante real (default DateTime.UtcNow al registrar la salida),
-        // no un day-key: se filtra por el rango [inicio, fin) del día de negocio en
-        // Perú en vez de compararlo por `.Date ==` crudo.
+        // Fecha es UTC real (DateTime.UtcNow). DayRange mapea el día Lima a su ventana UTC.
         var (inicio, fin) = PeruTime.DayRange(fecha);
         return await _dbSet
             .Include(s => s.Insumo)
@@ -28,5 +26,15 @@ public class SalidaInsumoRepository : GenericRepository<SalidaInsumo>, ISalidaIn
             .OrderBy(s => s.Insumo.TipoAmbiente)
             .ThenBy(s => s.Insumo.Nombre)
             .ToListAsync();
+    }
+
+    public async Task<IEnumerable<SalidaInsumo>> ObtenerHistorialAsync(
+        DateTime desde, DateTime hasta, int? insumoId, string? motivo)
+    {
+        var q = _dbSet.Include(s => s.Insumo).AsQueryable();
+        q = q.Where(s => s.Fecha >= desde && s.Fecha < hasta);
+        if (insumoId.HasValue) q = q.Where(s => s.InsumoId == insumoId.Value);
+        if (!string.IsNullOrWhiteSpace(motivo)) q = q.Where(s => s.Motivo == motivo);
+        return await q.OrderByDescending(s => s.Fecha).ToListAsync();
     }
 }

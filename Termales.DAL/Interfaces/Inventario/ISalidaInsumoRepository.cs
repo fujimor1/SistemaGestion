@@ -7,4 +7,5 @@ public interface ISalidaInsumoRepository : IGenericRepository<SalidaInsumo>
 {
     Task<IEnumerable<SalidaInsumo>> ObtenerPorInsumoAsync(int insumoId);
     Task<IEnumerable<SalidaInsumo>> ObtenerPorFechaAsync(DateTime fecha);
+    Task<IEnumerable<SalidaInsumo>> ObtenerHistorialAsync(DateTime desde, DateTime hasta, int? insumoId, string? motivo);
 }

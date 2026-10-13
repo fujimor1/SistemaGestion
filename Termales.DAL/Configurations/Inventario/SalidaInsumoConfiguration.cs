@@ -14,7 +14,9 @@ public class SalidaInsumoConfiguration : IEntityTypeConfiguration<SalidaInsumo>
         builder.Property(s => s.InsumoId).HasColumnName("insumo_id");
         builder.Property(s => s.Cantidad).HasColumnName("cantidad").HasPrecision(12, 3);
         builder.Property(s => s.Fecha).HasColumnName("fecha").HasDefaultValueSql("now()");
+        builder.Property(s => s.Motivo).HasColumnName("motivo").HasMaxLength(100);
         builder.Property(s => s.Observacion).HasColumnName("observacion").HasMaxLength(300);
+        builder.Property(s => s.RegistradoPor).HasColumnName("registrado_por").HasMaxLength(100);
 
         builder.HasOne(s => s.Insumo)
             .WithMany()

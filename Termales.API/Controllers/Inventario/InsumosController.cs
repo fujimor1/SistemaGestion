@@ -95,8 +95,36 @@ public class InsumosController : ControllerBase
         dto.InsumoId = id;
         try
         {
-            var salida = await _salidaService.RegistrarAsync(dto);
+            var salida = await _salidaService.RegistrarAsync(dto, User.Identity?.Name);
             return Ok(salida);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+    }
+
+    [HttpGet("salidas/historial")]
+    public async Task<IActionResult> HistorialSalidas(
+        [FromQuery] DateTime? desde, [FromQuery] DateTime? hasta,
+        [FromQuery] int? insumoId, [FromQuery] string? motivo)
+    {
+        var d = PeruTime.DayRange((desde ?? PeruTime.Today().AddDays(-30)).Date).inicio;
+        var h = PeruTime.DayRange((hasta ?? PeruTime.Today()).Date).fin;
+        var salidas = await _salidaService.ObtenerHistorialAsync(d, h, insumoId, motivo);
+        return Ok(salidas);
+    }
+
+    [HttpPost("salidas/lote")]
+    public async Task<IActionResult> RegistrarSalidaLote([FromBody] RegistrarSalidaLoteDto dto)
+    {
+        if (dto.Lineas is null || dto.Lineas.Count == 0)
+            return BadRequest(new { mensaje = "El lote debe tener al menos una línea" });
+        try
+        {
+            var registradoPor = User.Identity?.Name ?? "Sistema";
+            var resultados = await _salidaService.RegistrarLoteAsync(dto, registradoPor);
+            return Ok(resultados);
         }
         catch (InvalidOperationException ex)
         {
