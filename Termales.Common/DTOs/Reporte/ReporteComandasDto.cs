@@ -22,4 +22,5 @@ public class ComandaDetalleDto
     public int CantidadItems { get; set; }
     public decimal Total { get; set; }
     public string Estado { get; set; } = string.Empty;
+    public string? MotivoCancelacion { get; set; }
 }

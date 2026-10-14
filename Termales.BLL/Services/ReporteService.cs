@@ -992,7 +992,8 @@ public class ReporteService : IReporteService
                     : null,
                 CantidadItems    = dets.Sum(d => d.Cantidad),
                 Total            = o.Total,
-                Estado           = o.Estado.ToString(),
+                Estado              = o.Estado.ToString(),
+                MotivoCancelacion   = o.MotivoCancelacion,
             };
         }).ToList();
 
