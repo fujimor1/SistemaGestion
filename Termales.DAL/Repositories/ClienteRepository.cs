@@ -10,11 +10,14 @@ public class ClienteRepository : GenericRepository<Cliente>, IClienteRepository
     public ClienteRepository(TermalesDbContext context) : base(context) { }
 
     public async Task<Cliente?> ObtenerPorDniAsync(string dni) =>
-        await _dbSet.FirstOrDefaultAsync(c => c.Dni == dni);
+        await _dbSet.FirstOrDefaultAsync(c => c.NumeroDocumento == dni);
 
     public async Task<IEnumerable<Cliente>> BuscarPorNombreAsync(string nombre) =>
         await _dbSet
-            .Where(c => c.Activo && (c.Nombres.Contains(nombre) || c.Apellidos.Contains(nombre)))
+            .Where(c => c.Activo && (
+                c.Nombres.Contains(nombre) ||
+                c.Apellidos.Contains(nombre) ||
+                (c.RazonSocial != null && c.RazonSocial.Contains(nombre))))
             .ToListAsync();
 
     public async Task<(IEnumerable<Cliente> Items, int Total)> ObtenerPaginadoAsync(
@@ -26,11 +29,13 @@ public class ClienteRepository : GenericRepository<Cliente>, IClienteRepository
             query = query.Where(c =>
                 c.Nombres.Contains(busqueda) ||
                 c.Apellidos.Contains(busqueda) ||
-                c.Dni.Contains(busqueda));
+                (c.RazonSocial != null && c.RazonSocial.Contains(busqueda)) ||
+                c.NumeroDocumento.Contains(busqueda));
 
         var total = await query.CountAsync();
         var items = await query
             .OrderBy(c => c.Apellidos)
+            .ThenBy(c => c.RazonSocial)
             .Skip((pagina - 1) * tamanoPagina)
             .Take(tamanoPagina)
             .ToListAsync();
