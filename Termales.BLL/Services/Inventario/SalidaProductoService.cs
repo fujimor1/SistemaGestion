@@ -34,6 +34,7 @@ public class SalidaProductoService : ISalidaProductoService
         {
             ProductoId = dto.ProductoId,
             Cantidad = dto.Cantidad,
+            Motivo = dto.Motivo,
             Observacion = dto.Observacion
         };
 
@@ -46,6 +47,47 @@ public class SalidaProductoService : ISalidaProductoService
         return MapDto(salida, producto.Nombre);
     }
 
+    public async Task<IEnumerable<SalidaProductoDto>> RegistrarLoteAsync(RegistrarSalidaProductoLoteDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Motivo))
+            throw new InvalidOperationException("El motivo es requerido.");
+
+        var resultados = new List<SalidaProductoDto>();
+        foreach (var linea in dto.Lineas)
+        {
+            var producto = await _uow.Productos.ObtenerPorIdAsync(linea.ProductoId)
+                ?? throw new InvalidOperationException($"Producto {linea.ProductoId} no encontrado.");
+
+            if (producto.Stock < linea.Cantidad)
+                throw new InvalidOperationException(
+                    $"Stock insuficiente para '{producto.Nombre}'. Disponible: {producto.Stock}");
+
+            var salida = new SalidaProducto
+            {
+                ProductoId = linea.ProductoId,
+                Cantidad = linea.Cantidad,
+                Motivo = dto.Motivo,
+                Observacion = dto.Observacion
+            };
+
+            producto.Stock -= linea.Cantidad;
+
+            await _uow.SalidasProducto.AgregarAsync(salida);
+            await _uow.Productos.ActualizarAsync(producto);
+            resultados.Add(MapDto(salida, producto.Nombre));
+        }
+
+        await _uow.GuardarCambiosAsync();
+        return resultados;
+    }
+
+    public async Task<IEnumerable<SalidaProductoDto>> ObtenerHistorialAsync(
+        DateTime? desde, DateTime? hasta, int? productoId, string? motivo)
+    {
+        var salidas = await _uow.SalidasProducto.ObtenerHistorialAsync(desde, hasta, productoId, motivo);
+        return salidas.Select(s => MapDto(s));
+    }
+
     private static SalidaProductoDto MapDto(SalidaProducto s, string? nombre = null) => new()
     {
         SalidaProductoId = s.SalidaProductoId,
@@ -53,6 +95,7 @@ public class SalidaProductoService : ISalidaProductoService
         NombreProducto = nombre ?? s.Producto?.Nombre ?? string.Empty,
         Cantidad = s.Cantidad,
         Fecha = s.Fecha,
+        Motivo = s.Motivo,
         Observacion = s.Observacion
     };
 }

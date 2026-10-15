@@ -8,6 +8,7 @@ public class SalidaProducto
     public int ProductoId { get; set; }
     public int Cantidad { get; set; }
     public DateTime Fecha { get; set; } = DateTime.UtcNow;
+    public string? Motivo { get; set; }
     public string? Observacion { get; set; }
     public Producto Producto { get; set; } = null!;
 }

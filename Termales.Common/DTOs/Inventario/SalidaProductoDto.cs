@@ -7,6 +7,7 @@ public class SalidaProductoDto
     public string NombreProducto { get; set; } = string.Empty;
     public int Cantidad { get; set; }
     public DateTime Fecha { get; set; }
+    public string? Motivo { get; set; }
     public string? Observacion { get; set; }
 }
 
@@ -14,5 +15,19 @@ public class RegistrarSalidaProductoDto
 {
     public int ProductoId { get; set; }
     public int Cantidad { get; set; }
+    public string? Motivo { get; set; }
     public string? Observacion { get; set; }
+}
+
+public class LineaSalidaProductoLoteDto
+{
+    public int ProductoId { get; set; }
+    public int Cantidad { get; set; }
+}
+
+public class RegistrarSalidaProductoLoteDto
+{
+    public string Motivo { get; set; } = string.Empty;
+    public string? Observacion { get; set; }
+    public List<LineaSalidaProductoLoteDto> Lineas { get; set; } = [];
 }

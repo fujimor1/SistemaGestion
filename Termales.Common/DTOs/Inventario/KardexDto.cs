@@ -20,6 +20,8 @@ public class KardexMovimientoDto
 public class KardexInsumoDto
 {
     public int InsumoId { get; set; }
+    /// <summary>"insumo" | "producto"</summary>
+    public string TipoArticulo { get; set; } = "insumo";
     public string Nombre { get; set; } = string.Empty;
     public string? Unidad { get; set; }
     public string TipoAmbiente { get; set; } = string.Empty;
@@ -37,6 +39,8 @@ public class KardexInsumoDto
 public class KardexResumenDto
 {
     public int InsumoId { get; set; }
+    /// <summary>"insumo" | "producto"</summary>
+    public string TipoArticulo { get; set; } = "insumo";
     public string Nombre { get; set; } = string.Empty;
     public string? Unidad { get; set; }
     public string TipoAmbiente { get; set; } = string.Empty;

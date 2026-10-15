@@ -27,6 +27,18 @@ public class KardexController : ControllerBase
         return kardex is null ? NotFound() : Ok(kardex);
     }
 
+    [HttpGet("producto/{id:int}")]
+    public async Task<IActionResult> KardexProducto(
+        int id,
+        [FromQuery] DateTime? desde,
+        [FromQuery] DateTime? hasta)
+    {
+        var d = PeruTime.DayRange((desde ?? PeruTime.Today().AddDays(-30)).Date).inicio;
+        var h = PeruTime.DayRange((hasta ?? PeruTime.Today()).Date).fin;
+        var kardex = await _kardex.ObtenerKardexProductoAsync(id, d, h);
+        return kardex is null ? NotFound() : Ok(kardex);
+    }
+
     [HttpGet("general")]
     public async Task<IActionResult> ResumenGeneral(
         [FromQuery] DateTime? desde,
