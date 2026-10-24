@@ -29,18 +29,19 @@ public class ConsultaDocumentoService : IConsultaDocumentoService
 
         try
         {
-            var req = new HttpRequestMessage(HttpMethod.Get, $"{_cfg.UrlBase.TrimEnd('/')}/v1/reniec/dni?numero={dni}");
+            var req = new HttpRequestMessage(HttpMethod.Get, $"{_cfg.UrlBase.TrimEnd('/')}/api/v1/dni/{dni}");
             req.Headers.Add("Authorization", $"Bearer {_cfg.ApiToken}");
 
             var resp = await _http.SendAsync(req);
             if (!resp.IsSuccessStatusCode)
                 return ApiResponse<ConsultaDniResultDto>.Fallido("No se encontró el DNI");
 
-            var data = await resp.Content.ReadFromJsonAsync<ReniecResponse>();
-            if (data is null || string.IsNullOrWhiteSpace(data.FullName))
+            var data = await resp.Content.ReadFromJsonAsync<ApisPeruDniResponse>();
+            if (data is null || string.IsNullOrWhiteSpace(data.Nombres))
                 return ApiResponse<ConsultaDniResultDto>.Fallido("No se encontró el DNI");
 
-            return ApiResponse<ConsultaDniResultDto>.Exitoso(new ConsultaDniResultDto { Nombre = data.FullName });
+            var nombreCompleto = $"{data.Nombres} {data.ApellidoPaterno} {data.ApellidoMaterno}".Trim();
+            return ApiResponse<ConsultaDniResultDto>.Exitoso(new ConsultaDniResultDto { Nombre = nombreCompleto });
         }
         catch (Exception)
         {
@@ -57,14 +58,14 @@ public class ConsultaDocumentoService : IConsultaDocumentoService
 
         try
         {
-            var req = new HttpRequestMessage(HttpMethod.Get, $"{_cfg.UrlBase.TrimEnd('/')}/v1/sunat/ruc?numero={ruc}");
+            var req = new HttpRequestMessage(HttpMethod.Get, $"{_cfg.UrlBase.TrimEnd('/')}/api/v1/ruc/{ruc}");
             req.Headers.Add("Authorization", $"Bearer {_cfg.ApiToken}");
 
             var resp = await _http.SendAsync(req);
             if (!resp.IsSuccessStatusCode)
                 return ApiResponse<ConsultaRucResultDto>.Fallido("No se encontró el RUC");
 
-            var data = await resp.Content.ReadFromJsonAsync<SunatResponse>();
+            var data = await resp.Content.ReadFromJsonAsync<ApisPeruRucResponse>();
             if (data is null || string.IsNullOrWhiteSpace(data.RazonSocial))
                 return ApiResponse<ConsultaRucResultDto>.Fallido("No se encontró el RUC");
 
@@ -76,15 +77,21 @@ public class ConsultaDocumentoService : IConsultaDocumentoService
         }
     }
 
-    private class ReniecResponse
+    private class ApisPeruDniResponse
     {
-        [JsonPropertyName("full_name")]
-        public string? FullName { get; set; }
+        [JsonPropertyName("nombres")]
+        public string? Nombres { get; set; }
+
+        [JsonPropertyName("apellidoPaterno")]
+        public string? ApellidoPaterno { get; set; }
+
+        [JsonPropertyName("apellidoMaterno")]
+        public string? ApellidoMaterno { get; set; }
     }
 
-    private class SunatResponse
+    private class ApisPeruRucResponse
     {
-        [JsonPropertyName("razon_social")]
+        [JsonPropertyName("razonSocial")]
         public string? RazonSocial { get; set; }
     }
 }
