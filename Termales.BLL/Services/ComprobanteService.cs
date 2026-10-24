@@ -290,7 +290,7 @@ public class ComprobanteService : IComprobanteService
 
         var items = new List<ItemComprobante> { new()
         {
-            Descripcion    = $"Hospedaje - {hab.Nombre}",
+            Descripcion    = $"{hab.Nombre} - Hospedaje",
             Cantidad       = 1,
             ValorUnitario  = valorUnit,
             PrecioUnitario = monto,
