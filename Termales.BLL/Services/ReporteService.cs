@@ -1118,10 +1118,11 @@ public class ReporteService : IReporteService
             var efectivo     = cierre?.EfectivoFisico ?? 0;
             var yape         = cierre?.YapeFisico ?? 0;
             var diferencia   = cierre?.Diferencia ?? 0;
-            // Efectivo contado, menos lo que ya estaba ahí antes de vender (saldo inicial) y lo
-            // que salió por caja chica, ajustado por la diferencia física (sobrante suma,
-            // faltante resta) — así se reproduce el "neto efectivo" del Excel original.
-            var netoEfectivo = efectivo + diferencia - saldoInicial - egresoDia;
+            // EfectivoFisico es lo que quedó en la caja al cierre, DESPUÉS de haber pagado los
+            // egresos de caja chica. Restarlos de nuevo sería doble descuento. La fórmula
+            // correcta es: efectivo contado ± diferencia − saldo inicial (que ya estaba antes
+            // de las ventas del día y no pertenece al ingreso de hoy).
+            var netoEfectivo = efectivo + diferencia - saldoInicial;
 
             return new IngresoDiarioDesglosadoDto
             {
