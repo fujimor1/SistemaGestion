@@ -16,6 +16,11 @@ public class LiquidacionCajaDto
     public decimal TransferenciaContado { get; set; }
     public decimal TotalContado { get; set; }
     public decimal Diferencia { get; set; }
+    /// <summary>Parte de Diferencia que corresponde al efectivo (con signo: + sobrante, - faltante).
+    /// Null si no hay cierre o es un cierre viejo sin el desglose del sistema por método.</summary>
+    public decimal? DiferenciaEfectivo { get; set; }
+    /// <summary>Parte de Diferencia que corresponde a Yape/Plin (incluye la transferencia contada).</summary>
+    public decimal? DiferenciaYape { get; set; }
     public string EstadoCaja { get; set; } = string.Empty;
 
     public decimal IngresoTotal { get; set; }

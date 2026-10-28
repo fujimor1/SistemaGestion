@@ -17,7 +17,13 @@ public class IngresoDiarioDesglosadoDto
     public decimal  Egreso           { get; set; }
     public decimal? Faltante         { get; set; }
     public decimal? Sobrante         { get; set; }
-    public decimal  NetoEfectivo     { get; set; }
+    // Diferencia del cierre repartida por método (con signo: + sobrante, - faltante). Efectivo
+    // se compara contra apertura + ventas en efectivo - egresos; Yape/Plin (incluye transferencia
+    // física) contra las ventas Yape/Plin. Null si no hay cierre o es un cierre viejo sin el
+    // desglose del sistema por método.
+    public decimal? DiferenciaEfectivo { get; set; }
+    public decimal? DiferenciaYape     { get; set; }
+    public decimal  NetoEfectivo    { get; set; }
     public decimal  NetoTotal        { get; set; }
 }
 

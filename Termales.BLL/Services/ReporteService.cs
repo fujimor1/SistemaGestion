@@ -778,6 +778,8 @@ public class ReporteService : IReporteService
         var yape          = cierre?.YapeFisico ?? 0;
         var transferencia = cierre?.TransferenciaFisico ?? 0;
 
+        var (difEfectivo, difYape) = DiferenciaCierreCaja.Calcular(cierre);
+
         return new LiquidacionCajaDto
         {
             Fecha                = fecha,
@@ -791,7 +793,9 @@ public class ReporteService : IReporteService
             TransferenciaContado = transferencia,
             TotalContado         = efectivo + yape + transferencia,
             Diferencia           = cierre?.Diferencia ?? 0,
-            EstadoCaja           = cierre is not null ? "Cerrada" : apertura is not null ? "Abierta" : "Sin apertura",
+            DiferenciaEfectivo   = difEfectivo,
+            DiferenciaYape       = difYape,
+            EstadoCaja          = cierre is not null ? "Cerrada" : apertura is not null ? "Abierta" : "Sin apertura",
             IngresoTotal         = items.Sum(i => i.Ingreso),
             CostoTotal           = itemsConCosto.Count > 0 ? itemsConCosto.Sum(i => i.Costo) : null,
             UtilidadTotal        = itemsConCosto.Count > 0 ? itemsConCosto.Sum(i => i.Utilidad) : null,
@@ -1124,6 +1128,8 @@ public class ReporteService : IReporteService
             // de las ventas del día y no pertenece al ingreso de hoy).
             var netoEfectivo = efectivo + diferencia - saldoInicial;
 
+            var (difEfectivo, difYape) = DiferenciaCierreCaja.Calcular(cierre);
+
             return new IngresoDiarioDesglosadoDto
             {
                 Fecha           = fecha,
@@ -1141,6 +1147,8 @@ public class ReporteService : IReporteService
                 Egreso          = egresoDia,
                 Faltante        = cierre is not null && diferencia < 0 ? Math.Abs(diferencia) : null,
                 Sobrante        = cierre is not null && diferencia > 0 ? diferencia : null,
+                DiferenciaEfectivo = difEfectivo,
+                DiferenciaYape     = difYape,
                 NetoEfectivo    = netoEfectivo,
                 NetoTotal       = netoEfectivo + yape,
             };
